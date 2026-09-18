@@ -4,8 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**M0 is in progress.** The build toolchain is up (#3) but no gameplay code exists yet — no
-simulation, no entities, no content. `src/core/constants.ts` is the only real module.
+**M0 is in progress.** Toolchain (#3), CI (#4) and the `core/` primitives (#5) are done. No
+gameplay code exists yet — no simulation, no entities, no content.
+
+`src/core/` holds the engine-agnostic primitives everything else builds on: `rng` (seeded,
+serialisable), `loop` (fixed timestep; speed multiplies tick count, never delta), `pool`
+(`Pool<T>` and `SlotAllocator`), `events` (preallocated, zero-allocation buffer), `vec` (mutating
+API), `spatial` (uniform hash), `constants`.
 
 Planning artefacts:
 
@@ -27,7 +32,7 @@ npm run dev              # Vite dev server
 npm run build            # typecheck, then production build
 npm run typecheck        # two passes: whole project, then core/+sim/ without the DOM lib
 npm run lint             # ESLint, incl. the layer-boundary rules below
-npm test                 # Vitest (test:watch to iterate)
+npm test                 # Vitest (test:watch to iterate; test:coverage for the 85% gate)
 npm run format           # Prettier — code only; *.md is ignored on purpose
 npm run bundle:check     # gzipped JS payload vs the 500 kB budget (needs a build first)
 npm run changelog        # regenerate CHANGELOG.md from git history
@@ -86,6 +91,12 @@ These are spread across several doc sections. Getting any of them wrong causes b
 **Tick pipeline order is load-bearing** (`TECH_DESIGN.md` §6.4) — status ticks run *before* reactions (a DoT can apply the stack that triggers a reaction the same tick); reactions run *before* movement (Superconduct strips armour before this tick's damage lands).
 
 **Zero allocation in the tick loop** — no object literals, no closures, no `.map`/`.filter` inside `sim/systems/**`. Entities use structure-of-arrays typed pools; range queries write into caller-supplied buffers. This is what keeps GC pauses out of the frame budget on mobile.
+
+**Typed-array reads need `!`** — `noUncheckedIndexedAccess` is on and it applies to typed arrays,
+so `hp[i]` is `number | undefined`. The flag stays on because it catches real bugs on `Map.get()`
+and plain arrays; at typed-array sites the index is guaranteed by `SlotAllocator`, so assert with
+`as number` or `!` and document the invariant once per class rather than at each read. See
+`src/core/spatial.ts` for the pattern.
 
 **No balance number lives in `src/`** — every stat, cost, duration and multiplier goes in JSON under `content/data/`, validated by Zod, with content IDs generated into union types so a typo in a wave file is a compile error. The only acceptable numbers in code are technical constants in `core/constants.ts`.
 

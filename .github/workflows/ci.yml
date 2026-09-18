@@ -42,7 +42,7 @@ jobs:
         run: npm run lint
 
       - name: Test
-        run: npx vitest run --coverage
+        run: npm run test:coverage
 
       - name: Build
         # vite build directly, not `npm run build` — that would re-run the

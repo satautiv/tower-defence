@@ -26,11 +26,16 @@ export default defineConfig({
     /* Generous enough for ESLint config loading on a cold CI runner, tight
        enough to still catch a genuine hang. */
     testTimeout: 20_000,
+    /* The allocation tests need --expose-gc to force a collection and compare
+       heap usage meaningfully. It is set via NODE_OPTIONS in the npm test
+       scripts, not here: poolOptions.forks.execArgv is silently ignored by
+       Vitest 5, which looks like it works until the guard test in
+       tests/core/allocation.test.ts says otherwise. */
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
     coverage: {
       /* sim/ and core/ are where the game actually lives, and they are pure,
          so they are cheap to test. view/ and ui/ are covered by E2E instead. */
-      include: ['src/core/**', 'src/sim/**'],
+      include: ['src/core/**/*.ts', 'src/sim/**/*.ts'],
       thresholds: { lines: 85, functions: 85, branches: 85, statements: 85 },
     },
   },

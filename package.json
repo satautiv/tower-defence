@@ -18,14 +18,15 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:unit": "vitest run",
-    "test:determinism": "vitest run tests/determinism --passWithNoTests",
+    "test": "NODE_OPTIONS=--expose-gc vitest run",
+    "test:watch": "NODE_OPTIONS=--expose-gc vitest",
+    "test:unit": "NODE_OPTIONS=--expose-gc vitest run",
+    "test:determinism": "NODE_OPTIONS=--expose-gc vitest run tests/determinism --passWithNoTests",
     "content:lint": "node tools/content-lint/index.js",
     "balance": "node tools/balance-sim/index.js",
     "bundle:check": "node tools/bundle-budget/index.js",
-    "changelog": "node tools/changelog/index.js"
+    "changelog": "node tools/changelog/index.js",
+    "test:coverage": "NODE_OPTIONS=--expose-gc vitest run --coverage"
   },
   "dependencies": {
     "pixi.js": "^8.21.0"
