@@ -1,0 +1,26 @@
+{
+  "id": "riftfall",
+  "nameKey": "power.riftfall.name",
+  "descriptionKey": "power.riftfall.desc",
+  "cost": 40,
+  "cooldownSeconds": 12,
+  "targeting": "point",
+  "effects": [
+    {
+      "kind": "damage_in_radius",
+      "params": {
+        "damage": 150,
+        "radiusTiles": 2.5,
+        "damageType": "pyro"
+      }
+    },
+    {
+      "kind": "apply_status_in_radius",
+      "params": {
+        "status": "scorch",
+        "stacks": 3,
+        "radiusTiles": 2.5
+      }
+    }
+  ]
+}

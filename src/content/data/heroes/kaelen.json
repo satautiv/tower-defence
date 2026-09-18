@@ -1,0 +1,74 @@
+{
+  "id": "kaelen",
+  "nameKey": "hero.kaelen.name",
+  "descriptionKey": "hero.kaelen.desc",
+  "damageType": "arcane",
+  "hp": 600,
+  "damage": 35,
+  "attacksPerSecond": 1.0,
+  "attackRangeTiles": 3,
+  "armour": 10,
+  "respawnSeconds": 25,
+  "hpPerLevel": 60,
+  "damagePerLevel": 4,
+  "abilities": [
+    {
+      "id": "aether_bolt",
+      "nameKey": "hero.kaelen.aether_bolt.name",
+      "descriptionKey": "hero.kaelen.aether_bolt.desc",
+      "cooldownSeconds": 8,
+      "effects": [
+        {
+          "kind": "damage_in_radius",
+          "params": {
+            "damage": 180,
+            "radiusTiles": 0.5,
+            "damageType": "arcane"
+          }
+        },
+        {
+          "kind": "apply_status_in_radius",
+          "params": {
+            "status": "unravel",
+            "stacks": 3,
+            "radiusTiles": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "ward_break",
+      "nameKey": "hero.kaelen.ward_break.name",
+      "descriptionKey": "hero.kaelen.ward_break.desc",
+      "cooldownSeconds": 16,
+      "effects": [
+        {
+          "kind": "modify_stat",
+          "params": {
+            "stat": "ward",
+            "flat": -50,
+            "durationSeconds": 6,
+            "radiusTiles": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "conduit_surge",
+      "nameKey": "hero.kaelen.conduit_surge.name",
+      "descriptionKey": "hero.kaelen.conduit_surge.desc",
+      "cooldownSeconds": 22,
+      "effects": [
+        {
+          "kind": "modify_stat",
+          "params": {
+            "stat": "fireRate",
+            "multiplier": 1.4,
+            "durationSeconds": 8,
+            "radiusTiles": 5
+          }
+        }
+      ]
+    }
+  ]
+}

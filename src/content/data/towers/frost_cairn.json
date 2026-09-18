@@ -1,0 +1,140 @@
+{
+  "id": "frost_cairn",
+  "nameKey": "tower.frost_cairn.name",
+  "descriptionKey": "tower.frost_cairn.desc",
+  "family": "control",
+  "tiers": [
+    {
+      "cost": 90,
+      "damage": 5,
+      "damageType": "cryo",
+      "fireRate": 1.0,
+      "rangeTiles": 4.5,
+      "splashRadiusTiles": 4.5,
+      "statusApplied": {
+        "status": "chill",
+        "stacks": 1
+      }
+    },
+    {
+      "cost": 144,
+      "damage": 8,
+      "damageType": "cryo",
+      "fireRate": 1.0,
+      "rangeTiles": 5.0,
+      "splashRadiusTiles": 5.0,
+      "statusApplied": {
+        "status": "chill",
+        "stacks": 1
+      }
+    },
+    {
+      "cost": 234,
+      "damage": 12,
+      "damageType": "cryo",
+      "fireRate": 1.0,
+      "rangeTiles": 5.5,
+      "splashRadiusTiles": 5.5,
+      "statusApplied": {
+        "status": "chill",
+        "stacks": 1
+      }
+    }
+  ],
+  "specialisations": [
+    {
+      "id": "glacier_heart",
+      "nameKey": "tower.glacier_heart.name",
+      "descriptionKey": "tower.glacier_heart.desc",
+      "tiers": [
+        {
+          "cost": 405,
+          "damage": 25,
+          "damageType": "cryo",
+          "fireRate": 1.0,
+          "rangeTiles": 5.5,
+          "splashRadiusTiles": 5.5,
+          "statusApplied": {
+            "status": "chill",
+            "stacks": 2
+          }
+        },
+        {
+          "cost": 720,
+          "damage": 35,
+          "damageType": "cryo",
+          "fireRate": 1.0,
+          "rangeTiles": 6.0,
+          "splashRadiusTiles": 6.0,
+          "statusApplied": {
+            "status": "chill",
+            "stacks": 3
+          }
+        }
+      ],
+      "ability": {
+        "id": "absolute_zero",
+        "nameKey": "tower.glacier_heart.ability",
+        "cost": 35,
+        "cooldownSeconds": 30,
+        "effects": [
+          {
+            "kind": "apply_status_in_radius",
+            "params": {
+              "status": "freeze",
+              "stacks": 1,
+              "radiusTiles": 6
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "rime_spire",
+      "nameKey": "tower.rime_spire.name",
+      "descriptionKey": "tower.rime_spire.desc",
+      "tiers": [
+        {
+          "cost": 405,
+          "damage": 40,
+          "damageType": "cryo",
+          "fireRate": 1.0,
+          "rangeTiles": 6.0,
+          "splashRadiusTiles": 6.0,
+          "statusApplied": {
+            "status": "chill",
+            "stacks": 1
+          }
+        },
+        {
+          "cost": 720,
+          "damage": 55,
+          "damageType": "cryo",
+          "fireRate": 1.0,
+          "rangeTiles": 6.5,
+          "splashRadiusTiles": 6.5,
+          "statusApplied": {
+            "status": "chill",
+            "stacks": 2
+          }
+        }
+      ],
+      "ability": {
+        "id": "permafrost",
+        "nameKey": "tower.rime_spire.ability",
+        "cost": 25,
+        "cooldownSeconds": 24,
+        "effects": [
+          {
+            "kind": "modify_stat",
+            "params": {
+              "stat": "chillDecay",
+              "multiplier": 0,
+              "durationSeconds": 8
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

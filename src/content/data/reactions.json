@@ -1,0 +1,51 @@
+[
+  {
+    "id": "thermal_shock",
+    "nameKey": "reaction.thermal_shock.name",
+    "descriptionKey": "reaction.thermal_shock.desc",
+    "a": "scorch",
+    "b": "chill",
+    "cooldownSeconds": 1.2,
+    "baseDamage": 40,
+    "damagePerStack": 12,
+    "radiusTiles": 1.5
+  },
+  {
+    "id": "superconduct",
+    "nameKey": "reaction.superconduct.name",
+    "descriptionKey": "reaction.superconduct.desc",
+    "a": "chill",
+    "b": "charge",
+    "cooldownSeconds": 1.2,
+    "radiusTiles": 2.0
+  },
+  {
+    "id": "electrolysis",
+    "nameKey": "reaction.electrolysis.name",
+    "descriptionKey": "reaction.electrolysis.desc",
+    "a": "charge",
+    "b": "corrode",
+    "cooldownSeconds": 1.2,
+    "baseDamage": 25,
+    "jumps": 4
+  },
+  {
+    "id": "combustion",
+    "nameKey": "reaction.combustion.name",
+    "descriptionKey": "reaction.combustion.desc",
+    "a": "scorch",
+    "b": "corrode",
+    "cooldownSeconds": 1.2,
+    "baseDamage": 80,
+    "radiusTiles": 1.5
+  },
+  {
+    "id": "amplify",
+    "nameKey": "reaction.amplify.name",
+    "descriptionKey": "reaction.amplify.desc",
+    "a": "unravel",
+    "b": "any",
+    "consumes": false,
+    "cooldownSeconds": 4.0
+  }
+]

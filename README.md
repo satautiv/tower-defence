@@ -120,6 +120,7 @@ npm run dev          # http://localhost:5173
 | `npm run lint` | ESLint, including the layer-boundary rules |
 | `npm test` | Vitest (`npm run test:watch` to iterate) |
 | `npm run format` | Prettier (code only; markdown is hand-formatted) |
+| `npm run content:lint` | Validates all game content and its cross-references |
 | `npm run bundle:check` | Fails if the gzipped JS payload exceeds 500 kB |
 | `npm run changelog` | Regenerates `CHANGELOG.md` from commit history |
 

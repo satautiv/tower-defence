@@ -1,0 +1,10 @@
+{
+  "id": "husk",
+  "nameKey": "enemy.husk.name",
+  "hp": 90,
+  "speed": 1.0,
+  "armour": 5,
+  "bounty": 6,
+  "meleeDamage": 8,
+  "meleeIntervalSeconds": 1.0
+}

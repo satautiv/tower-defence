@@ -1,0 +1,146 @@
+{
+  "id": "flame_vent",
+  "nameKey": "tower.flame_vent.name",
+  "descriptionKey": "tower.flame_vent.desc",
+  "family": "ordnance",
+  "tiers": [
+    {
+      "cost": 100,
+      "damage": 8,
+      "damageType": "pyro",
+      "fireRate": 4.0,
+      "rangeTiles": 3.5,
+      "splashRadiusTiles": 1.0,
+      "statusApplied": {
+        "status": "scorch",
+        "stacks": 1
+      }
+    },
+    {
+      "cost": 160,
+      "damage": 11,
+      "damageType": "pyro",
+      "fireRate": 4.0,
+      "rangeTiles": 3.8,
+      "splashRadiusTiles": 1.2,
+      "statusApplied": {
+        "status": "scorch",
+        "stacks": 1
+      }
+    },
+    {
+      "cost": 260,
+      "damage": 14,
+      "damageType": "pyro",
+      "fireRate": 4.0,
+      "rangeTiles": 4.0,
+      "splashRadiusTiles": 1.4,
+      "statusApplied": {
+        "status": "scorch",
+        "stacks": 1
+      },
+      "perkKeys": ["tower.flame_vent.perk.never_misses"]
+    }
+  ],
+  "specialisations": [
+    {
+      "id": "pyroclast_vent",
+      "nameKey": "tower.pyroclast_vent.name",
+      "descriptionKey": "tower.pyroclast_vent.desc",
+      "tiers": [
+        {
+          "cost": 450,
+          "damage": 18,
+          "damageType": "pyro",
+          "fireRate": 4.0,
+          "rangeTiles": 4.0,
+          "splashRadiusTiles": 1.6,
+          "statusApplied": {
+            "status": "scorch",
+            "stacks": 2
+          }
+        },
+        {
+          "cost": 800,
+          "damage": 24,
+          "damageType": "pyro",
+          "fireRate": 4.0,
+          "rangeTiles": 4.2,
+          "splashRadiusTiles": 1.8,
+          "statusApplied": {
+            "status": "scorch",
+            "stacks": 2
+          }
+        }
+      ],
+      "ability": {
+        "id": "eruption",
+        "nameKey": "tower.pyroclast_vent.ability",
+        "cost": 25,
+        "cooldownSeconds": 22,
+        "effects": [
+          {
+            "kind": "damage_in_radius",
+            "params": {
+              "damage": 250,
+              "radiusTiles": 3
+            }
+          },
+          {
+            "kind": "apply_status_in_radius",
+            "params": {
+              "status": "scorch",
+              "stacks": 5,
+              "radiusTiles": 3
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "plasma_lance",
+      "nameKey": "tower.plasma_lance.name",
+      "descriptionKey": "tower.plasma_lance.desc",
+      "tiers": [
+        {
+          "cost": 450,
+          "damage": 55,
+          "damageType": "arcane",
+          "fireRate": 1.0,
+          "rangeTiles": 8.0,
+          "statusApplied": {
+            "status": "unravel",
+            "stacks": 1
+          }
+        },
+        {
+          "cost": 800,
+          "damage": 80,
+          "damageType": "arcane",
+          "fireRate": 1.0,
+          "rangeTiles": 8.5,
+          "statusApplied": {
+            "status": "unravel",
+            "stacks": 2
+          }
+        }
+      ],
+      "ability": {
+        "id": "overcharge_lance",
+        "nameKey": "tower.plasma_lance.ability",
+        "cost": 35,
+        "cooldownSeconds": 25,
+        "effects": [
+          {
+            "kind": "modify_stat",
+            "params": {
+              "stat": "damage",
+              "multiplier": 2.7,
+              "durationSeconds": 6
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "resonant_bloom",
+  "nameKey": "talent.resonant_bloom.name",
+  "descriptionKey": "talent.resonant_bloom.desc",
+  "branch": "conduction",
+  "maxRanks": 5,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "reactionPower",
+    "perRank": 0.1
+  }
+}

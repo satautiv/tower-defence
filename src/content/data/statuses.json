@@ -1,0 +1,60 @@
+[
+  {
+    "id": "scorch",
+    "nameKey": "status.scorch.name",
+    "descriptionKey": "status.scorch.desc",
+    "maxStacks": 5,
+    "durationSeconds": 4,
+    "damagePerSecondPerStack": 6
+  },
+  {
+    "id": "chill",
+    "nameKey": "status.chill.name",
+    "descriptionKey": "status.chill.desc",
+    "maxStacks": 5,
+    "durationSeconds": 3,
+    "slowPerStack": 0.12,
+    "escalatesTo": "freeze",
+    "stacksAfterEscalation": 2
+  },
+  {
+    "id": "freeze",
+    "nameKey": "status.freeze.name",
+    "descriptionKey": "status.freeze.desc",
+    "maxStacks": 1,
+    "durationSeconds": 1.5
+  },
+  {
+    "id": "charge",
+    "nameKey": "status.charge.name",
+    "descriptionKey": "status.charge.desc",
+    "maxStacks": 5,
+    "durationSeconds": 3
+  },
+  {
+    "id": "corrode",
+    "nameKey": "status.corrode.name",
+    "descriptionKey": "status.corrode.desc",
+    "maxStacks": 5,
+    "durationSeconds": 5,
+    "damagePerSecondPerStack": 4,
+    "defenceReductionPerStack": 8
+  },
+  {
+    "id": "unravel",
+    "nameKey": "status.unravel.name",
+    "descriptionKey": "status.unravel.desc",
+    "maxStacks": 5,
+    "durationSeconds": 4,
+    "vulnerabilityPerStack": 0.08
+  },
+  {
+    "id": "fracture",
+    "nameKey": "status.fracture.name",
+    "descriptionKey": "status.fracture.desc",
+    "maxStacks": 10,
+    "durationSeconds": 6,
+    "vulnerabilityPerStack": 0.03,
+    "reactive": false
+  }
+]

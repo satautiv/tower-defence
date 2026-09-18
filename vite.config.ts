@@ -35,7 +35,17 @@ export default defineConfig({
     coverage: {
       /* sim/ and core/ are where the game actually lives, and they are pure,
          so they are cheap to test. view/ and ui/ are covered by E2E instead. */
-      include: ['src/core/**/*.ts', 'src/sim/**/*.ts'],
+      include: ['src/core/**/*.ts', 'src/sim/**/*.ts', 'src/content/**/*.ts'],
+      exclude: [
+        /* Generated from the data by tools/content-gen; testing it would test
+           the generator, which tests/content/shipped.test.ts already does. */
+        'src/content/generated/**',
+        /* Vite's import.meta.glob has no meaning under the Node test runner.
+           Covered instead by the build succeeding and by the loader tests,
+           which exercise the same buildRegistry it calls. */
+        'src/content/load.ts',
+        'src/content/index.ts',
+      ],
       thresholds: { lines: 85, functions: 85, branches: 85, statements: 85 },
     },
   },

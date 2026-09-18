@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **M0 is in progress.** Toolchain (#3), CI (#4) and the `core/` primitives (#5) are done. No
 gameplay code exists yet — no simulation, no entities, no content.
 
-`src/core/` holds the engine-agnostic primitives everything else builds on: `rng` (seeded,
+`src/content/` holds the schemas, seed data and validation; `src/core/` holds the engine-agnostic
+primitives everything else builds on: `rng` (seeded,
 serialisable), `loop` (fixed timestep; speed multiplies tick count, never delta), `pool`
 (`Pool<T>` and `SlotAllocator`), `events` (preallocated, zero-allocation buffer), `vec` (mutating
 API), `spatial` (uniform hash), `constants`.
@@ -34,6 +35,8 @@ npm run typecheck        # two passes: whole project, then core/+sim/ without th
 npm run lint             # ESLint, incl. the layer-boundary rules below
 npm test                 # Vitest (test:watch to iterate; test:coverage for the 85% gate)
 npm run format           # Prettier — code only; *.md is ignored on purpose
+npm run content:gen      # regenerate id unions + typed refs from src/content/data
+npm run content:lint     # schema + cross-file validation of all content
 npm run bundle:check     # gzipped JS payload vs the 500 kB budget (needs a build first)
 npm run changelog        # regenerate CHANGELOG.md from git history
 ```
@@ -48,7 +51,11 @@ commitlint gates PR commits. Types that reach the changelog: `feat`, `fix`, `per
 
 Single test: `npx vitest run tests/smoke.test.ts`, or `npx vitest -t "test name"`.
 
-**Placeholders**, named now so the naming is settled, implemented later: `content:lint` (#6),
+`src/content/generated/` is built, not committed — `content:gen` runs automatically before
+`dev`, `typecheck` and `test`, so it is normally invisible. After editing anything in
+`src/content/data` by hand, run it if your editor starts complaining about ids.
+
+**Placeholders**, named now so the naming is settled, implemented later:
 `balance` (#35), `test:determinism` (#10, currently `--passWithNoTests`). `android:dev` /
 `android:build` arrive with #54. The balance sim will take arguments:
 `npm run balance -- --stage 1-8 --difficulty veteran --runs 2000 --strategy greedy`

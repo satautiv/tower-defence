@@ -1,0 +1,10 @@
+{
+  "id": "ironclad_revenant",
+  "nameKey": "enemy.ironclad_revenant.name",
+  "hp": 260,
+  "speed": 0.7,
+  "armour": 40,
+  "bounty": 14,
+  "meleeDamage": 14,
+  "meleeIntervalSeconds": 1.2
+}

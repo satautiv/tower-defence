@@ -1,0 +1,17 @@
+{
+  "id": "aether_siphon",
+  "nameKey": "power.aether_siphon.name",
+  "descriptionKey": "power.aether_siphon.desc",
+  "cost": 50,
+  "cooldownSeconds": 25,
+  "targeting": "point",
+  "effects": [
+    {
+      "kind": "force_reactions",
+      "params": {
+        "radiusTiles": 4,
+        "ignoreCooldown": true
+      }
+    }
+  ]
+}

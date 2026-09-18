@@ -1,0 +1,11 @@
+{
+  "id": "rift_bat",
+  "nameKey": "enemy.rift_bat.name",
+  "hp": 60,
+  "speed": 2.0,
+  "ward": 5,
+  "bounty": 5,
+  "traits": ["flying"],
+  "meleeDamage": 4,
+  "meleeIntervalSeconds": 0.8
+}

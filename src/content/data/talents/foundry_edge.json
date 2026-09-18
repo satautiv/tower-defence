@@ -1,0 +1,12 @@
+{
+  "id": "foundry_edge",
+  "nameKey": "talent.foundry_edge.name",
+  "descriptionKey": "talent.foundry_edge.desc",
+  "branch": "foundry",
+  "maxRanks": 5,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "towerDamage",
+    "perRank": 0.02
+  }
+}

@@ -12,8 +12,8 @@ build/
 *.tsbuildinfo
 
 # Generated — produced by build steps, never edited by hand
-# Content ID union types generated from content/data/ (see TECH_DESIGN.md §8.2)
-src/content/ids.ts
+# Content id unions and typed cross-references (npm run content:gen)
+src/content/generated/
 # Texture atlases packed from source art by tools/atlas-build
 public/assets/atlas/
 # Balance simulator reports (tools/balance-sim)

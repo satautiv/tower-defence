@@ -1,0 +1,120 @@
+{
+  "id": "arbalest_post",
+  "nameKey": "tower.arbalest_post.name",
+  "descriptionKey": "tower.arbalest_post.desc",
+  "family": "marksman",
+  "tiers": [
+    {
+      "cost": 80,
+      "damage": 12,
+      "damageType": "kinetic",
+      "fireRate": 1.2,
+      "rangeTiles": 7.0
+    },
+    {
+      "cost": 128,
+      "damage": 19,
+      "damageType": "kinetic",
+      "fireRate": 1.3,
+      "rangeTiles": 7.5
+    },
+    {
+      "cost": 208,
+      "damage": 29,
+      "damageType": "kinetic",
+      "fireRate": 1.4,
+      "rangeTiles": 8.0,
+      "statusApplied": {
+        "status": "fracture",
+        "stacks": 1
+      }
+    }
+  ],
+  "specialisations": [
+    {
+      "id": "sniper_nest",
+      "nameKey": "tower.sniper_nest.name",
+      "descriptionKey": "tower.sniper_nest.desc",
+      "tiers": [
+        {
+          "cost": 360,
+          "damage": 110,
+          "damageType": "kinetic",
+          "fireRate": 0.45,
+          "rangeTiles": 14.0,
+          "armourPierce": 25,
+          "targets": "ground"
+        },
+        {
+          "cost": 640,
+          "damage": 180,
+          "damageType": "kinetic",
+          "fireRate": 0.5,
+          "rangeTiles": 14.0,
+          "armourPierce": 40
+        }
+      ],
+      "ability": {
+        "id": "deadeye",
+        "nameKey": "tower.sniper_nest.ability",
+        "cost": 25,
+        "cooldownSeconds": 20,
+        "effects": [
+          {
+            "kind": "damage_in_radius",
+            "params": {
+              "damage": 800,
+              "radiusTiles": 0.5,
+              "trueDamage": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "repeater_battery",
+      "nameKey": "tower.repeater_battery.name",
+      "descriptionKey": "tower.repeater_battery.desc",
+      "tiers": [
+        {
+          "cost": 360,
+          "damage": 14,
+          "damageType": "kinetic",
+          "fireRate": 4.0,
+          "rangeTiles": 6.5,
+          "statusApplied": {
+            "status": "fracture",
+            "stacks": 2
+          }
+        },
+        {
+          "cost": 640,
+          "damage": 20,
+          "damageType": "kinetic",
+          "fireRate": 4.5,
+          "rangeTiles": 7.0,
+          "statusApplied": {
+            "status": "fracture",
+            "stacks": 2
+          }
+        }
+      ],
+      "ability": {
+        "id": "suppressing_fire",
+        "nameKey": "tower.repeater_battery.ability",
+        "cost": 20,
+        "cooldownSeconds": 18,
+        "effects": [
+          {
+            "kind": "modify_stat",
+            "params": {
+              "stat": "fireRate",
+              "multiplier": 2,
+              "durationSeconds": 4
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

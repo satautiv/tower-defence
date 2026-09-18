@@ -41,6 +41,13 @@ jobs:
         # fails here, which is the point.
         run: npm run lint
 
+      - name: Content
+        # Schema validation plus cross-file checks: a wave naming an enemy that
+        # does not exist, a plot off the map, an unlock chain that cannot
+        # complete. Typecheck above already rejects a bad id via the generated
+        # references; this reports it in language a content author can act on.
+        run: npm run content:lint
+
       - name: Test
         run: npm run test:coverage
 
