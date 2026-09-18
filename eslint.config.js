@@ -15,8 +15,25 @@ import tseslint from 'typescript-eslint';
 /** Libraries that only ever belong in the view, ui or audio layers. */
 const RENDER_LIBS = ['pixi.js', 'pixi.js/*', 'react', 'react-dom', 'react/*', 'howler', 'zustand'];
 
-/** Import patterns that reach a layer, whether by alias or by relative path. */
-const layer = (name) => [`@${name}`, `@${name}/*`, `**/${name}`, `**/${name}/*`, `**/${name}/**`];
+/**
+ * Import patterns that reach a layer, whether by alias or by relative path.
+ *
+ * Relative forms are anchored with an explicit `../` rather than `**` because
+ * `**` also matches an alias prefix: the pattern `**\/app` happily matched
+ * `@view/app`, which is view's own module and nothing to do with the app layer.
+ * Three levels of `../` covers the deepest directory in src/.
+ */
+const layer = (name) => [
+  `@${name}`,
+  `@${name}/*`,
+  `@${name}/**`,
+  `../${name}`,
+  `../${name}/**`,
+  `../../${name}`,
+  `../../${name}/**`,
+  `../../../${name}`,
+  `../../../${name}/**`,
+];
 
 /** Browser globals that must not appear in a layer meant to run under Node. */
 const BROWSER_GLOBALS = [

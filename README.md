@@ -71,9 +71,9 @@ Everything else in the technical plan follows from it.
 
 ## Planned stack
 
-**TypeScript** · **Vite** · **PixiJS v8** (rendering) · **React + Zustand** (menus only, never the
-game loop) · **Howler** (audio) · **Zod** (content validation) · **Vitest + Playwright** (testing)
-· **GitHub Actions → Pages** (web) · **Capacitor** (Android)
+**TypeScript** · **Vite** · **PixiJS v8** (rendering) · **React 19 + Zustand** (menus only, never
+the game loop) · **Howler** (audio) · **Zod** (content validation) · **Vitest + Playwright**
+(testing) · **GitHub Actions → Pages** (web) · **Capacitor** (Android)
 
 Alternatives considered and rejected — Phaser, Unity, Godot — are recorded with their reasoning in
 [the technical plan](docs/TECH_DESIGN.md#3-stack).

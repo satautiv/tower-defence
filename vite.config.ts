@@ -1,9 +1,11 @@
 import { fileURLToPath, URL } from 'node:url';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 const alias = (p: string) => fileURLToPath(new URL(`./src/${p}`, import.meta.url));
 
 export default defineConfig({
+  plugins: [react()],
   /* Keep in sync with compilerOptions.paths in tsconfig.json */
   resolve: {
     alias: {
@@ -31,7 +33,7 @@ export default defineConfig({
        scripts, not here: poolOptions.forks.execArgv is silently ignored by
        Vitest 5, which looks like it works until the guard test in
        tests/core/allocation.test.ts says otherwise. */
-    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'src/**/*.test.ts'],
     coverage: {
       /* sim/ and core/ are where the game actually lives, and they are pure,
          so they are cheap to test. view/ and ui/ are covered by E2E instead. */

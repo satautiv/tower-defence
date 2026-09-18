@@ -88,6 +88,28 @@ describe('core/ sits at the bottom of the stack', () => {
 });
 
 describe('presentation layers stay downstream', () => {
+  it('blocks ui/ from importing the app layer', async () => {
+    const rules = await rulesTriggeredBy(
+      `import { boot } from '@app/mount';\nexport const b = boot;\n`,
+      'src/ui/probe.ts',
+    );
+    expect(rules).toContain('no-restricted-imports');
+  });
+
+  /**
+   * Regression: the layer patterns once used `**` for relative imports, which
+   * also matched an alias prefix — so `@view/app`, which is view's own module,
+   * was rejected as if it were the app layer. Relative forms are now anchored
+   * with an explicit `../`.
+   */
+  it('allows ui/ to import view/app, which is not the app layer', async () => {
+    const rules = await rulesTriggeredBy(
+      `import { createGameView } from '@view/app';\nexport const c = createGameView;\n`,
+      'src/ui/probe.ts',
+    );
+    expect(rules).toEqual([]);
+  });
+
   it('lets view/ read from sim/', async () => {
     const rules = await rulesTriggeredBy(
       `import { TICK_SECONDS } from '@core/constants';\nexport const dt = TICK_SECONDS;\n`,

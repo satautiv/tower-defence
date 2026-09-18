@@ -1,0 +1,116 @@
+/*
+ * Design tokens.
+ *
+ * Dark-first, because the game world is dark and a light chrome around it would
+ * fight the board for attention. Values are CSS custom properties so a theme or
+ * the accessibility UI-scale slider (#47) can override them at the root without
+ * touching a component.
+ *
+ * Damage-type colours are reserved: they identify gameplay information and must
+ * not be reused for ordinary chrome (docs/GAME_DESIGN.md §16.1).
+ */
+:root {
+  /* Surfaces, darkest to lightest */
+  --c-bg: #0b0d14;
+  --c-surface: #141827;
+  --c-surface-raised: #1d2234;
+  --c-border: #2c3245;
+  --c-border-strong: #3e4560;
+
+  /* Text */
+  --c-text: #e6e9f2;
+  --c-text-muted: #98a0b8;
+  --c-text-dim: #6b738c;
+
+  /* Interaction */
+  --c-accent: #5ce1e6;
+  --c-accent-dim: #2f8b8f;
+  --c-focus: #8bd6ff;
+  --c-danger: #d1495b;
+  --c-warning: #f2c14e;
+  --c-success: #7fd45a;
+
+  /* Resources */
+  --c-gold: #f2c14e;
+  --c-lives: #d1495b;
+  --c-aether: #b892ff;
+
+  /* Damage types — reserved, never used for chrome */
+  --c-kinetic: #9aa4b2;
+  --c-pyro: #ff7a33;
+  --c-cryo: #7fd4ff;
+  --c-volt: #c08cff;
+  --c-toxic: #7fd45a;
+  --c-arcane: #ff5ce0;
+
+  /* Spacing, on a 4px rhythm */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  /* Type scale */
+  --f-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-numeric: ui-monospace, 'SF Mono', 'Cascadia Mono', monospace;
+  --t-xs: 12px;
+  --t-sm: 14px;
+  --t-md: 16px;
+  --t-lg: 20px;
+  --t-xl: 28px;
+  --t-2xl: 40px;
+
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+
+  --z-hud: 10;
+  --z-panel: 20;
+  --z-modal: 30;
+
+  /* Motion. Set to 0s by the reduced-motion setting (#47). */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 250ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
+
+  /* Touch targets never go below this (docs/GAME_DESIGN.md §18). */
+  --hit-min: 48px;
+
+  /* Safe areas, read by the viewport fitter. */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+}
+
+/*
+ * The canvas/DOM boundary.
+ *
+ * The overlay covers the whole canvas, so without this every click would be
+ * swallowed by an invisible div and building a tower would be impossible.
+ * Pointer events are off by default and re-enabled only on things meant to be
+ * clicked, which is what lets the UI sit on top of a fully interactive board.
+ */
+.ui-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--f-ui);
+  color: var(--c-text);
+  overflow: hidden;
+}
+
+.ui-interactive {
+  pointer-events: auto;
+}

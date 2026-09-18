@@ -1,0 +1,85 @@
+/* Screen and HUD layout. Visual design is #46; this is structure. */
+
+.ui-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: calc(var(--s-5) + var(--safe-area-top)) calc(var(--s-5) + var(--safe-area-right))
+    calc(var(--s-5) + var(--safe-area-bottom)) calc(var(--s-5) + var(--safe-area-left));
+}
+.ui-screen--centred {
+  align-items: center;
+  justify-content: center;
+}
+
+/* The stage screen is transparent: the board shows through it. */
+.ui-screen--stage {
+  padding: 0;
+}
+
+.ui-screen:not(.ui-screen--stage) {
+  background: var(--c-bg);
+}
+
+.game-canvas-host {
+  position: absolute;
+  inset: 0;
+}
+
+.ui-splash__title,
+.ui-menu__title {
+  margin: 0;
+  font-size: var(--t-2xl);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-accent);
+}
+.ui-menu__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 240px;
+}
+
+.ui-hud {
+  position: absolute;
+  top: calc(var(--s-3) + var(--safe-area-top));
+  left: calc(var(--s-4) + var(--safe-area-left));
+  right: calc(var(--s-4) + var(--safe-area-right));
+  z-index: var(--z-hud);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+.ui-hud__resources {
+  display: flex;
+  gap: var(--s-4);
+}
+.ui-hud__stat {
+  /* Tabular numerals: counters must not reflow as digits change, which is
+     distracting in peripheral vision while watching the board. */
+  font: 600 var(--t-lg) / 1 var(--f-numeric);
+  font-variant-numeric: tabular-nums;
+}
+.ui-hud__stat--lives {
+  color: var(--c-lives);
+}
+.ui-hud__stat--gold {
+  color: var(--c-gold);
+}
+.ui-hud__stat--aether {
+  color: var(--c-aether);
+}
+.ui-hud__wave {
+  font-size: var(--t-sm);
+  color: var(--c-text-muted);
+}
+
+.ui-muted {
+  margin: 0;
+  color: var(--c-text-muted);
+  font-size: var(--t-sm);
+}

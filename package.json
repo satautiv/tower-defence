@@ -41,16 +41,26 @@
   },
   "dependencies": {
     "pixi.js": "^8.21.0",
-    "zod": "^4.6.5"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
     "@eslint/js": "^10.0.1",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^22.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^5.0.1",
     "eslint": "^10.10.0",
     "free-tex-packer-core": "^0.3.9",
+    "happy-dom": "^20.14.5",
     "prettier": "^3.9.8",
     "tsx": "^4.23.13",
     "typescript": "~6.0.3",

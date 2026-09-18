@@ -1,0 +1,159 @@
+/* Primitives. Every one opts back into pointer events via .ui-interactive. */
+
+.ui-button {
+  min-height: var(--hit-min);
+  padding: var(--s-2) var(--s-5);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-md);
+  background: var(--c-surface-raised);
+  color: var(--c-text);
+  font: 500 var(--t-md) / 1.2 var(--f-ui);
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+.ui-button:hover:not(:disabled) {
+  background: var(--c-border);
+}
+.ui-button:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+.ui-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ui-button--primary {
+  background: var(--c-accent-dim);
+  border-color: var(--c-accent);
+}
+.ui-button--primary:hover:not(:disabled) {
+  background: var(--c-accent);
+  color: var(--c-bg);
+}
+.ui-button--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.ui-button--danger {
+  background: transparent;
+  border-color: var(--c-danger);
+  color: var(--c-danger);
+}
+
+.ui-panel {
+  background: color-mix(in srgb, var(--c-surface) 92%, transparent);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+  backdrop-filter: blur(6px);
+}
+.ui-panel__title {
+  margin: 0 0 var(--s-3);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+}
+.ui-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.ui-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-5);
+  background: color-mix(in srgb, var(--c-bg) 72%, transparent);
+}
+.ui-modal {
+  width: min(520px, 100%);
+  max-height: 80%;
+  overflow: auto;
+  padding: var(--s-5);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+}
+.ui-modal:focus-visible {
+  outline: 2px solid var(--c-focus);
+}
+.ui-modal__title {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-lg);
+}
+.ui-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.ui-slider {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-height: var(--hit-min);
+}
+.ui-slider__label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--t-sm);
+  color: var(--c-text-muted);
+}
+.ui-slider__value {
+  font-family: var(--f-numeric);
+  color: var(--c-text);
+}
+.ui-slider__input {
+  width: 100%;
+  accent-color: var(--c-accent);
+}
+
+.ui-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--hit-min);
+  cursor: pointer;
+}
+.ui-toggle__input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--c-accent);
+}
+.ui-toggle__text {
+  display: flex;
+  flex-direction: column;
+}
+.ui-toggle__label {
+  font-size: var(--t-md);
+}
+.ui-toggle__description {
+  font-size: var(--t-xs);
+  color: var(--c-text-dim);
+}
+
+.ui-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+.ui-tooltip__bubble {
+  position: absolute;
+  bottom: calc(100% + var(--s-2));
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-sm);
+  background: var(--c-surface-raised);
+  font-size: var(--t-xs);
+  pointer-events: none;
+}

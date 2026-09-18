@@ -10,7 +10,10 @@ import type { ContentRegistry, RawFile } from './loader.js';
  * disk (tools/content/io.ts) and hands the identical shape to buildRegistry —
  * so what content-lint validates is what the game loads.
  *
- * Patterns must be literals; Vite resolves them statically.
+ * Both the pattern and the options object must be written inline at each call.
+ * Vite parses these statically, and hoisting the options into a shared const
+ * makes the glob unresolvable — the bundler happens to tolerate it, but the dev
+ * and test transforms reject it outright.
  */
 
 function filesFrom(modules: Record<string, unknown>): RawFile[] {
@@ -32,16 +35,25 @@ let cached: ContentRegistry | undefined;
 export function loadContent(): ContentRegistry {
   if (cached !== undefined) return cached;
 
-  const opts = { eager: true, import: 'default' } as const;
   cached = buildRegistry({
-    statuses: singleFile(import.meta.glob('./data/statuses.json', opts), 'statuses.json'),
-    reactions: singleFile(import.meta.glob('./data/reactions.json', opts), 'reactions.json'),
-    towers: filesFrom(import.meta.glob('./data/towers/*.json', opts)),
-    enemies: filesFrom(import.meta.glob('./data/enemies/*.json', opts)),
-    stages: filesFrom(import.meta.glob('./data/stages/*.json', opts)),
-    powers: filesFrom(import.meta.glob('./data/powers/*.json', opts)),
-    heroes: filesFrom(import.meta.glob('./data/heroes/*.json', opts)),
-    talents: filesFrom(import.meta.glob('./data/talents/*.json', opts)),
+    statuses: singleFile(
+      import.meta.glob('./data/statuses.json', { eager: true, import: 'default' }),
+      'statuses.json',
+    ),
+    reactions: singleFile(
+      import.meta.glob('./data/reactions.json', { eager: true, import: 'default' }),
+      'reactions.json',
+    ),
+    towers: filesFrom(import.meta.glob('./data/towers/*.json', { eager: true, import: 'default' })),
+    enemies: filesFrom(
+      import.meta.glob('./data/enemies/*.json', { eager: true, import: 'default' }),
+    ),
+    stages: filesFrom(import.meta.glob('./data/stages/*.json', { eager: true, import: 'default' })),
+    powers: filesFrom(import.meta.glob('./data/powers/*.json', { eager: true, import: 'default' })),
+    heroes: filesFrom(import.meta.glob('./data/heroes/*.json', { eager: true, import: 'default' })),
+    talents: filesFrom(
+      import.meta.glob('./data/talents/*.json', { eager: true, import: 'default' }),
+    ),
   });
   return cached;
 }

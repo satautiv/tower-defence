@@ -4,9 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**M0 is in progress.** Toolchain (#3), CI (#4), `core/` primitives (#5), the content pipeline (#6)
-and the render stack (#7) are done. No gameplay code exists yet — no simulation, no entities.
+**M0 is in progress.** Toolchain (#3), CI (#4), `core/` primitives (#5), the content pipeline (#6),
+the render stack (#7) and the UI shell (#8) are done. No gameplay code exists yet — no simulation,
+no entities.
 
+`src/ui/` holds the React shell: `store` (UI state only), `Router`, `Overlay`, `GameCanvas`
+(owns the renderer's lifetime), `components/` primitives and `hooks/useThrottledValue`.
 `src/view/` holds the render stack: `viewport` (letterbox fit), `camera` (pan/zoom, clamped),
 `layers` (the ten-layer stack), `terrain` (bake-once texture cache), `input`, `assets`, `app`
 (Pixi wiring). The geometry is pure and unit-tested; only `app.ts` touches a renderer.
