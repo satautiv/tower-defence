@@ -4,7 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**There is no source code yet.** The repo currently contains only planning artefacts:
+**M0 is in progress.** The build toolchain is up (#3) but no gameplay code exists yet — no
+simulation, no entities, no content. `src/core/constants.ts` is the only real module.
+
+Planning artefacts:
 
 | Path | What it is |
 |---|---|
@@ -17,23 +20,26 @@ Before implementing anything, read the relevant section of `docs/TECH_DESIGN.md`
 
 ## Commands
 
-**None of these exist yet.** They are the scripts specified in `docs/TECH_DESIGN.md` §16 and issue #3, and should be created with that exact naming:
+Requires Node 22+. `npm install` first.
 
 ```
 npm run dev              # Vite dev server
-npm run build            # production build (fails on bundle-size regression)
-npm run typecheck        # tsc --noEmit, strict
+npm run build            # typecheck, then production build
+npm run typecheck        # two passes: whole project, then core/+sim/ without the DOM lib
 npm run lint             # ESLint, incl. the layer-boundary rules below
-npm run test:unit        # Vitest + coverage gate
-npm run test:determinism # seed replay hash equality
-npm run content:lint     # content cross-reference validation
-npm run balance          # headless balance simulator
-npm run android:dev / android:build   # Capacitor (M6)
+npm test                 # Vitest (test:watch to iterate)
+npm run format           # Prettier — code only; *.md is ignored on purpose
 ```
 
-Single test: `npx vitest run path/to/file.test.ts`, or `npx vitest -t "test name"`.
+Single test: `npx vitest run tests/smoke.test.ts`, or `npx vitest -t "test name"`.
 
-Balance sim takes arguments: `npm run balance -- --stage 1-8 --difficulty veteran --runs 2000 --strategy greedy`
+**Placeholders**, named now so the naming is settled, implemented later: `content:lint` (#6),
+`balance` (#35), `test:determinism` (#10, currently `--passWithNoTests`). `android:dev` /
+`android:build` arrive with #54. The balance sim will take arguments:
+`npm run balance -- --stage 1-8 --difficulty veteran --runs 2000 --strategy greedy`
+
+React, Zustand and Howler are **not installed yet** — they arrive with #8 and #44. Don't add a
+dependency before the issue that needs it.
 
 ## The architecture invariant everything depends on
 
@@ -46,7 +52,14 @@ Concretely, inside `src/sim/**`:
 - No `window`, `document`, `Date.now()`
 - **No `Math.random()`** — use the seeded RNG stream on the `World`
 
-All of this is enforced by ESLint `no-restricted-imports` rules, which are part of issue #3. Verify the rule actually fails a deliberate bad import; a guardrail that doesn't bite is worse than none.
+Enforced three ways ([ADR-0002](docs/adr/0002-enforcing-layer-boundaries.md)): ESLint
+`no-restricted-imports` per directory, `no-restricted-globals`/`no-restricted-properties`, and
+`tsconfig.sim.json` — a second typecheck pass with the DOM lib removed entirely, so `core/` and
+`sim/` cannot reach the browser even by a route nobody blocklisted.
+
+`tests/guardrails.test.ts` lints synthetic files and asserts each rule still fires. If you add a
+layer, extend those tests too — a guardrail nobody re-checks is worse than none, because it is
+trusted.
 
 Dependency direction: `core ← sim ← app`, with `view`, `ui` and `audio` depending on `core` and reading `sim`. `view`/`ui` may **read** sim state and **dispatch commands**; they may never mutate it.
 

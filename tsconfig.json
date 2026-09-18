@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+
+    /* Strictness. noUncheckedIndexedAccess matters more than usual here: the
+       simulation indexes typed arrays constantly and an undefined slot must
+       never be silently treated as a number. */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Keep in sync with resolve.alias in vite.config.ts */
+    "paths": {
+      "@core/*": ["./src/core/*"],
+      "@sim/*": ["./src/sim/*"],
+      "@content/*": ["./src/content/*"],
+      "@view/*": ["./src/view/*"],
+      "@ui/*": ["./src/ui/*"],
+      "@audio/*": ["./src/audio/*"],
+      "@platform/*": ["./src/platform/*"],
+      "@app/*": ["./src/app/*"]
+    }
+  },
+  "include": ["src", "tests", "tools", "vite.config.ts", "eslint.config.js"]
+}

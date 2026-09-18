@@ -1,0 +1,13 @@
+{
+  /* Second typecheck pass over the pure layers ONLY, with the DOM lib removed.
+     The ESLint rules in eslint.config.js ban `window`/`document` by name; this
+     makes the whole DOM surface non-existent at the type level, so sim/ and
+     core/ cannot reach the browser even by a route nobody thought to blocklist.
+     See docs/adr/0001-stack-selection.md. */
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src/core", "src/sim"]
+}

@@ -1,0 +1,12 @@
+dist/
+coverage/
+node_modules/
+android/
+public/assets/atlas/
+package-lock.json
+
+# Long-form markdown is hand-authored and hand-formatted. Prettier collapses the
+# numbered contents blocks into their section labels (a real rendering bug) and
+# pads tables past 180 columns, which makes them miserable to edit. Prose
+# formatting is not worth a 600-line diff every time a sentence changes.
+*.md

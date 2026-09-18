@@ -2,9 +2,10 @@
 
 A tower defence game where victory comes from **how your towers combine**, not how many you can afford.
 
-> **Status: planning complete, implementation not started.**
-> This repository currently contains the design and technical specifications, plus a 58-issue
-> roadmap. There is no game code yet. See [Roadmap](#roadmap) for where things begin.
+> **Status: M0 in progress — build toolchain up, no gameplay yet.**
+> The design and technical specifications are complete, and the project scaffolding now builds,
+> lints, tests and serves a canvas. What does not exist yet is the game: no simulation, no towers,
+> no enemies. See [Roadmap](#roadmap).
 
 ---
 
@@ -102,12 +103,35 @@ Two sequencing decisions worth knowing:
 
 ## Development
 
-There is nothing to run yet. Implementation starts with
-[#3 — repo scaffolding](https://github.com/satautiv/tower-defence/issues/3), which has no
-dependencies and establishes the build toolchain and the lint rules that enforce the architecture
-above.
+Requires **Node 22+**.
 
-The commands that issue will create are listed in [CLAUDE.md](CLAUDE.md#commands).
+```bash
+npm install
+npm run dev          # http://localhost:5173
+```
+
+| Command | Does |
+|---|---|
+| `npm run dev` | Vite dev server with HMR |
+| `npm run build` | Typecheck, then production build |
+| `npm run typecheck` | Both passes — whole project, then `core/` and `sim/` without the DOM lib |
+| `npm run lint` | ESLint, including the layer-boundary rules |
+| `npm test` | Vitest (`npm run test:watch` to iterate) |
+| `npm run format` | Prettier (code only; markdown is hand-formatted) |
+
+Run one file with `npx vitest run tests/smoke.test.ts`, or one case with `npx vitest -t "name"`.
+
+`npm run content:lint` and `npm run balance` exist so their names are settled, but are placeholders
+until [#6](https://github.com/satautiv/tower-defence/issues/6) and
+[#35](https://github.com/satautiv/tower-defence/issues/35).
+
+### A note on the lint rules
+
+`npm run lint` rejects a renderer import, a browser global, or `Math.random()` inside `src/sim/`.
+That is deliberate, not a nuisance: it keeps the simulation runnable headless under Node, which is
+what makes the balance simulator possible. Reasoning in
+[ADR-0002](docs/adr/0002-enforcing-layer-boundaries.md); `tests/guardrails.test.ts` proves the rules
+still fire on every CI run.
 
 ## License
 
