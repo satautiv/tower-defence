@@ -1,6 +1,3 @@
-import { Sprite } from 'pixi.js';
+import { VIEW_MARKER } from '@view/probe_target';
 
-export function typeError(): number {
-  const n: number = 'not a number';
-  return n + Sprite.length;
-}
+export const reachesIntoView = VIEW_MARKER;
