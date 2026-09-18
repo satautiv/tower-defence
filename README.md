@@ -4,10 +4,10 @@
 
 A tower defence game where victory comes from **how your towers combine**, not how many you can afford.
 
-> **Status: M0 in progress — build toolchain up, no gameplay yet.**
-> The design and technical specifications are complete, and the project scaffolding now builds,
-> lints, tests and serves a canvas. What does not exist yet is the game: no simulation, no towers,
-> no enemies. See [Roadmap](#roadmap).
+> **Status: M0 in progress — foundations up, no gameplay yet.**
+> The specifications are complete, and the toolchain, CI, engine primitives, content pipeline and
+> render stack are in place. What does not exist yet is the game: no simulation, no towers, no
+> enemies. See [Roadmap](#roadmap).
 
 ---
 
@@ -121,6 +121,7 @@ npm run dev          # http://localhost:5173
 | `npm test` | Vitest (`npm run test:watch` to iterate) |
 | `npm run format` | Prettier (code only; markdown is hand-formatted) |
 | `npm run content:lint` | Validates all game content and its cross-references |
+| `npm run atlas:build` | Packs `assets/sprites` into a texture atlas |
 | `npm run bundle:check` | Fails if the gzipped JS payload exceeds 500 kB |
 | `npm run changelog` | Regenerates `CHANGELOG.md` from commit history |
 

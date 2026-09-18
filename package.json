@@ -29,11 +29,15 @@
     "test:coverage": "NODE_OPTIONS=--expose-gc vitest run --coverage",
     "content:gen": "tsx tools/content-gen/index.ts",
     "pretypecheck": "npm run content:gen",
-    "predev": "npm run content:gen",
-    "pretest": "npm run content:gen",
+    "predev": "npm run generate",
+    "pretest": "npm run generate",
     "precontent:lint": "npm run content:gen",
-    "prepare": "npm run content:gen",
-    "pretest:coverage": "npm run content:gen"
+    "prepare": "npm run generate",
+    "pretest:coverage": "npm run generate",
+    "art:placeholder": "tsx tools/placeholder-art/index.ts",
+    "atlas:build": "tsx tools/atlas-build/index.ts",
+    "generate": "npm run content:gen && npm run atlas:build",
+    "prebuild": "npm run generate"
   },
   "dependencies": {
     "pixi.js": "^8.21.0",
@@ -46,6 +50,7 @@
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^5.0.1",
     "eslint": "^10.10.0",
+    "free-tex-packer-core": "^0.3.9",
     "prettier": "^3.9.8",
     "tsx": "^4.23.13",
     "typescript": "~6.0.3",

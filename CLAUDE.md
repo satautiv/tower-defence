@@ -4,9 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**M0 is in progress.** Toolchain (#3), CI (#4) and the `core/` primitives (#5) are done. No
-gameplay code exists yet — no simulation, no entities, no content.
+**M0 is in progress.** Toolchain (#3), CI (#4), `core/` primitives (#5), the content pipeline (#6)
+and the render stack (#7) are done. No gameplay code exists yet — no simulation, no entities.
 
+`src/view/` holds the render stack: `viewport` (letterbox fit), `camera` (pan/zoom, clamped),
+`layers` (the ten-layer stack), `terrain` (bake-once texture cache), `input`, `assets`, `app`
+(Pixi wiring). The geometry is pure and unit-tested; only `app.ts` touches a renderer.
 `src/content/` holds the schemas, seed data and validation; `src/core/` holds the engine-agnostic
 primitives everything else builds on: `rng` (seeded,
 serialisable), `loop` (fixed timestep; speed multiplies tick count, never delta), `pool`
@@ -35,8 +38,10 @@ npm run typecheck        # two passes: whole project, then core/+sim/ without th
 npm run lint             # ESLint, incl. the layer-boundary rules below
 npm test                 # Vitest (test:watch to iterate; test:coverage for the 85% gate)
 npm run format           # Prettier — code only; *.md is ignored on purpose
-npm run content:gen      # regenerate id unions + typed refs from src/content/data
+npm run generate         # content:gen + atlas:build (runs before dev/test/build)
 npm run content:lint     # schema + cross-file validation of all content
+npm run atlas:build      # pack assets/sprites into public/assets/atlas
+npm run art:placeholder  # regenerate the placeholder sprites (until #42)
 npm run bundle:check     # gzipped JS payload vs the 500 kB budget (needs a build first)
 npm run changelog        # regenerate CHANGELOG.md from git history
 ```
@@ -51,7 +56,8 @@ commitlint gates PR commits. Types that reach the changelog: `feat`, `fix`, `per
 
 Single test: `npx vitest run tests/smoke.test.ts`, or `npx vitest -t "test name"`.
 
-`src/content/generated/` is built, not committed — `content:gen` runs automatically before
+`assets/sprites/` is committed source art (placeholders until #42); `public/assets/atlas/` and
+`src/content/generated/` are built, not committed — `content:gen` runs automatically before
 `dev`, `typecheck` and `test`, so it is normally invisible. After editing anything in
 `src/content/data` by hand, run it if your editor starts complaining about ids.
 
