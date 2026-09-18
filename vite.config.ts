@@ -23,6 +23,9 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    /* Generous enough for ESLint config loading on a cold CI runner, tight
+       enough to still catch a genuine hang. */
+    testTimeout: 20_000,
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
     coverage: {
       /* sim/ and core/ are where the game actually lives, and they are pure,

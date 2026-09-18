@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch makes the in-flight run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Format
+        run: npm run format:check
+
+      - name: Typecheck
+        # Two passes: the whole project, then core/ and sim/ with the DOM lib
+        # removed, so those layers cannot reach the browser (ADR-0002).
+        run: npm run typecheck
+
+      - name: Lint
+        # Includes the layer-boundary rules. A renderer import inside src/sim/
+        # fails here, which is the point.
+        run: npm run lint
+
+      - name: Test
+        run: npx vitest run --coverage
+
+      - name: Build
+        # vite build directly, not `npm run build` — that would re-run the
+        # typecheck the previous step already did.
+        run: npx vite build
+
+      - name: Bundle budget
+        run: npm run bundle:check
+
+  commits:
+    name: commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Conventional Commits
+        # Only the commits this PR adds. Linting all history would fail on the
+        # repository's initial commit, which predates the convention.
+        run: >
+          npx commitlint
+          --from ${{ github.event.pull_request.base.sha }}
+          --to ${{ github.event.pull_request.head.sha }}
+          --verbose
+
+  balance:
+    name: balance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Placeholder. Becomes a real gate in #35: runs the headless simulator
+      # over every stage and difficulty, comments the win-rate delta on the PR,
+      # and fails if any stage moves more than ±10%. Until then this only
+      # proves the wiring.
+      - run: echo "balance — simulator not implemented yet (#35)."
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Placeholder. Becomes real in #53: Playwright across chromium, firefox
+      # and webkit, plus a performance trace that fails on a >15% mean
+      # frame-time regression.
+      - run: echo "e2e — Playwright not set up yet (#53)."

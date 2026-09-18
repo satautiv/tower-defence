@@ -1,5 +1,5 @@
 import { ESLint } from 'eslint';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * The layer boundaries in eslint.config.js are the one thing protecting the
@@ -17,6 +17,15 @@ async function rulesTriggeredBy(code: string, filePath: string): Promise<string[
   const [result] = await eslint.lintText(code, { filePath });
   return (result?.messages ?? []).map((m) => m.ruleId ?? 'unknown');
 }
+
+/**
+ * The first lintText() pays for loading and resolving the flat config, which
+ * takes seconds under coverage instrumentation on a slow runner. Pay it once
+ * here rather than charging it to whichever test happens to run first.
+ */
+beforeAll(async () => {
+  await eslint.lintText('export const warm = 1;\n', { filePath: 'src/sim/warmup.ts' });
+}, 120_000);
 
 describe('sim/ purity is enforced', () => {
   it('rejects importing a renderer', async () => {
