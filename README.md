@@ -108,3 +108,10 @@ dependencies and establishes the build toolchain and the lint rules that enforce
 above.
 
 The commands that issue will create are listed in [CLAUDE.md](CLAUDE.md#commands).
+
+## License
+
+Source code is licensed under the [MIT License](LICENSE).
+
+Game assets — art, music, sound effects — are **not** covered by it. Those will carry their own
+terms, noted alongside them as they are added. Third-party assets keep their original licences.
