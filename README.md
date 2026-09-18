@@ -1,5 +1,7 @@
 # Aetherfall
 
+[![CI](https://github.com/satautiv/tower-defence/actions/workflows/ci.yml/badge.svg)](https://github.com/satautiv/tower-defence/actions/workflows/ci.yml)
+
 A tower defence game where victory comes from **how your towers combine**, not how many you can afford.
 
 > **Status: M0 in progress — build toolchain up, no gameplay yet.**
@@ -118,12 +120,17 @@ npm run dev          # http://localhost:5173
 | `npm run lint` | ESLint, including the layer-boundary rules |
 | `npm test` | Vitest (`npm run test:watch` to iterate) |
 | `npm run format` | Prettier (code only; markdown is hand-formatted) |
+| `npm run bundle:check` | Fails if the gzipped JS payload exceeds 500 kB |
+| `npm run changelog` | Regenerates `CHANGELOG.md` from commit history |
 
 Run one file with `npx vitest run tests/smoke.test.ts`, or one case with `npx vitest -t "name"`.
 
 `npm run content:lint` and `npm run balance` exist so their names are settled, but are placeholders
 until [#6](https://github.com/satautiv/tower-defence/issues/6) and
 [#35](https://github.com/satautiv/tower-defence/issues/35).
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) — `CHANGELOG.md`
+is generated from them, and CI rejects a pull request whose commits do not conform.
 
 ### A note on the lint rules
 

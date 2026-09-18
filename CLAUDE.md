@@ -29,7 +29,17 @@ npm run typecheck        # two passes: whole project, then core/+sim/ without th
 npm run lint             # ESLint, incl. the layer-boundary rules below
 npm test                 # Vitest (test:watch to iterate)
 npm run format           # Prettier — code only; *.md is ignored on purpose
+npm run bundle:check     # gzipped JS payload vs the 500 kB budget (needs a build first)
+npm run changelog        # regenerate CHANGELOG.md from git history
 ```
+
+CI runs format, typecheck, lint, tests with coverage, build and the bundle gate on every push and
+PR, in about 30 seconds. `main` is protected: PRs need `verify` and `commits` green. Admins are
+deliberately exempt (`enforce_admins: false`) so the owner can still push directly.
+
+**Commit messages must follow Conventional Commits** — `CHANGELOG.md` is generated from them and
+commitlint gates PR commits. Types that reach the changelog: `feat`, `fix`, `perf`, `refactor`,
+`docs`, `revert`. `chore`, `ci`, `build` and `test` are valid but deliberately unpublished.
 
 Single test: `npx vitest run tests/smoke.test.ts`, or `npx vitest -t "test name"`.
 
