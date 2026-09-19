@@ -13,6 +13,16 @@ import {
 } from './common.js';
 import { EffectSchema } from './common.js';
 
+/**
+ * How a tower delivers damage.
+ *
+ * Authored rather than inferred from the stats: a large radius could mean a
+ * mortar's blast or a frost aura, and guessing would silently give one tower
+ * the other's behaviour.
+ */
+export const FIRING_MODES = ['projectile', 'ballistic', 'beam', 'chain', 'aura', 'cone'] as const;
+export const FiringModeSchema = z.enum(FIRING_MODES);
+
 /** One rung of a tower's upgrade path. */
 export const TowerTierSchema = z.object({
   cost: z.number().int().positive(),
@@ -25,6 +35,14 @@ export const TowerTierSchema = z.object({
   minRangeTiles: Tiles.default(0),
   splashRadiusTiles: Tiles.default(0),
   targets: TargetClassSchema.default('both'),
+  firingMode: FiringModeSchema.default('projectile'),
+  /** Tiles per second for projectile and ballistic shots. */
+  projectileSpeedTiles: Positive.default(18),
+  /** Half-angle of a cone, in degrees. Cone mode only. */
+  coneHalfAngleDegrees: z.number().min(1).max(180).default(30),
+  /** Extra enemies a chain jumps to, and the damage kept per jump. */
+  chainTargets: z.number().int().nonnegative().default(0),
+  chainFalloff: z.number().min(0).max(1).default(0.75),
   statusApplied: StatusApplicationSchema.optional(),
   /** Flat armour ignored before the damage formula runs. */
   armourPierce: NonNegative.default(0),

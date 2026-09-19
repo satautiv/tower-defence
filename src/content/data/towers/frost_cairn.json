@@ -14,7 +14,8 @@
       "statusApplied": {
         "status": "chill",
         "stacks": 1
-      }
+      },
+      "firingMode": "aura"
     },
     {
       "cost": 144,
@@ -26,7 +27,8 @@
       "statusApplied": {
         "status": "chill",
         "stacks": 1
-      }
+      },
+      "firingMode": "aura"
     },
     {
       "cost": 234,
@@ -38,7 +40,8 @@
       "statusApplied": {
         "status": "chill",
         "stacks": 1
-      }
+      },
+      "firingMode": "aura"
     }
   ],
   "specialisations": [
@@ -57,7 +60,8 @@
           "statusApplied": {
             "status": "chill",
             "stacks": 2
-          }
+          },
+          "firingMode": "aura"
         },
         {
           "cost": 720,
@@ -69,7 +73,8 @@
           "statusApplied": {
             "status": "chill",
             "stacks": 3
-          }
+          },
+          "firingMode": "aura"
         }
       ],
       "ability": {
@@ -104,7 +109,8 @@
           "statusApplied": {
             "status": "chill",
             "stacks": 1
-          }
+          },
+          "firingMode": "aura"
         },
         {
           "cost": 720,
@@ -116,7 +122,8 @@
           "statusApplied": {
             "status": "chill",
             "stacks": 2
-          }
+          },
+          "firingMode": "aura"
         }
       ],
       "ability": {

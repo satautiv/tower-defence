@@ -14,6 +14,19 @@ export { ActiveWaves, describeWave, earlyCallBonus } from './waves.js';
 export type { WavePreview, WaveGroupPreview } from './waves.js';
 export { waveSpawnerSystem, startWave } from './systems/waves.js';
 export { drainCommandQueue, RejectReason } from './systems/commands.js';
+export { targetingSystem, pickTarget, canTarget, canTargetAny } from './systems/targeting.js';
+export { firingSystem } from './systems/firing.js';
+export { projectileSystem } from './systems/projectiles.js';
+export {
+  placeTower,
+  towerIndex,
+  tierSlot,
+  applyTowerStats,
+  statIndexOf,
+  TargetMode,
+} from './towers.js';
+export { TIER_SLOTS, FiringMode, TargetClass } from './ruleset.js';
+export type { TowerTable } from './ruleset.js';
 
 export { CommandQueue, CommandKind } from './commands.js';
 export * from './commands.js';

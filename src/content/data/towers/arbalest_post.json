@@ -9,14 +9,16 @@
       "damage": 12,
       "damageType": "kinetic",
       "fireRate": 1.2,
-      "rangeTiles": 7.0
+      "rangeTiles": 7.0,
+      "firingMode": "projectile"
     },
     {
       "cost": 128,
       "damage": 19,
       "damageType": "kinetic",
       "fireRate": 1.3,
-      "rangeTiles": 7.5
+      "rangeTiles": 7.5,
+      "firingMode": "projectile"
     },
     {
       "cost": 208,
@@ -27,7 +29,8 @@
       "statusApplied": {
         "status": "fracture",
         "stacks": 1
-      }
+      },
+      "firingMode": "projectile"
     }
   ],
   "specialisations": [
@@ -43,7 +46,8 @@
           "fireRate": 0.45,
           "rangeTiles": 14.0,
           "armourPierce": 25,
-          "targets": "ground"
+          "targets": "ground",
+          "firingMode": "beam"
         },
         {
           "cost": 640,
@@ -51,7 +55,8 @@
           "damageType": "kinetic",
           "fireRate": 0.5,
           "rangeTiles": 14.0,
-          "armourPierce": 40
+          "armourPierce": 40,
+          "firingMode": "beam"
         }
       ],
       "ability": {
@@ -85,7 +90,8 @@
           "statusApplied": {
             "status": "fracture",
             "stacks": 2
-          }
+          },
+          "firingMode": "projectile"
         },
         {
           "cost": 640,
@@ -96,7 +102,8 @@
           "statusApplied": {
             "status": "fracture",
             "stacks": 2
-          }
+          },
+          "firingMode": "projectile"
         }
       ],
       "ability": {

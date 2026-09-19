@@ -1,6 +1,9 @@
 import type { World } from '../world.js';
 import { drainCommandQueue } from './commands.js';
 import { movementSystem } from './movement.js';
+import { firingSystem } from './firing.js';
+import { projectileSystem } from './projectiles.js';
+import { targetingSystem } from './targeting.js';
 import { waveSpawnerSystem } from './waves.js';
 
 /**
@@ -67,13 +70,13 @@ export const SYSTEMS: readonly SimSystem[] = [
    * moved and before anything queries. Towers re-target only when their
    * cooldown elapses or their target dies or leaves range, not every tick.
    */
-  { name: 'targetingSystem', run: noop },
+  { name: 'targetingSystem', run: targetingSystem },
 
-  /** 8. Spawn projectiles, resolve instant beams, pulse auras. #13. */
-  { name: 'firingSystem', run: noop },
+  /** 8. Spawn projectiles, resolve instant beams, pulse auras. */
+  { name: 'firingSystem', run: firingSystem },
 
-  /** 9. Advance projectiles, collide, queue on-hit damage. #13. */
-  { name: 'projectileSystem', run: noop },
+  /** 9. Advance projectiles, collide, queue on-hit damage. */
+  { name: 'projectileSystem', run: projectileSystem },
 
   /** 10. Lingering pools, fields, lava, burning ground. #31. */
   { name: 'groundEffectSystem', run: noop },

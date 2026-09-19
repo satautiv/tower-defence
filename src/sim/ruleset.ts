@@ -4,6 +4,7 @@ import type { StageDefinition } from '@content/schema/stage';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
 import { EnemyFlag } from './flags.js';
+import { DAMAGE_INDEX } from './damage.js';
 import { BakedPath } from './path.js';
 
 /**
@@ -76,6 +77,58 @@ export interface WaveTable {
   readonly groupSpawnPoint: Uint8Array;
 }
 
+/**
+ * Seven stat blocks per tower: tiers one to three, then two tiers for each of
+ * the two specialisations. Flattened `tower * TIER_SLOTS + slot`, so resolving
+ * a tower's current stats is one index rather than a walk through nested
+ * content.
+ */
+export const TIER_SLOTS = 7;
+
+export const enum FiringMode {
+  Projectile = 0,
+  Ballistic,
+  Beam,
+  Chain,
+  Aura,
+  Cone,
+}
+
+export const enum TargetClass {
+  Ground = 0,
+  Air,
+  Both,
+}
+
+export interface TowerTable {
+  readonly ids: readonly string[];
+  readonly indexOf: ReadonlyMap<string, number>;
+  readonly cost: Int32Array;
+  readonly damage: Float32Array;
+  readonly damageType: Uint8Array;
+  /** Ticks between shots. */
+  readonly fireIntervalTicks: Float32Array;
+  readonly range: Float32Array;
+  readonly minRange: Float32Array;
+  readonly splashRadius: Float32Array;
+  readonly targets: Uint8Array;
+  readonly firingMode: Uint8Array;
+  /** Pixels per tick. */
+  readonly projectileSpeed: Float32Array;
+  /**
+   * Cosine of the cone's half-angle, precomputed so the containment test is a
+   * dot product with no trigonometry in the firing loop.
+   */
+  readonly coneCos: Float32Array;
+  readonly chainTargets: Uint8Array;
+  readonly chainFalloff: Float32Array;
+  readonly armourPierce: Float32Array;
+  readonly bonusGoldPerKill: Float32Array;
+  /** 255 when the tier applies no status. */
+  readonly statusId: Uint8Array;
+  readonly statusStacks: Uint8Array;
+}
+
 export interface SpawnPoint {
   readonly x: number;
   readonly y: number;
@@ -83,6 +136,7 @@ export interface SpawnPoint {
 }
 
 export interface Ruleset {
+  readonly towers: TowerTable;
   readonly enemies: EnemyTable;
   readonly statuses: StatusTable;
   readonly waves: WaveTable;
@@ -181,6 +235,85 @@ function buildStatusTable(registry: ContentRegistry): StatusTable {
   return table;
 }
 
+const MODE_INDEX: Readonly<Record<string, number>> = {
+  projectile: FiringMode.Projectile,
+  ballistic: FiringMode.Ballistic,
+  beam: FiringMode.Beam,
+  chain: FiringMode.Chain,
+  aura: FiringMode.Aura,
+  cone: FiringMode.Cone,
+};
+
+const TARGET_INDEX: Readonly<Record<string, number>> = {
+  ground: TargetClass.Ground,
+  air: TargetClass.Air,
+  both: TargetClass.Both,
+};
+
+function buildTowerTable(registry: ContentRegistry): TowerTable {
+  const ids = [...registry.towers.keys()].sort();
+  const slots = ids.length * TIER_SLOTS;
+
+  const table: TowerTable = {
+    ids,
+    indexOf: new Map(ids.map((id, index) => [id, index])),
+    cost: new Int32Array(slots),
+    damage: new Float32Array(slots),
+    damageType: new Uint8Array(slots),
+    fireIntervalTicks: new Float32Array(slots),
+    range: new Float32Array(slots),
+    minRange: new Float32Array(slots),
+    splashRadius: new Float32Array(slots),
+    targets: new Uint8Array(slots),
+    firingMode: new Uint8Array(slots),
+    projectileSpeed: new Float32Array(slots),
+    coneCos: new Float32Array(slots),
+    chainTargets: new Uint8Array(slots),
+    chainFalloff: new Float32Array(slots),
+    armourPierce: new Float32Array(slots),
+    bonusGoldPerKill: new Float32Array(slots),
+    statusId: new Uint8Array(slots).fill(255),
+    statusStacks: new Uint8Array(slots),
+  };
+
+  ids.forEach((id, towerIdx) => {
+    const tower = registry.towers.get(id);
+    if (tower === undefined) return;
+
+    const blocks = [
+      ...tower.tiers,
+      ...tower.specialisations[0].tiers,
+      ...tower.specialisations[1].tiers,
+    ];
+
+    blocks.forEach((tier, slot) => {
+      const i = towerIdx * TIER_SLOTS + slot;
+      table.cost[i] = tier.cost;
+      table.damage[i] = tier.damage;
+      table.damageType[i] = DAMAGE_INDEX[tier.damageType];
+      /* Content states shots per second; the simulation counts down ticks. */
+      table.fireIntervalTicks[i] = TICK_HZ / tier.fireRate;
+      table.range[i] = tier.rangeTiles * TILE_SIZE;
+      table.minRange[i] = tier.minRangeTiles * TILE_SIZE;
+      table.splashRadius[i] = tier.splashRadiusTiles * TILE_SIZE;
+      table.targets[i] = TARGET_INDEX[tier.targets] ?? TargetClass.Both;
+      table.firingMode[i] = MODE_INDEX[tier.firingMode] ?? FiringMode.Projectile;
+      table.projectileSpeed[i] = (tier.projectileSpeedTiles * TILE_SIZE) / TICK_HZ;
+      table.coneCos[i] = Math.cos((tier.coneHalfAngleDegrees * Math.PI) / 180);
+      table.chainTargets[i] = tier.chainTargets;
+      table.chainFalloff[i] = tier.chainFalloff;
+      table.armourPierce[i] = tier.armourPierce;
+      table.bonusGoldPerKill[i] = tier.bonusGoldPerKill;
+      if (tier.statusApplied !== undefined) {
+        table.statusId[i] = STATUS_INDEX[tier.statusApplied.status];
+        table.statusStacks[i] = tier.statusApplied.stacks;
+      }
+    });
+  });
+
+  return table;
+}
+
 function buildWaveTable(stage: StageDefinition, enemies: EnemyTable): WaveTable {
   const count = stage.waves.length;
   const slots = count * MAX_GROUPS_PER_WAVE;
@@ -238,6 +371,7 @@ export function buildRuleset(registry: ContentRegistry, stage: StageDefinition):
   const enemies = buildEnemyTable(registry);
 
   return {
+    towers: buildTowerTable(registry),
     enemies,
     statuses: buildStatusTable(registry),
     waves: buildWaveTable(stage, enemies),
@@ -274,7 +408,30 @@ const EMPTY_WAVES: WaveTable = {
   groupSpawnPoint: new Uint8Array(0),
 };
 
+const EMPTY_TOWERS: TowerTable = {
+  ids: [],
+  indexOf: new Map(),
+  cost: new Int32Array(0),
+  damage: new Float32Array(0),
+  damageType: new Uint8Array(0),
+  fireIntervalTicks: new Float32Array(0),
+  range: new Float32Array(0),
+  minRange: new Float32Array(0),
+  splashRadius: new Float32Array(0),
+  targets: new Uint8Array(0),
+  firingMode: new Uint8Array(0),
+  projectileSpeed: new Float32Array(0),
+  coneCos: new Float32Array(0),
+  chainTargets: new Uint8Array(0),
+  chainFalloff: new Float32Array(0),
+  armourPierce: new Float32Array(0),
+  bonusGoldPerKill: new Float32Array(0),
+  statusId: new Uint8Array(0),
+  statusStacks: new Uint8Array(0),
+};
+
 export const EMPTY_RULESET: Ruleset = {
+  towers: EMPTY_TOWERS,
   waves: EMPTY_WAVES,
   enemies: {
     ids: [],

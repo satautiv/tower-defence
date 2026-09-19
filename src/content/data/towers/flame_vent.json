@@ -14,7 +14,9 @@
       "statusApplied": {
         "status": "scorch",
         "stacks": 1
-      }
+      },
+      "firingMode": "cone",
+      "coneHalfAngleDegrees": 30
     },
     {
       "cost": 160,
@@ -26,7 +28,9 @@
       "statusApplied": {
         "status": "scorch",
         "stacks": 1
-      }
+      },
+      "firingMode": "cone",
+      "coneHalfAngleDegrees": 30
     },
     {
       "cost": 260,
@@ -39,7 +43,9 @@
         "status": "scorch",
         "stacks": 1
       },
-      "perkKeys": ["tower.flame_vent.perk.never_misses"]
+      "perkKeys": ["tower.flame_vent.perk.never_misses"],
+      "firingMode": "cone",
+      "coneHalfAngleDegrees": 30
     }
   ],
   "specialisations": [
@@ -58,7 +64,8 @@
           "statusApplied": {
             "status": "scorch",
             "stacks": 2
-          }
+          },
+          "firingMode": "cone"
         },
         {
           "cost": 800,
@@ -70,7 +77,8 @@
           "statusApplied": {
             "status": "scorch",
             "stacks": 2
-          }
+          },
+          "firingMode": "cone"
         }
       ],
       "ability": {
@@ -111,7 +119,8 @@
           "statusApplied": {
             "status": "unravel",
             "stacks": 1
-          }
+          },
+          "firingMode": "beam"
         },
         {
           "cost": 800,
@@ -122,7 +131,8 @@
           "statusApplied": {
             "status": "unravel",
             "stacks": 2
-          }
+          },
+          "firingMode": "beam"
         }
       ],
       "ability": {
