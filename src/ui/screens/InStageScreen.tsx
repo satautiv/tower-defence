@@ -18,7 +18,7 @@ import {
   undoSecondsRemaining,
   upgradeTower,
 } from '@sim/index';
-import type { BuildOption, EnemyInfo, TowerInfo } from '@sim/index';
+import type { BuildOption, EnemyInfo, StageResult, TowerInfo } from '@sim/index';
 import { GameSession } from '@app/session';
 import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
@@ -38,6 +38,7 @@ import type { HudModel } from '../hud/model.js';
 import { BuildMenu } from '../stage/BuildMenu.js';
 import { Diagnostics } from '../stage/Diagnostics.js';
 import { EnemyPanel } from '../stage/EnemyPanel.js';
+import { StageResults } from '../stage/StageResults.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
 import { WavePreview } from '../stage/WavePreview.js';
 import { useUiStore } from '../store.js';
@@ -82,7 +83,6 @@ export function InStageScreen(): ReactElement {
   const openPanel = useUiStore((state) => state.openPanel);
   const closePanel = useUiStore((state) => state.closePanel);
   const selectedStageId = useUiStore((state) => state.selectedStageId);
-  const setResult = useUiStore((state) => state.setResult);
 
   const sessionRef = useRef<GameSession | null>(null);
   const boardRef = useRef<BoardView | null>(null);
@@ -100,6 +100,8 @@ export function InStageScreen(): ReactElement {
   const [undoLeft, setUndoLeft] = useState(0);
   const [atlas, setAtlas] = useState<AtlasIndex | null>(null);
   const [enemy, setEnemy] = useState<EnemyInfo | null>(null);
+  /* Set once the stage ends; the results sit over the board it ended on. */
+  const [result, setResult] = useState<StageResult | null>(null);
 
   const paused = openPanel === 'pause';
 
@@ -299,15 +301,14 @@ export function InStageScreen(): ReactElement {
         setEnemy(info);
       }
 
+      /* Kept in the stage rather than routed to a screen of its own: leaving
+         would tear the renderer down, and Retry would have to build it again. */
       if (session.world.finished) {
-        /* Captured before navigating: the session is torn down with this
-           screen, and the results screen has nothing to read otherwise. */
-        setResult(session.result());
-        navigate('results');
+        setResult((shown) => shown ?? session.result());
       }
     }, 100);
     return () => clearInterval(id);
-  }, [navigate, setResult]);
+  }, []);
 
   const build = useCallback(
     (typeIdx: number) => {
@@ -381,10 +382,17 @@ export function InStageScreen(): ReactElement {
     sessionRef.current?.setPaused(paused);
   }, [paused]);
 
+  /**
+   * The one restart, from the pause menu and from the results alike (§17.3:
+   * one tap, no confirmation, no loading). The world resets in place — no new
+   * renderer, no reload — so it is as fast as a frame.
+   */
   const restart = useCallback(() => {
     sessionRef.current?.restart();
+    effectsRef.current?.reset();
     closePanel();
     clearSelection();
+    setResult(null);
   }, [closePanel, clearSelection]);
 
   return (
@@ -414,13 +422,17 @@ export function InStageScreen(): ReactElement {
             onQuit={() => navigate('stageSelect')}
           />
 
-          <WavePreview
-            read={readNextWave}
-            atlas={atlas}
-            nameOf={enemyName}
-            onCall={() => dispatch(callWave)}
-            locked={paused}
-          />
+          {/* Nothing is coming once the stage is over; "final wave" would be
+              a wrong thing to say over a board lost at wave six. */}
+          {result === null && (
+            <WavePreview
+              read={readNextWave}
+              atlas={atlas}
+              nameOf={enemyName}
+              onCall={() => dispatch(callWave)}
+              locked={paused}
+            />
+          )}
 
           <Diagnostics
             read={() => metricsRef.current.stats()}
@@ -461,6 +473,14 @@ export function InStageScreen(): ReactElement {
               }}
               onClose={clearSelection}
               locked={paused}
+            />
+          )}
+
+          {result !== null && (
+            <StageResults
+              result={result}
+              onRetry={restart}
+              onLeave={() => navigate('stageSelect')}
             />
           )}
 

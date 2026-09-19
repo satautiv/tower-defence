@@ -76,7 +76,7 @@ describe('navigation', () => {
     const { navigate, selectStage } = useUiStore.getState();
     selectStage('1-1');
     navigate('inStage');
-    navigate('results');
+    navigate('stageSelect');
     expect(useUiStore.getState().selectedStageId).toBe('1-1');
   });
 });

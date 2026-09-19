@@ -3,7 +3,6 @@ import { InStageScreen } from './screens/InStageScreen.js';
 import {
   MenuScreen,
   RegionMapScreen,
-  ResultsScreen,
   SettingsScreen,
   SplashScreen,
   StageSelectScreen,
@@ -13,7 +12,7 @@ import { useUiStore } from './store.js';
 /**
  * Switches on the current screen.
  *
- * A flat switch rather than a routing library: there are seven screens, no URLs
+ * A flat switch rather than a routing library: there are six screens, no URLs
  * to own, and the only non-obvious requirement is that exactly one of them
  * mounts the renderer. Mounting by identity means React unmounts the previous
  * screen — and with it the Pixi application — without any explicit teardown
@@ -33,8 +32,6 @@ export function Router(): ReactElement {
       return <StageSelectScreen />;
     case 'inStage':
       return <InStageScreen />;
-    case 'results':
-      return <ResultsScreen />;
     case 'settings':
       return <SettingsScreen />;
   }

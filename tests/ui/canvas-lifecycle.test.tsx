@@ -209,7 +209,6 @@ describe('the router mounts the renderer on exactly one screen', () => {
     ['menu', 'screen-menu'],
     ['regionMap', 'screen-region-map'],
     ['stageSelect', 'screen-stage-select'],
-    ['results', 'screen-results'],
     ['settings', 'screen-settings'],
   ])('renders the %s screen', async (screenName, testId) => {
     useUiStore.getState().navigate(screenName as never);

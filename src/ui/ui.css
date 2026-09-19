@@ -437,6 +437,20 @@ abbr.ui-wave__threat {
   color: var(--c-text);
 }
 
+/* The results sit over the board the stage ended on, which stays visible —
+   dimmed, and no longer answering taps. */
+.ui-results {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--c-bg) 45%, transparent);
+}
+.ui-results__panel {
+  width: min(360px, calc(100% - var(--s-6)));
+}
 .ui-results__stars {
   display: flex;
   justify-content: center;

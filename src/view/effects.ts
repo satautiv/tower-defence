@@ -103,6 +103,13 @@ export class EffectsView {
     }
   }
 
+  /** Drops every effect in flight. A restart must not inherit the last run's deaths. */
+  reset(): void {
+    for (const puff of this.puffs) this.spare.push(puff);
+    this.puffs.length = 0;
+    this.graphics.clear();
+  }
+
   get activeCount(): number {
     return this.puffs.length;
   }

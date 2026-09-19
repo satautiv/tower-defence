@@ -262,6 +262,23 @@ describe('death effects come from events', () => {
     expect(effects.activeCount).toBe(0);
   });
 
+  /* A restart must not open on the last run's deaths still fading. */
+  it('drops every puff on reset, and can still show new ones after', () => {
+    const world = freshWorld();
+    const effects = new EffectsView(createLayerStack().layers);
+
+    for (let i = 0; i < 4; i++) world.events.push(2, i, 100, 200, 0);
+    effects.consume(world);
+    effects.reset();
+    expect(effects.activeCount).toBe(0);
+
+    /* The puffs went back to the spare pool rather than being lost. */
+    world.events.clear();
+    for (let i = 0; i < 256; i++) world.events.push(2, i, 0, 0, 0);
+    effects.consume(world);
+    expect(effects.activeCount).toBe(256);
+  });
+
   it('drops puffs rather than growing without limit', () => {
     const world = freshWorld();
     const effects = new EffectsView(createLayerStack().layers);
