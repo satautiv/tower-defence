@@ -1,4 +1,5 @@
 import type { World } from '../world.js';
+import { movementSystem } from './movement.js';
 
 /**
  * The tick pipeline, in order (docs/TECH_DESIGN.md §6.4).
@@ -59,8 +60,8 @@ export const SYSTEMS: readonly SimSystem[] = [
    */
   { name: 'reactionSystem', run: noop },
 
-  /** 4. Advance path distance, fly straight, apply slows. #11. */
-  { name: 'movementSystem', run: noop },
+  /** 4. Advance path distance, fly straight, apply slows. */
+  { name: 'movementSystem', run: movementSystem },
 
   /** 5. Engage, block, fight, respawn, walk to rally. #24. */
   { name: 'soldierSystem', run: noop },

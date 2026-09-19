@@ -1,7 +1,10 @@
 import { SPATIAL_CELL_SIZE, TILE_SIZE } from '@core/constants';
 import { Rng } from '@core/rng';
 import { SpatialHash } from '@core/spatial';
+import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
+import { EMPTY_RULESET, buildRuleset } from './ruleset.js';
+import type { Ruleset } from './ruleset.js';
 import { MAX_ENEMIES, MAX_QUERY_RESULTS } from './capacity.js';
 import { CommandQueue } from './commands.js';
 import { DamageQueue, DeathList } from './damage.js';
@@ -59,6 +62,11 @@ export interface WaveState {
 export class World {
   readonly config: WorldConfig;
   readonly rng: Rng;
+  /**
+   * Authored content, resolved into flat numeric tables. Immutable for the life
+   * of the stage: anything that changes during play lives on the World.
+   */
+  readonly rules: Ruleset;
 
   /** Ticks elapsed. The simulation's only notion of time. */
   tick = 0;
@@ -91,8 +99,9 @@ export class World {
   readonly resources: Resources;
   readonly wave: WaveState;
 
-  constructor(config: WorldConfig) {
+  constructor(config: WorldConfig, rules: Ruleset = EMPTY_RULESET) {
     this.config = config;
+    this.rules = rules;
     this.rng = new Rng(config.seed);
     this.reactionPower = config.reactionPower ?? 1;
 
@@ -151,13 +160,20 @@ export class World {
  * because copying them into the world would mean two sources of truth for data
  * that never changes during a run.
  */
-export function createWorldForStage(stage: StageDefinition, seed: number): World {
-  return new World({
-    seed,
-    widthTiles: stage.widthTiles,
-    heightTiles: stage.heightTiles,
-    startingGold: stage.startingGold,
-    lives: stage.lives,
-    totalWaves: stage.waves.length,
-  });
+export function createWorldForStage(
+  registry: ContentRegistry,
+  stage: StageDefinition,
+  seed: number,
+): World {
+  return new World(
+    {
+      seed,
+      widthTiles: stage.widthTiles,
+      heightTiles: stage.heightTiles,
+      startingGold: stage.startingGold,
+      lives: stage.lives,
+      totalWaves: stage.waves.length,
+    },
+    buildRuleset(registry, stage),
+  );
 }

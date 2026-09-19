@@ -4,6 +4,12 @@ export { tick, advance } from './tick.js';
 export { SYSTEMS, SYSTEM_ORDER } from './systems/index.js';
 export type { SimSystem } from './systems/index.js';
 export { hashWorld } from './hash.js';
+export { buildRuleset, EMPTY_RULESET } from './ruleset.js';
+export type { Ruleset, EnemyTable, StatusTable, SpawnPoint } from './ruleset.js';
+export { BakedPath, chooseBranch, laneOffsetFor } from './path.js';
+export type { PathSample, PathBranch } from './path.js';
+export { spawnEnemy, enemyIndex } from './spawn.js';
+export { movementSystem, speedMultiplier } from './systems/movement.js';
 
 export { CommandQueue, CommandKind } from './commands.js';
 export * from './commands.js';

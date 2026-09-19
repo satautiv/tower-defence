@@ -55,7 +55,7 @@ describe('createWorldForStage', () => {
 
   it('takes its dimensions and resources from authored content', () => {
     expect(stage).toBeDefined();
-    const world = createWorldForStage(stage!, 1);
+    const world = createWorldForStage(registry, stage!, 1);
 
     expect(world.config.widthTiles).toBe(stage!.widthTiles);
     expect(world.config.heightTiles).toBe(stage!.heightTiles);
