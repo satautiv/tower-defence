@@ -131,6 +131,10 @@
   border-radius: 0;
   font-family: var(--f-numeric);
 }
+.ui-speed__kbd {
+  align-self: center;
+  margin: 0 var(--s-2);
+}
 .ui-speed .ui-speed__option + .ui-speed__option {
   border-left: 1px solid var(--c-border-strong);
 }

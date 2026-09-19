@@ -4,6 +4,7 @@ import { GAME_SPEEDS } from '@core/constants';
 import type { GameSpeed } from '@core/constants';
 import { shallowEqual, useThrottledValue } from '../hooks/useThrottledValue.js';
 import { Button } from '../components/index.js';
+import { BINDINGS } from '../keys.js';
 import { useUiStore } from '../store.js';
 import { placeholderHudSource } from './model.js';
 import type { HudSource } from './model.js';
@@ -80,7 +81,7 @@ export function Hud({
         <div className="ui-hud__paused" role="status" data-testid="paused">
           <span className="ui-hud__paused-label">Paused</span>
           {onRestart !== undefined && (
-            <Button variant="ghost" onClick={onRestart}>
+            <Button variant="ghost" onClick={onRestart} shortcut={BINDINGS.restart}>
               Restart
             </Button>
           )}
@@ -101,7 +102,13 @@ export function Hud({
 
       <div className="ui-hud__controls">
         {onSpeed !== undefined && (
-          <div className="ui-speed ui-interactive" role="group" aria-label="Game speed">
+          <div
+            className="ui-speed ui-interactive"
+            role="group"
+            aria-label="Game speed"
+            aria-keyshortcuts={BINDINGS.speed.aria}
+            title={`${BINDINGS.speed.label} steps through the speeds`}
+          >
             {GAME_SPEEDS.map((speed) => (
               <Button
                 key={speed}
@@ -118,14 +125,27 @@ export function Hud({
                 {speed}×
               </Button>
             ))}
+            <kbd className="ui-kbd ui-speed__kbd" aria-hidden="true">
+              {BINDINGS.speed.label}
+            </kbd>
           </div>
         )}
         {paused ? (
-          <Button variant="primary" onClick={closePanel} aria-label="Resume">
+          <Button
+            variant="primary"
+            onClick={closePanel}
+            aria-label="Resume"
+            shortcut={BINDINGS.pause}
+          >
             ▶
           </Button>
         ) : (
-          <Button variant="ghost" onClick={() => openPanel('pause')} aria-label="Pause">
+          <Button
+            variant="ghost"
+            onClick={() => openPanel('pause')}
+            aria-label="Pause"
+            shortcut={BINDINGS.pause}
+          >
             II
           </Button>
         )}

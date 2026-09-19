@@ -68,6 +68,9 @@ export function BuildMenu({
               onPointerEnter={() => onHover(option.typeIdx)}
               onFocus={() => onHover(option.typeIdx)}
               className="ui-build__card"
+              shortcut={
+                index < 9 ? { label: String(index + 1), aria: String(index + 1) } : undefined
+              }
               aria-label={`Build ${option.id} for ${option.cost} gold`}
             >
               <span className={`ui-build__type ui-type--${option.stats.damageType}`} />

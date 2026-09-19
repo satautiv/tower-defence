@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import type { TierStats, TowerInfo } from '@sim/index';
 import { Button, Panel } from '../components/index.js';
+import { BINDINGS } from '../keys.js';
 
 export interface TowerPanelProps {
   tower: TowerInfo;
@@ -119,6 +120,7 @@ export function TowerPanel({
             variant="primary"
             disabled={!tower.upgrade.affordable}
             onClick={guard(onUpgrade)}
+            shortcut={BINDINGS.upgrade}
             {...lock}
           >
             Upgrade &mdash; {tower.upgrade.cost}
@@ -148,11 +150,11 @@ export function TowerPanel({
         {/* A full refund while the window is open: a misplaced tap on a
             touchscreen is a slip, not a change of mind. */}
         {tower.undoable && undoSeconds > 0 ? (
-          <Button variant="primary" onClick={guard(onUndo)} {...lock}>
+          <Button variant="primary" onClick={guard(onUndo)} shortcut={BINDINGS.undo} {...lock}>
             Undo ({undoSeconds.toFixed(1)}s)
           </Button>
         ) : (
-          <Button variant="danger" onClick={guard(onSell)} {...lock}>
+          <Button variant="danger" onClick={guard(onSell)} shortcut={BINDINGS.sell} {...lock}>
             Sell &mdash; {tower.sellValue}
           </Button>
         )}

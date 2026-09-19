@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import type { StageResult } from '@sim/index';
 import { Button, INTERACTIVE, Panel, cx } from '../components/index.js';
+import { BINDINGS } from '../keys.js';
 
 export interface StageResultsProps {
   result: StageResult;
@@ -75,7 +76,7 @@ export function StageResults({ result, onRetry, onLeave }: StageResultsProps): R
           </div>
         </div>
 
-        <Button variant="primary" onClick={onRetry} autoFocus>
+        <Button variant="primary" onClick={onRetry} autoFocus shortcut={BINDINGS.restart}>
           Retry
         </Button>
         <Button onClick={onLeave}>Stage select</Button>

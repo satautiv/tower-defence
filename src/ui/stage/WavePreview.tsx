@@ -5,6 +5,7 @@ import type { AtlasIndex } from '@view/assets';
 import { Button, Panel } from '../components/index.js';
 import { useThrottledValue } from '../hooks/useThrottledValue.js';
 import { SpriteIcon } from './SpriteIcon.js';
+import { BINDINGS } from '../keys.js';
 import { THREAT_LABEL, THREAT_SHORT } from './threats.js';
 
 export interface WavePreviewProps {
@@ -132,6 +133,7 @@ export function WavePreview({
       <Button
         variant="primary"
         className="ui-wave__call"
+        shortcut={BINDINGS.callWave}
         onClick={() => {
           if (!locked) onCall();
         }}

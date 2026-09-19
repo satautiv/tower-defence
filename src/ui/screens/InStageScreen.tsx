@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { TILE_SIZE } from '@core/constants';
+import type { GameSpeed } from '@core/constants';
 import {
   buildOptions,
   buildTower,
@@ -42,6 +43,8 @@ import { StageResults } from '../stage/StageResults.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
 import { WavePreview } from '../stage/WavePreview.js';
 import { useUiStore } from '../store.js';
+import { focusOf, keyAction, nextSpeed } from '../keys.js';
+import type { KeyAction } from '../keys.js';
 import { useSettings } from '../settings.js';
 import { enemyName, statusName } from '../text.js';
 
@@ -93,6 +96,7 @@ export function InStageScreen(): ReactElement {
   const navigate = useUiStore((state) => state.navigate);
   const openPanel = useUiStore((state) => state.openPanel);
   const closePanel = useUiStore((state) => state.closePanel);
+  const openPanelById = useUiStore((state) => state.openPanelById);
   const selectedStageId = useUiStore((state) => state.selectedStageId);
 
   const sessionRef = useRef<GameSession | null>(null);
@@ -123,6 +127,8 @@ export function InStageScreen(): ReactElement {
   previewRef.current = previewRadius;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  const finishedRef = useRef(result !== null);
+  finishedRef.current = result !== null;
   const enemyPickRef = useRef<EnemyPick | null>(null);
 
   /**
@@ -332,42 +338,6 @@ export function InStageScreen(): ReactElement {
     [dispatch, clearSelection],
   );
 
-  /** Keyboard is an accelerator on desktop; every action has a touch route too. */
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent): void => {
-      const session = sessionRef.current;
-      if (session === null) return;
-
-      if (event.key === 'Escape') return clearSelection();
-      /* Paused, keys that would act do nothing — including picking a build
-         option, which would otherwise close the menu as if it had built. */
-      if (pausedRef.current) return;
-      if (event.key === ' ') {
-        event.preventDefault();
-        return dispatch(callWave);
-      }
-      if (event.key.toLowerCase() === 'u') return dispatch(undoBuild);
-
-      const slot = selectionRef.current.towerSlot;
-      if (slot >= 0) {
-        if (event.key.toLowerCase() === 'e') return dispatch((q) => upgradeTower(q, slot));
-        if (event.key === 'Delete' || event.key === 'Backspace') {
-          return dispatch((q) => sellTower(q, slot));
-        }
-      }
-
-      const digit = Number.parseInt(event.key, 10);
-      if (Number.isInteger(digit) && digit >= 1 && selectionRef.current.plotId >= 0) {
-        const available = buildOptions(session.world);
-        const option = available[digit - 1];
-        if (option !== undefined) build(option.typeIdx);
-      }
-    };
-
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [dispatch, clearSelection, build]);
-
   const readNextWave = useCallback(() => {
     const session = sessionRef.current;
     return session === null ? null : nextWave(session.world);
@@ -411,6 +381,102 @@ export function InStageScreen(): ReactElement {
     setResult(null);
   }, [closePanel, clearSelection]);
 
+  /** The one place a speed change is asked for, by button or by key. */
+  const changeSpeed = useCallback(
+    (speed: GameSpeed) => {
+      dispatch((q) => setSpeed(q, speed));
+      useSettings.getState().setSpeed(speed);
+    },
+    [dispatch],
+  );
+
+  /**
+   * Keyboard is an accelerator on desktop; every action has a touch route too.
+   * What a key means is decided in keys.ts from the stage's state; this only
+   * carries it out, through the same routes the buttons use.
+   */
+  const perform = useCallback(
+    (action: KeyAction) => {
+      const session = sessionRef.current;
+      if (session === null) return;
+      const slot = selectionRef.current.towerSlot;
+
+      switch (action.kind) {
+        case 'callWave':
+          return dispatch(callWave);
+        case 'togglePause':
+          return pausedRef.current ? closePanel() : openPanelById('pause');
+        case 'cycleSpeed':
+          /* From the speed last asked for rather than the world's, so two
+             quick presses inside one frame still step twice. */
+          return changeSpeed(nextSpeed(useSettings.getState().speed));
+        case 'build': {
+          const option = buildOptions(session.world)[action.option];
+          if (option !== undefined) build(option.typeIdx);
+          return;
+        }
+        case 'upgrade':
+          return dispatch((q) => upgradeTower(q, slot));
+        case 'sell':
+          dispatch((q) => sellTower(q, slot));
+          return clearSelection();
+        case 'undo':
+          dispatch(undoBuild);
+          return clearSelection();
+        case 'restart':
+          return restart();
+        case 'deselect':
+          return clearSelection();
+      }
+    },
+    [dispatch, closePanel, openPanelById, changeSpeed, build, clearSelection, restart],
+  );
+
+  useEffect(() => {
+    /* How focus last moved: by Tab, or by a pointer. See focusOf. */
+    let tabbedHere = false;
+    const onPointer = (): void => {
+      tabbedHere = false;
+    };
+
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Tab') tabbedHere = true;
+      const session = sessionRef.current;
+      if (session === null) return;
+      const selected = selectionRef.current;
+
+      const action = keyAction(
+        {
+          key: event.key,
+          repeat: event.repeat,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          altKey: event.altKey,
+          ...focusOf(event.target, tabbedHere),
+        },
+        {
+          paused: pausedRef.current,
+          finished: finishedRef.current,
+          buildOptions:
+            selected.plotId >= 0 && selected.towerSlot < 0 ? buildOptions(session.world).length : 0,
+          towerSelected: selected.towerSlot >= 0,
+          somethingSelected: selected.plotId >= 0 || enemyPickRef.current !== null,
+        },
+      );
+      if (action === null) return;
+      /* Handled: Space must not also scroll, nor Backspace navigate back. */
+      event.preventDefault();
+      perform(action);
+    };
+
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onPointer, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onPointer, true);
+    };
+  }, [perform]);
+
   return (
     <div
       className={`ui-screen ui-screen--stage${paused ? ' ui-screen--paused' : ''}`}
@@ -433,10 +499,7 @@ export function InStageScreen(): ReactElement {
         <>
           <Hud
             source={hudSource}
-            onSpeed={(speed) => {
-              dispatch((q) => setSpeed(q, speed));
-              useSettings.getState().setSpeed(speed);
-            }}
+            onSpeed={changeSpeed}
             onRestart={restart}
             onQuit={() => navigate('stageSelect')}
           />
