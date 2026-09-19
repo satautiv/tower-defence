@@ -13,6 +13,8 @@
  * simulation is forbidden from doing.
  */
 
+import { detectRendererSupport } from './support.js';
+
 const SAMPLE_COUNT = 240;
 
 export interface FrameStats {
@@ -96,6 +98,8 @@ export class FrameMetrics {
 export interface DeviceInfo {
   renderer: string;
   webgl2: boolean;
+  /** True when there is no GPU behind the context and the CPU draws every pixel. */
+  software: boolean;
   devicePixelRatio: number;
   screen: string;
   /** Megabytes, where the browser reports it. Chrome and the Android WebView do. */
@@ -110,34 +114,21 @@ interface MemoryCapableperformance {
 /**
  * What the device says about itself.
  *
- * The renderer string is the important one: an Android WebView falling back to
- * software rendering will still run, just far too slowly, and it is invisible
- * from a frame counter alone.
+ * The renderer string is the important one: a WebView or a VM falling back to
+ * software rendering still reports full WebGL2 support and still runs, just far
+ * too slowly, and that is invisible from a frame counter alone.
+ *
+ * The probe is `detectRendererSupport`, the same one the renderer configures
+ * itself from, so what is displayed here cannot drift from what was decided.
  */
 export function deviceInfo(): DeviceInfo {
-  let renderer = 'unknown';
-  let webgl2 = false;
-
-  try {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl2');
-    webgl2 = gl !== null;
-    if (gl !== null) {
-      const debug = gl.getExtension('WEBGL_debug_renderer_info');
-      renderer =
-        debug === null
-          ? gl.getParameter(gl.RENDERER)
-          : gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
-    }
-  } catch {
-    renderer = 'unavailable';
-  }
-
+  const support = detectRendererSupport();
   const memory = (performance as unknown as MemoryCapableperformance).memory;
 
   return {
-    renderer: String(renderer),
-    webgl2,
+    renderer: support.renderer,
+    webgl2: support.webgl2,
+    software: support.software,
     devicePixelRatio: globalThis.devicePixelRatio ?? 1,
     screen: `${globalThis.innerWidth}x${globalThis.innerHeight}`,
     heapMb: memory === undefined ? null : Math.round(memory.usedJSHeapSize / 1024 / 1024),

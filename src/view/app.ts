@@ -4,7 +4,7 @@ import { Camera } from './camera.js';
 import { CameraController } from './input.js';
 import { createLayerStack } from './layers.js';
 import type { Layers } from './layers.js';
-import { detectRendererSupport, showUnsupportedMessage } from './support.js';
+import { SOFTWARE_MAX_FPS, detectRendererSupport, showUnsupportedMessage } from './support.js';
 import { TerrainCache, setContainerFactory } from './terrain.js';
 import { clampResolution, fitViewport, readSafeAreaInsets } from './viewport.js';
 import type { Viewport } from './viewport.js';
@@ -61,16 +61,28 @@ export async function createGameView(options: CreateViewOptions): Promise<GameVi
     return null;
   }
 
+  /*
+   * A CPU rasteriser reports full WebGL2 support and then charges for every
+   * pixel out of the frame budget of a core that also has to run the game.
+   * Multisampling and a retina backing store are both pure fill-rate costs, so
+   * they are dropped rather than paid: the alternative is not a slower game but
+   * an unresponsive machine. The same trade is the right one on the weakest
+   * devices in the matrix (#56), which is why it is not a local workaround.
+   */
   const app = new Application();
   await app.init({
     background,
     resizeTo: mount,
-    antialias: true,
+    antialias: !support.software,
     autoDensity: true,
-    resolution: clampResolution(globalThis.devicePixelRatio ?? 1),
+    resolution: support.software ? 1 : clampResolution(globalThis.devicePixelRatio ?? 1),
     preference: support.webgpu ? 'webgpu' : 'webgl',
   });
   mount.appendChild(app.canvas);
+
+  /* Uncapped, the ticker takes every core it can reach. The fixed-timestep loop
+     turns the longer frames into extra ticks, so the simulation is unchanged. */
+  if (support.software) app.ticker.maxFPS = SOFTWARE_MAX_FPS;
 
   setContainerFactory(() => new Container());
 

@@ -46,6 +46,10 @@ export function Diagnostics({ read, timeToFirstFrameMs, enemies }: DiagnosticsPr
      stutter rather than merely measurable. */
   const healthy = stats.fps >= 50;
 
+  /* Software rendering is the single most useful thing on this panel: it makes
+     every other number here bad, and nothing else reveals it. */
+  const pipeline = device.software ? 'CPU — NO GPU' : device.webgl2 ? 'WebGL2' : 'NO WEBGL2';
+
   return (
     <div className={cx(INTERACTIVE, 'ui-diagnostics')} data-testid="diagnostics">
       <div className="ui-diagnostics__row">
@@ -68,7 +72,7 @@ export function Diagnostics({ read, timeToFirstFrameMs, enemies }: DiagnosticsPr
         <span>{(timeToFirstFrameMs() / 1000).toFixed(2)}s</span>
       </div>
       <div className="ui-diagnostics__row">
-        <span>{device.webgl2 ? 'WebGL2' : 'NO WEBGL2'}</span>
+        <span className={device.software ? 'ui-diagnostics__bad' : undefined}>{pipeline}</span>
         <span>{device.heapMb === null ? '—' : `${device.heapMb} MB`}</span>
       </div>
       <div className="ui-diagnostics__renderer">{device.renderer}</div>
