@@ -58,6 +58,7 @@ export function InStageScreen(): ReactElement {
   const closePanel = useUiStore((state) => state.closePanel);
   const openPanelById = useUiStore((state) => state.openPanelById);
   const selectedStageId = useUiStore((state) => state.selectedStageId);
+  const setResult = useUiStore((state) => state.setResult);
 
   const sessionRef = useRef<GameSession | null>(null);
   const boardRef = useRef<BoardView | null>(null);
@@ -206,10 +207,15 @@ export function InStageScreen(): ReactElement {
       setTower(slot >= 0 ? towerInfo(session.world, slot) : null);
       setUndoLeft(undoSecondsRemaining(session.world));
 
-      if (session.world.finished) navigate('results');
+      if (session.world.finished) {
+        /* Captured before navigating: the session is torn down with this
+           screen, and the results screen has nothing to read otherwise. */
+        setResult(session.result());
+        navigate('results');
+      }
     }, 100);
     return () => clearInterval(id);
-  }, [navigate]);
+  }, [navigate, setResult]);
 
   const build = useCallback(
     (typeIdx: number) => {

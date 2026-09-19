@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { StageResult } from '@sim/index';
 
 /**
  * UI state, and nothing else.
@@ -29,11 +30,22 @@ export interface UiState {
   /** Simulation entity id of the selected tower. An id, never the entity. */
   selectedEntityId: number | null;
   openPanel: PanelId | null;
+  /**
+   * The outcome of the run just finished.
+   *
+   * Simulation state does not belong here, and this is not an exception: it is
+   * an immutable value describing a run that has already ended, captured once
+   * so the results screen can read it after the stage has been torn down.
+   * Nothing updates it at 60Hz, and nothing reads it to decide what happens
+   * next in the world.
+   */
+  lastResult: StageResult | null;
 
   navigate: (screen: Screen) => void;
   goBack: () => void;
   selectStage: (stageId: string | null) => void;
   selectEntity: (entityId: number | null) => void;
+  setResult: (result: StageResult | null) => void;
   openPanelById: (panel: PanelId) => void;
   closePanel: () => void;
   reset: () => void;
@@ -50,10 +62,12 @@ export const UI_STATE_KEYS = [
   'selectedStageId',
   'selectedEntityId',
   'openPanel',
+  'lastResult',
   'navigate',
   'goBack',
   'selectStage',
   'selectEntity',
+  'setResult',
   'openPanelById',
   'closePanel',
   'reset',
@@ -65,6 +79,7 @@ const INITIAL = {
   selectedStageId: null,
   selectedEntityId: null,
   openPanel: null,
+  lastResult: null,
 };
 
 export const useUiStore = create<UiState>((set) => ({
@@ -92,6 +107,8 @@ export const useUiStore = create<UiState>((set) => ({
     ),
 
   selectStage: (selectedStageId) => set({ selectedStageId }),
+
+  setResult: (lastResult) => set({ lastResult }),
 
   selectEntity: (selectedEntityId) =>
     set((state) => (state.selectedEntityId === selectedEntityId ? state : { selectedEntityId })),

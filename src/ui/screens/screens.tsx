@@ -90,12 +90,74 @@ export function StageSelectScreen(): ReactElement {
   );
 }
 
+/**
+ * How the run went.
+ *
+ * Reads the result captured when the stage ended, since the session is torn
+ * down with the stage screen. Retry is one tap and carries no penalty: a loss
+ * should cost the player nothing but the time they already spent
+ * (docs/GAME_DESIGN.md §17.3).
+ */
 export function ResultsScreen(): ReactElement {
   const navigate = useUiStore((state) => state.navigate);
+  const result = useUiStore((state) => state.lastResult);
+
+  const minutes = Math.floor((result?.durationSeconds ?? 0) / 60);
+  const seconds = Math.floor((result?.durationSeconds ?? 0) % 60);
 
   return (
     <div className="ui-screen ui-screen--centred" data-testid="screen-results">
-      <Panel title="Stage complete">
+      <Panel title={result?.won === true ? 'Stage cleared' : 'Defeat'}>
+        {result === null ? (
+          <p className="ui-muted">No run to report.</p>
+        ) : (
+          <>
+            <div className="ui-results__stars" aria-label={`${result.stars} of 3 stars`}>
+              {[1, 2, 3].map((star) => (
+                <span
+                  key={star}
+                  className={star <= result.stars ? 'ui-star ui-star--earned' : 'ui-star'}
+                >
+                  ★
+                </span>
+              ))}
+            </div>
+
+            <div className="ui-stats">
+              <div className="ui-stat">
+                <span className="ui-stat__label">Lives</span>
+                <span className="ui-stat__value">
+                  {result.livesRemaining} / {result.startingLives}
+                </span>
+              </div>
+              <div className="ui-stat">
+                <span className="ui-stat__label">Waves</span>
+                <span className="ui-stat__value">
+                  {result.wavesCleared} / {result.totalWaves}
+                </span>
+              </div>
+              <div className="ui-stat">
+                <span className="ui-stat__label">Time</span>
+                <span className="ui-stat__value">
+                  {minutes}:{String(seconds).padStart(2, '0')}
+                </span>
+              </div>
+              <div className="ui-stat">
+                <span className="ui-stat__label">Killed</span>
+                <span className="ui-stat__value">{result.enemiesKilled}</span>
+              </div>
+              <div className="ui-stat">
+                <span className="ui-stat__label">Leaked</span>
+                <span className="ui-stat__value">{result.enemiesLeaked}</span>
+              </div>
+              <div className="ui-stat">
+                <span className="ui-stat__label">Gold earned</span>
+                <span className="ui-stat__value">{result.goldEarned}</span>
+              </div>
+            </div>
+          </>
+        )}
+
         <Button variant="primary" onClick={() => navigate('inStage')}>
           Retry
         </Button>

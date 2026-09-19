@@ -197,3 +197,17 @@
 .ui-type--true {
   color: var(--c-text);
 }
+
+.ui-results__stars {
+  display: flex;
+  justify-content: center;
+  gap: var(--s-2);
+  font-size: var(--t-2xl);
+  line-height: 1;
+}
+.ui-star {
+  color: var(--c-border-strong);
+}
+.ui-star--earned {
+  color: var(--c-gold);
+}
