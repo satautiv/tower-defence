@@ -4,10 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**M0 is complete; M1 is in progress.** The simulation skeleton (#10) is in: `src/sim/` has the
-`World`, five structure-of-arrays entity pools, the command queue, the event buffer, the single
-damage queue and the fifteen-step tick pipeline. **Most systems are stubs** — the ordering and
-shape are fixed, and #11 onward fill in behaviour. There is still no playable game.
+**M0 is complete; M1 is in progress.** #10–#13 are done. `src/sim/` has the `World`, five
+structure-of-arrays entity pools, the command queue, event buffer, damage queue and the
+fifteen-step tick pipeline — and now paths and movement (#11), the wave spawner (#12), and
+targeting, firing and projectiles (#13). Enemies walk, waves arrive, towers shoot.
+
+**Nothing takes damage yet.** Firing queues onto `world.damage`; resolving it is #14. Still to
+come in M1: damage (#14), economy (#15), lives and win/lose (#16), build UX (#17), the view layer
+(#18), and the #19 gate.
+
+`src/sim/ruleset.ts` resolves authored content into flat numeric tables once per stage — towers,
+enemies, statuses, waves, paths. **No system reads a JSON object or a string id during a tick**,
+and it is the single place tiles become world pixels.
 
 `src/platform/` isolates every platform difference behind an interface: `SaveAdapter` (localStorage
 for the profile, IndexedDB for snapshots, memory as a fallback), `Lifecycle`, `Haptics`,
