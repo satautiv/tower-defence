@@ -40,6 +40,7 @@
     "prebuild": "npm run generate"
   },
   "dependencies": {
+    "idb-keyval": "^6.3.0",
     "pixi.js": "^8.21.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
@@ -59,6 +60,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^5.0.1",
     "eslint": "^10.10.0",
+    "fake-indexeddb": "^6.2.5",
     "free-tex-packer-core": "^0.3.9",
     "happy-dom": "^20.14.5",
     "prettier": "^3.9.8",

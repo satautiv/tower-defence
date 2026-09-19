@@ -37,7 +37,12 @@ export default defineConfig({
     coverage: {
       /* sim/ and core/ are where the game actually lives, and they are pure,
          so they are cheap to test. view/ and ui/ are covered by E2E instead. */
-      include: ['src/core/**/*.ts', 'src/sim/**/*.ts', 'src/content/**/*.ts'],
+      include: [
+        'src/core/**/*.ts',
+        'src/sim/**/*.ts',
+        'src/content/**/*.ts',
+        'src/platform/**/*.ts',
+      ],
       exclude: [
         /* Generated from the data by tools/content-gen; testing it would test
            the generator, which tests/content/shipped.test.ts already does. */
