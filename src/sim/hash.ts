@@ -77,6 +77,7 @@ function foldWorld(hash: number, world: World): number {
   h = foldNumber(h, world.wave.cleared);
 
   for (const value of Object.values(world.stats)) h = foldNumber(h, value);
+  for (const value of Object.values(world.lastBuild)) h = foldNumber(h, value);
 
   /* The wave runner is mutable state like any pool; leaving it out would let
      two runs differ in spawn progress and still hash the same. */

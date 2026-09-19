@@ -36,7 +36,24 @@ export {
 export { raiseTowerTier, setTowerSpecialisation, removeTower, plotOccupant } from './towers.js';
 export { lifecycleSystem, starsFor, stageResult } from './systems/lifecycle.js';
 export type { StageResult } from './systems/lifecycle.js';
-export type { StageStats } from './world.js';
+export type { StageStats, UndoableBuild } from './world.js';
+export {
+  towerInfo,
+  buildOptions,
+  plotInfo,
+  rangeOf,
+  prospectiveRange,
+  canUndo,
+  undoSecondsRemaining,
+} from './inspect.js';
+export type {
+  TowerInfo,
+  BuildOption,
+  PlotInfo,
+  TierStats,
+  UpgradeOption,
+  SpecialisationOption,
+} from './inspect.js';
 export type { BuildPlot } from './ruleset.js';
 export {
   placeTower,
@@ -51,6 +68,7 @@ export type { TowerTable } from './ruleset.js';
 
 export { CommandQueue, CommandKind } from './commands.js';
 export * from './commands.js';
+export { undoBuild } from './commands.js';
 export { SimEvents, SimEventKind } from './events.js';
 export * from './events.js';
 

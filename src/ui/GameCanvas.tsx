@@ -20,16 +20,20 @@ import type { GameView } from '@view/app';
 export interface GameCanvasProps {
   onReady?: (view: GameView) => void;
   onUnsupported?: () => void;
+  /** A press that never became a drag, in design-space coordinates. */
+  onTap?: (logicalX: number, logicalY: number) => void;
 }
 
-export function GameCanvas({ onReady, onUnsupported }: GameCanvasProps): ReactElement {
+export function GameCanvas({ onReady, onUnsupported, onTap }: GameCanvasProps): ReactElement {
   const hostRef = useRef<HTMLDivElement>(null);
   const readyRef = useRef(onReady);
   const unsupportedRef = useRef(onUnsupported);
+  const tapRef = useRef(onTap);
 
   useEffect(() => {
     readyRef.current = onReady;
     unsupportedRef.current = onUnsupported;
+    tapRef.current = onTap;
   });
 
   useEffect(() => {
@@ -40,7 +44,12 @@ export function GameCanvas({ onReady, onUnsupported }: GameCanvasProps): ReactEl
     let cancelled = false;
 
     void (async () => {
-      const created = await createGameView({ mount: host });
+      /* Routed through a ref so a changing handler never re-runs this effect
+         and tears the renderer down. */
+      const created = await createGameView({
+        mount: host,
+        onTap: (x, y) => tapRef.current?.(x, y),
+      });
       if (cancelled) {
         /* Unmounted while initialising. Destroy immediately rather than leaving
            an orphaned renderer with no component to tear it down. */

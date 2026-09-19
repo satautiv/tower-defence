@@ -1,4 +1,4 @@
-import { GAME_SPEEDS } from '@core/constants';
+import { GAME_SPEEDS, TICK_HZ } from '@core/constants';
 import { CommandKind } from '../commands.js';
 import {
   addGold,
@@ -45,6 +45,9 @@ export const enum RejectReason {
   NoSuchTower,
   Unaffordable,
   AlreadyMaxTier,
+  NothingToUndo,
+  UndoWindowExpired,
+  TowerChangedSinceBuild,
   MustSpecialise,
   NotReadyToSpecialise,
   PoolFull,
@@ -77,6 +80,10 @@ export function drainCommandQueue(world: World): void {
 
       case CommandKind.SellTower:
         applySell(world, command.a);
+        break;
+
+      case CommandKind.UndoBuild:
+        applyUndo(world);
         break;
 
       case CommandKind.SetTargetMode:
@@ -132,10 +139,65 @@ function applyBuild(world: World, plotId: number, typeIdx: number): void {
     return reject(world, CommandKind.BuildTower, RejectReason.Unaffordable);
   }
 
-  if (placeTower(world, typeIdx, plot.x, plot.y, plotId) < 0) {
+  const slot = placeTower(world, typeIdx, plot.x, plot.y, plotId);
+  if (slot < 0) {
     addGold(world, cost, false);
     reject(world, CommandKind.BuildTower, RejectReason.PoolFull);
+    return;
   }
+
+  world.lastBuild.towerSlot = slot;
+  world.lastBuild.towerId = world.towers.ids[slot] as number;
+  world.lastBuild.cost = cost;
+  world.lastBuild.atTick = world.tick;
+}
+
+/**
+ * Takes back the last build at full price.
+ *
+ * Full, not the sell refund: misplacing a tower on a touchscreen is a slip, and
+ * charging thirty percent for a slip is the kind of small cruelty that makes a
+ * game feel hostile. Selling remains the lossy option for changing your mind.
+ *
+ * Refused once the tower has been upgraded, since the thing being undone is no
+ * longer the thing that was built.
+ */
+function applyUndo(world: World): void {
+  const last = world.lastBuild;
+  if (last.towerSlot < 0) {
+    return reject(world, CommandKind.UndoBuild, RejectReason.NothingToUndo);
+  }
+
+  const window = world.rules.tuning.undoWindowSeconds * TICK_HZ;
+  if (world.tick - last.atTick > window) {
+    return reject(world, CommandKind.UndoBuild, RejectReason.UndoWindowExpired);
+  }
+
+  /* The id guards against the slot having been recycled by a later build. */
+  if (
+    !world.towers.isAlive(last.towerSlot) ||
+    (world.towers.ids[last.towerSlot] as number) !== last.towerId
+  ) {
+    clearUndo(world);
+    return reject(world, CommandKind.UndoBuild, RejectReason.NothingToUndo);
+  }
+
+  if ((world.towers.tier[last.towerSlot] as number) !== 0) {
+    return reject(world, CommandKind.UndoBuild, RejectReason.TowerChangedSinceBuild);
+  }
+
+  addGold(world, last.cost, false);
+  world.stats.goldSpent -= last.cost;
+  world.stats.towersBuilt -= 1;
+  removeTower(world, last.towerSlot);
+  clearUndo(world);
+}
+
+function clearUndo(world: World): void {
+  world.lastBuild.towerSlot = -1;
+  world.lastBuild.towerId = -1;
+  world.lastBuild.cost = 0;
+  world.lastBuild.atTick = -1;
 }
 
 function applyUpgrade(world: World, towerSlot: number): void {
@@ -160,6 +222,9 @@ function applyUpgrade(world: World, towerSlot: number): void {
     return reject(world, CommandKind.UpgradeTower, RejectReason.Unaffordable);
   }
   raiseTowerTier(world, towerSlot, cost);
+  /* The undo record is deliberately left in place. An upgraded tower is
+     refused with TowerChangedSinceBuild, which tells the player why, rather
+     than the blank NothingToUndo they would get if it were cleared here. */
 }
 
 function applySpecialise(world: World, towerSlot: number, branch: number): void {
@@ -181,6 +246,7 @@ function applySell(world: World, towerSlot: number): void {
   if (!world.towers.isAlive(towerSlot)) {
     return reject(world, CommandKind.SellTower, RejectReason.NoSuchTower);
   }
+  if (towerSlot === world.lastBuild.towerSlot) clearUndo(world);
   /* Not income: this is the player's own money coming back. */
   addGold(world, sellValue(world, towerSlot), false);
   removeTower(world, towerSlot);

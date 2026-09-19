@@ -22,15 +22,37 @@ const mocks = vi.hoisted(() => {
   const createGameView = vi.fn<(options?: unknown) => Promise<unknown>>(async () =>
     Promise.resolve({
       destroy,
-      camera: { centreOnWorld: vi.fn(), setWorldSize: vi.fn() },
-      layers: { plots: { addChild: vi.fn() } },
+      camera: {
+        centreOnWorld: vi.fn(),
+        setWorldSize: vi.fn(),
+        screenToWorld: vi.fn(),
+        worldToScreen: vi.fn(),
+      },
+      layers: { plots: { addChild: vi.fn() }, entities: { addChild: vi.fn() } },
+      app: { ticker: { add: vi.fn(), remove: vi.fn() } },
+      viewport: { scale: 1, offsetX: 0, offsetY: 0, width: 1920, height: 1080, resolution: 1 },
     }),
   );
-  return { destroy, createGameView, drawStagePreview: vi.fn(async () => Promise.resolve()) };
+  return { destroy, createGameView };
 });
 
 vi.mock('@view/app', () => ({ createGameView: mocks.createGameView }));
-vi.mock('@ui/screens/stagePreview', () => ({ drawStagePreview: mocks.drawStagePreview }));
+
+/* This file is about renderer lifetime, not gameplay. The board and the
+   session are stubbed so a mounted stage screen does not drag the whole
+   simulation into a test that only counts create and destroy calls. */
+vi.mock('@view/board', () => ({
+  BoardView: class {
+    syncPlots = vi.fn();
+    render = vi.fn();
+    destroy = vi.fn();
+  },
+}));
+vi.mock('@app/session', () => ({
+  GameSession: {
+    forStage: vi.fn(() => null),
+  },
+}));
 
 const { GameCanvas } = await import('@ui/GameCanvas');
 const { Router } = await import('@ui/Router');
@@ -47,7 +69,6 @@ const settle = async (): Promise<void> => {
 beforeEach(() => {
   mocks.createGameView.mockClear();
   mocks.destroy.mockClear();
-  mocks.drawStagePreview.mockClear();
   useUiStore.getState().reset();
 });
 afterEach(cleanup);

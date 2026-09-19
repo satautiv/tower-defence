@@ -29,6 +29,7 @@ export const enum CommandKind {
   CallWave,
   SetSpeed,
   UseInteractable,
+  UndoBuild,
 }
 
 export class CommandQueue {
@@ -104,3 +105,5 @@ export const setSpeed = (q: CommandQueue, speed: number): boolean =>
 
 export const useInteractable = (q: CommandQueue, interactableIdx: number): boolean =>
   q.push(CommandKind.UseInteractable, interactableIdx);
+
+export const undoBuild = (q: CommandQueue): boolean => q.push(CommandKind.UndoBuild);

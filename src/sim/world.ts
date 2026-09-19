@@ -78,6 +78,19 @@ export interface StageStats {
   finishedAtTick: number;
 }
 
+/**
+ * The build that can still be taken back.
+ *
+ * Holds the entity id as well as the slot: slots are recycled, so a tower sold
+ * and replaced would otherwise let an undo refund the wrong one.
+ */
+export interface UndoableBuild {
+  towerSlot: number;
+  towerId: number;
+  cost: number;
+  atTick: number;
+}
+
 export interface WaveState {
   /** Index of the highest wave started. -1 before the first. */
   index: number;
@@ -141,6 +154,7 @@ export class World {
   readonly resources: Resources;
   readonly wave: WaveState;
   readonly stats: StageStats;
+  readonly lastBuild: UndoableBuild;
   /** Per-wave spawn progress for everything currently in flight. */
   readonly waveRunner = new ActiveWaves();
 
@@ -158,6 +172,7 @@ export class World {
     this.resources = { gold: config.startingGold, aether: 0, lives: config.lives };
     this.wave = { index: -1, active: 0, autoStartIn: this.firstWaveDelay(), cleared: 0 };
     this.stats = freshStats();
+    this.lastBuild = { towerSlot: -1, towerId: -1, cost: 0, atTick: -1 };
   }
 
   /** Back to the state a fresh stage starts in, reusing every allocation. */
@@ -195,6 +210,7 @@ export class World {
     this.wave.cleared = 0;
 
     Object.assign(this.stats, freshStats());
+    Object.assign(this.lastBuild, { towerSlot: -1, towerId: -1, cost: 0, atTick: -1 });
   }
 
   /** The build phase before wave one, taken from authored content. */

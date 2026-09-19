@@ -40,6 +40,15 @@ export const TuningSchema = z.object({
    * a fraction keeps it correct on every difficulty rather than assuming 20.
    */
   twoStarLivesFraction: z.number().min(0).max(1),
+
+  /**
+   * How long a build can be taken back for a full refund.
+   *
+   * Misplacing a tower on a touchscreen is common and infuriating, and a 70%
+   * sell refund punishes a slip the same as a change of mind
+   * (docs/GAME_DESIGN.md §17.3).
+   */
+  undoWindowSeconds: NonNegative,
 });
 
 export type TuningDefinition = z.infer<typeof TuningSchema>;
