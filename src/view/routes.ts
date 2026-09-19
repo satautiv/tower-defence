@@ -21,7 +21,8 @@ import type { Layers } from './layers.js';
 
 export interface GroundRoute {
   path: BakedPath;
-  spawnIndex: number;
+  /** Every spawn that can put a walker on this route. */
+  spawnIndices: number[];
 }
 
 export interface FlyerLane {
@@ -52,13 +53,19 @@ export interface RouteMap {
 export function describeRoutes(world: World): RouteMap {
   const rules = world.rules;
   const ground: GroundRoute[] = [];
-  const seen = new Set<number>();
+  const byPath = new Map<number, GroundRoute>();
 
   const add = (pathId: number, spawnIndex: number): void => {
+    const listed = byPath.get(pathId);
+    if (listed !== undefined) {
+      if (!listed.spawnIndices.includes(spawnIndex)) listed.spawnIndices.push(spawnIndex);
+      return;
+    }
     const path = rules.pathById.get(pathId);
-    if (path === undefined || seen.has(pathId)) return;
-    seen.add(pathId);
-    ground.push({ path, spawnIndex });
+    if (path === undefined) return;
+    const route = { path, spawnIndices: [spawnIndex] };
+    byPath.set(pathId, route);
+    ground.push(route);
   };
 
   rules.spawnPoints.forEach((spawn, spawnIndex) => {
@@ -98,6 +105,38 @@ export function describeRoutes(world: World): RouteMap {
     spawns: rules.spawnPoints.map((spawn) => ({ x: spawn.x, y: spawn.y })),
     core: { x: rules.core.x, y: rules.core.y },
   };
+}
+
+export interface IncomingWave {
+  /** Index of the wave that starts next. */
+  index: number;
+  /** Per spawn point: whether the wave sends walkers from it. */
+  walkersFrom: boolean[];
+  /** Per spawn point: whether the wave sends flyers from it. */
+  flyersFrom: boolean[];
+}
+
+/**
+ * Where the next wave will come from, or null once no wave is left to come.
+ *
+ * Read from the same wave table the spawner uses, so the board cannot point at
+ * one spawn while the wave arrives from another. Allocates; call it when the
+ * wave index changes, not every frame.
+ */
+export function incomingWave(world: World): IncomingWave | null {
+  if (world.finished) return null;
+  const rules = world.rules;
+  const preview = describeWave(rules, world.wave.index + 1);
+  if (preview === null) return null;
+
+  const walkersFrom = rules.spawnPoints.map(() => false);
+  const flyersFrom = rules.spawnPoints.map(() => false);
+  for (const group of preview.groups) {
+    const flags = rules.enemies.flags[group.enemyTypeIdx] as number;
+    const from = (flags & EnemyFlag.Flying) !== 0 ? flyersFrom : walkersFrom;
+    if (group.spawnPoint < from.length) from[group.spawnPoint] = true;
+  }
+  return { index: preview.index, walkersFrom, flyersFrom };
 }
 
 /** Candidate points per lane when looking for somewhere to put its mark. */
@@ -196,6 +235,19 @@ const ARROW_ALPHA_QUIET = 0.55;
 const ARROW_ALPHA_BUSY = 0.15;
 /** How quickly the arrows fade between the two, per second. */
 const ALPHA_EASE_RATE = 4;
+/**
+ * Arrows on a route the next wave will not use. Dimmed rather than hidden: the
+ * route is still there and a later wave will take it, but the player's eye
+ * should go to where the next threat is coming from.
+ */
+const IDLE_ROUTE_ALPHA = 0.3;
+
+/** One ring's journey outwards from the spawn portal, in milliseconds. */
+const PULSE_PERIOD_MS = 1400;
+/** How far a ring grows, as a multiple of the portal's radius. */
+const PULSE_GROWTH = 1.2;
+/** The pulse stays readable in a fight, so an early call is not a blind one. */
+const PULSE_BUSY_STRENGTH = 0.5;
 
 const AIR_COLOUR = 0x98a0b8;
 
@@ -211,9 +263,16 @@ const CORE_COLOUR = 0xe6e9f2;
  * rasteriser, where the whole frame budget is already spoken for.
  */
 interface ArrowStream {
+  flying: boolean;
+  /** Spawns whose enemies take this route. */
+  spawnIndices: number[];
+  /** Whether the next wave sends anything along it. */
+  incoming: boolean;
   length: number;
   /** Writes the position and heading `distance` along the route into `out`. */
   sampleAt(distance: number, out: PathSample): void;
+  /** Holds the arrows, so the whole route dims with one alpha. */
+  container: Container;
   arrows: Graphics[];
 }
 
@@ -221,9 +280,16 @@ export class RouteView {
   private readonly airLanes = new Graphics();
   private readonly airArrows = new Container();
   private readonly road = new Graphics();
+  private readonly pulses = new Container();
   private readonly groundArrows = new Container();
   private readonly chevron = chevronContext();
+  private readonly ring = ringContext();
   private streams: ArrowStream[] = [];
+  /** Per spawn point, its pulse; visible when the next wave comes from it. */
+  private spawnPulses: Container[] = [];
+  /** The wave index `incoming` was computed for; -2 when the stage is over. */
+  private incomingKey = Number.NaN;
+  private incoming: IncomingWave | null = null;
   /** Positions of the arrows shown so far this frame, interleaved x,y. */
   private shownAt = new Float32Array(0);
   private routes: RouteMap = { ground: [], flyers: [], spawns: [], core: { x: 0, y: 0 } };
@@ -239,6 +305,7 @@ export class RouteView {
     layers.decals.addChild(this.airLanes);
     layers.decals.addChild(this.airArrows);
     layers.decals.addChild(this.road);
+    layers.decals.addChild(this.pulses);
     layers.decals.addChild(this.groundArrows);
   }
 
@@ -250,9 +317,16 @@ export class RouteView {
     return this.arrowAlpha;
   }
 
+  /** The wave the board is currently pointing at, or null. */
+  get incomingWave(): IncomingWave | null {
+    return this.incoming;
+  }
+
   /** Arrows placed on the board, visible or not. */
   get arrowCount(): number {
-    return this.airArrows.children.length + this.groundArrows.children.length;
+    let count = 0;
+    for (const stream of this.streams) count += stream.arrows.length;
+    return count;
   }
 
   /** Routes are fixed for the stage, so the road is drawn and the arrows made once. */
@@ -261,9 +335,11 @@ export class RouteView {
     this.drawRoad();
     this.drawAirLanes();
     this.buildStreams();
+    this.buildPulses();
+    this.incomingKey = Number.NaN;
   }
 
-  /** `nowMs` drives the arrows only; it never reaches the simulation. */
+  /** `nowMs` drives the arrows and pulses only; it never reaches the simulation. */
   render(world: World, nowMs: number): void {
     const elapsed = this.lastMs < 0 ? 0 : Math.max(0, nowMs - this.lastMs) / 1000;
     this.lastMs = nowMs;
@@ -273,33 +349,102 @@ export class RouteView {
     this.groundArrows.alpha = this.arrowAlpha;
     this.airArrows.alpha = this.arrowAlpha;
 
+    this.followIncoming(world);
+    this.renderPulses(nowMs);
+
     const phase = ((nowMs / 1000) * FLOW_SPEED) % ARROW_SPACING;
-    const s = this.sample;
-    let shownCount = 0;
+    /* Walkers and flyers are separate: an air arrow hidden under the road must
+       not claim a stretch and leave the road's own arrows unshown. */
+    const walkers = this.placeKind(false, phase, 0);
+    this.placeKind(true, phase, walkers);
+  }
+
+  /** Re-derives what the next wave uses, only when the wave has moved on. */
+  private followIncoming(world: World): void {
+    const key = world.finished ? -2 : world.wave.index;
+    if (key === this.incomingKey) return;
+    this.incomingKey = key;
+
+    const incoming = incomingWave(world);
+    this.incoming = incoming;
 
     for (const stream of this.streams) {
-      /* Only earlier routes are checked, so a route never hides its own arrows. */
-      const earlier = shownCount;
-      const end = stream.length - ARROW_MARGIN;
+      const from =
+        incoming === null ? null : stream.flying ? incoming.flyersFrom : incoming.walkersFrom;
+      /* With nothing left to come there is nothing to single out. */
+      stream.incoming = from === null || stream.spawnIndices.some((spawn) => from[spawn] === true);
+      stream.container.alpha = stream.incoming ? 1 : IDLE_ROUTE_ALPHA;
+    }
 
-      for (let i = 0; i < stream.arrows.length; i++) {
-        const arrow = stream.arrows[i] as Graphics;
-        const distance = ARROW_MARGIN + phase + i * ARROW_SPACING;
-        let shown = distance < end;
-        if (shown) {
-          stream.sampleAt(distance, s);
-          shown = !this.nearShown(s.x, s.y, earlier);
-        }
-        if (arrow.visible !== shown) arrow.visible = shown;
-        if (!shown) continue;
+    this.spawnPulses.forEach((pulse, spawn) => {
+      pulse.visible =
+        incoming !== null &&
+        (incoming.walkersFrom[spawn] === true || incoming.flyersFrom[spawn] === true);
+    });
+  }
 
-        arrow.position.set(s.x, s.y);
-        arrow.rotation = Math.atan2(s.dirY, s.dirX);
-        this.shownAt[shownCount * 2] = s.x;
-        this.shownAt[shownCount * 2 + 1] = s.y;
-        shownCount++;
+  /** Two rings a half-period apart, growing out of each spawn the next wave uses. */
+  private renderPulses(nowMs: number): void {
+    const calm = (this.arrowAlpha - ARROW_ALPHA_BUSY) / (ARROW_ALPHA_QUIET - ARROW_ALPHA_BUSY);
+    const strength = PULSE_BUSY_STRENGTH + (1 - PULSE_BUSY_STRENGTH) * calm;
+
+    for (const pulse of this.spawnPulses) {
+      if (!pulse.visible) continue;
+      for (let i = 0; i < pulse.children.length; i++) {
+        const ring = pulse.children[i] as Graphics;
+        const t = ((nowMs + (i * PULSE_PERIOD_MS) / 2) % PULSE_PERIOD_MS) / PULSE_PERIOD_MS;
+        ring.scale.set(1 + t * PULSE_GROWTH);
+        ring.alpha = (1 - t) * strength;
       }
     }
+  }
+
+  /**
+   * Places the arrows of one kind of route. Routes the next wave uses go first,
+   * so where they share a stretch with a quiet route, the stretch is drawn in
+   * the brighter of the two.
+   */
+  private placeKind(flying: boolean, phase: number, from: number): number {
+    let shown = from;
+    for (const stream of this.streams) {
+      if (stream.flying === flying && stream.incoming) {
+        shown = this.placeArrows(stream, phase, from, shown);
+      }
+    }
+    for (const stream of this.streams) {
+      if (stream.flying === flying && !stream.incoming) {
+        shown = this.placeArrows(stream, phase, from, shown);
+      }
+    }
+    return shown;
+  }
+
+  /** Returns the count of arrows shown so far, this stream's included. */
+  private placeArrows(stream: ArrowStream, phase: number, from: number, count: number): number {
+    const s = this.sample;
+    /* Only earlier routes are checked, so a route never hides its own arrows. */
+    const earlier = count;
+    const end = stream.length - ARROW_MARGIN;
+    let shownCount = count;
+
+    for (let i = 0; i < stream.arrows.length; i++) {
+      const arrow = stream.arrows[i] as Graphics;
+      const distance = ARROW_MARGIN + phase + i * ARROW_SPACING;
+      let shown = distance < end;
+      if (shown) {
+        stream.sampleAt(distance, s);
+        shown = !this.nearShown(s.x, s.y, from, earlier);
+      }
+      if (arrow.visible !== shown) arrow.visible = shown;
+      if (!shown) continue;
+
+      arrow.position.set(s.x, s.y);
+      arrow.rotation = Math.atan2(s.dirY, s.dirX);
+      this.shownAt[shownCount * 2] = s.x;
+      this.shownAt[shownCount * 2 + 1] = s.y;
+      shownCount++;
+    }
+    return shownCount;
   }
 
   /**
@@ -310,9 +455,9 @@ export class RouteView {
    * double up. The first route to claim a stretch draws it; the others yield,
    * so every stretch of road carries one stream of arrows.
    */
-  private nearShown(x: number, y: number, count: number): boolean {
+  private nearShown(x: number, y: number, from: number, to: number): boolean {
     const limit = ARROW_CLEARANCE * ARROW_CLEARANCE;
-    for (let k = 0; k < count; k++) {
+    for (let k = from; k < to; k++) {
       const dx = (this.shownAt[k * 2] as number) - x;
       const dy = (this.shownAt[k * 2 + 1] as number) - y;
       if (dx * dx + dy * dy < limit) return true;
@@ -396,16 +541,22 @@ export class RouteView {
 
   private buildStreams(): void {
     for (const parent of [this.airArrows, this.groundArrows]) {
-      for (const child of parent.removeChildren()) child.destroy();
+      for (const child of parent.removeChildren()) child.destroy({ children: true });
     }
 
     const streams: ArrowStream[] = [];
     for (const route of this.routes.ground) {
       const path = route.path;
+      const container = new Container({ label: `route:ground:${path.id}` });
+      this.groundArrows.addChild(container);
       streams.push({
+        flying: false,
+        spawnIndices: route.spawnIndices,
+        incoming: true,
         length: path.totalLength,
         sampleAt: (distance, out) => void path.sample(distance, out),
-        arrows: this.makeArrows(path.totalLength, this.groundArrows),
+        container,
+        arrows: this.makeArrows(path.totalLength, container),
       });
     }
     for (const lane of this.routes.flyers) {
@@ -415,7 +566,12 @@ export class RouteView {
       if (length === 0) continue;
       const ux = dx / length;
       const uy = dy / length;
+      const container = new Container({ label: `route:air:${lane.spawnIndex}` });
+      this.airArrows.addChild(container);
       streams.push({
+        flying: true,
+        spawnIndices: [lane.spawnIndex],
+        incoming: true,
         length,
         sampleAt: (distance, out) => {
           out.x = lane.fromX + ux * distance;
@@ -423,7 +579,8 @@ export class RouteView {
           out.dirX = ux;
           out.dirY = uy;
         },
-        arrows: this.makeArrows(length, this.airArrows),
+        container,
+        arrows: this.makeArrows(length, container),
       });
     }
     this.streams = streams;
@@ -431,6 +588,19 @@ export class RouteView {
     let total = 0;
     for (const stream of streams) total += stream.arrows.length;
     this.shownAt = new Float32Array(total * 2);
+  }
+
+  private buildPulses(): void {
+    for (const child of this.pulses.removeChildren()) child.destroy({ children: true });
+
+    this.spawnPulses = this.routes.spawns.map((spawn, index) => {
+      const pulse = new Container({ label: `spawn-pulse:${index}` });
+      pulse.position.set(spawn.x, spawn.y);
+      pulse.visible = false;
+      pulse.addChild(new Graphics(this.ring), new Graphics(this.ring));
+      this.pulses.addChild(pulse);
+      return pulse;
+    });
   }
 
   /** Enough arrows to fill the route at any phase; the spare one hides. */
@@ -449,8 +619,10 @@ export class RouteView {
     this.airLanes.destroy();
     this.airArrows.destroy({ children: true });
     this.road.destroy();
+    this.pulses.destroy({ children: true });
     this.groundArrows.destroy({ children: true });
     this.chevron.destroy();
+    this.ring.destroy();
   }
 }
 
@@ -470,6 +642,13 @@ function chevronContext(): GraphicsContext {
     .lineTo(s, 0)
     .lineTo(-s, -s)
     .stroke({ width: 3, color: ARROW_COLOUR, join: 'round', cap: 'round' });
+}
+
+/** A portal-sized ring centred on the origin, scaled outwards as it pulses. */
+function ringContext(): GraphicsContext {
+  return new GraphicsContext()
+    .circle(0, 0, TILE_SIZE * 0.5)
+    .stroke({ width: 3, color: SPAWN_COLOUR });
 }
 
 /** The two-arc doodle bird: understood as "flying" without a word of text. */
