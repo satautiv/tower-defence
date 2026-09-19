@@ -42,6 +42,7 @@ import { StageResults } from '../stage/StageResults.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
 import { WavePreview } from '../stage/WavePreview.js';
 import { useUiStore } from '../store.js';
+import { useSettings } from '../settings.js';
 import { enemyName, statusName } from '../text.js';
 
 /**
@@ -77,6 +78,16 @@ interface Selection {
 }
 
 const NOTHING: Selection = { plotId: -1, towerSlot: -1, screen: { x: 0, y: 0 } };
+
+/**
+ * Starts a stage at the speed the player last chose (docs/GAME_DESIGN.md
+ * §15.3: speed persists across stages). A command like any other, applied at
+ * the first tick, so a replay records it and nothing reaches into the world.
+ */
+function applyPreferredSpeed(session: GameSession): void {
+  const speed = useSettings.getState().speed;
+  if (speed !== session.world.speed) session.dispatch((queue) => setSpeed(queue, speed));
+}
 
 export function InStageScreen(): ReactElement {
   const navigate = useUiStore((state) => state.navigate);
@@ -197,6 +208,7 @@ export function InStageScreen(): ReactElement {
       const session = GameSession.forStage(selectedStageId ?? '1-1');
       if (session === null) return;
       sessionRef.current = session;
+      applyPreferredSpeed(session);
 
       const routes = new RouteView(view.layers);
       routes.sync(session.world);
@@ -388,7 +400,11 @@ export function InStageScreen(): ReactElement {
    * renderer, no reload — so it is as fast as a frame.
    */
   const restart = useCallback(() => {
-    sessionRef.current?.restart();
+    const session = sessionRef.current;
+    session?.restart();
+    /* The world resets to 1x; the player's chosen speed is theirs, not the
+       run's, so it comes straight back. */
+    if (session !== null) applyPreferredSpeed(session);
     effectsRef.current?.reset();
     closePanel();
     clearSelection();
@@ -417,7 +433,10 @@ export function InStageScreen(): ReactElement {
         <>
           <Hud
             source={hudSource}
-            onSpeed={(speed) => dispatch((q) => setSpeed(q, speed))}
+            onSpeed={(speed) => {
+              dispatch((q) => setSpeed(q, speed));
+              useSettings.getState().setSpeed(speed);
+            }}
             onRestart={restart}
             onQuit={() => navigate('stageSelect')}
           />
