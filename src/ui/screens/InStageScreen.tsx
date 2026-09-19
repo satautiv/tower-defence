@@ -18,7 +18,12 @@ import type { BuildOption, TowerInfo } from '@sim/index';
 import { GameSession } from '@app/session';
 import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
+import { EffectsView } from '@view/effects';
+import { EntityView } from '@view/entities';
+import { initAssets, loadBundle } from '@view/assets';
 import { logicalToCanvas } from '@view/viewport';
+import { Assets } from 'pixi.js';
+import type { Spritesheet } from 'pixi.js';
 import { GameCanvas } from '../GameCanvas.js';
 import { Button, Modal, Panel } from '../components/index.js';
 import { Hud } from '../hud/Hud.js';
@@ -56,6 +61,8 @@ export function InStageScreen(): ReactElement {
 
   const sessionRef = useRef<GameSession | null>(null);
   const boardRef = useRef<BoardView | null>(null);
+  const entityRef = useRef<EntityView | null>(null);
+  const effectsRef = useRef<EffectsView | null>(null);
   const viewRef = useRef<GameView | null>(null);
 
   const [unsupported, setUnsupported] = useState(false);
@@ -137,6 +144,22 @@ export function InStageScreen(): ReactElement {
       boardRef.current = board;
       board.syncPlots(session.world);
 
+      const entities = new EntityView(view.layers);
+      entityRef.current = entities;
+      const effects = new EffectsView(view.layers);
+      effectsRef.current = effects;
+
+      /* Atlas first, so entities never appear as blank textures that pop in
+         a frame later. */
+      void (async () => {
+        await initAssets({
+          bundles: [{ name: 'core', assets: [{ alias: 'game', src: 'assets/atlas/game.json' }] }],
+        });
+        await loadBundle('core');
+        const sheet = Assets.get<Spritesheet>('game');
+        if (sheet !== undefined) entities.bindAtlas(sheet, session.world);
+      })();
+
       view.camera.setWorldSize(
         session.world.config.widthTiles * TILE_SIZE,
         session.world.config.heightTiles * TILE_SIZE,
@@ -150,13 +173,22 @@ export function InStageScreen(): ReactElement {
           session.start(now);
           started = true;
         }
-        session.update(now);
+
+        const alpha = session.update(now, () => entities.captureForInterpolation());
+
+        entities.sync(session.world);
+        effects.consume(session.world);
+        /* Both consumers have read the buffer, so it can be dropped. */
+        session.clearEvents();
+
         board.render(
           session.world,
           selectionRef.current.plotId,
           previewRef.current,
           selectionRef.current.towerSlot,
         );
+        entities.render(session.world, alpha);
+        effects.render();
       });
     },
     [selectedStageId],

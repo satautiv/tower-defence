@@ -65,6 +65,8 @@ const SPRITES: SpriteSpec[] = [
     shape: 'disc',
     scale: 0.46,
   },
+  { name: 'enemy_chitin_mother', size: 64, colour: PALETTE.toxic, shape: 'disc', scale: 0.44 },
+  { name: 'enemy_broodling', size: 48, colour: PALETTE.toxic, shape: 'disc', scale: 0.3 },
 
   { name: 'tower_arbalest_post', size: 64, colour: PALETTE.kinetic, shape: 'block' },
   { name: 'tower_flame_vent', size: 64, colour: PALETTE.pyro, shape: 'block' },

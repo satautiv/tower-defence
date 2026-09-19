@@ -38,7 +38,7 @@ export class GameSession {
    * Advances to the current time and returns the interpolation alpha for
    * rendering between ticks.
    */
-  update(nowMs: number): number {
+  update(nowMs: number, beforeTick?: () => void): number {
     if (this.paused || this.world.finished) {
       /* Keep the clock anchored, or resuming would hand the loop a delta the
          size of however long the player spent in the pause menu. */
@@ -47,7 +47,13 @@ export class GameSession {
     }
 
     const step = this.loop.advance(nowMs, this.world.speed);
-    for (let i = 0; i < step.steps; i++) tick(this.world);
+    for (let i = 0; i < step.steps; i++) {
+      /* Snapshots positions as "previous" so the renderer has something to
+         interpolate from. Without it a 60Hz simulation visibly steps on a
+         144Hz display. */
+      beforeTick?.();
+      tick(this.world);
+    }
     return step.alpha;
   }
 
@@ -59,6 +65,17 @@ export class GameSession {
    */
   dispatch(issue: (queue: CommandQueue) => void): void {
     issue(this.world.commands);
+  }
+
+  /**
+   * Drops this frame's events.
+   *
+   * The session clears them, not the consumers: the view and the audio layer
+   * both read the same buffer, and whichever cleared first would blind the
+   * other. Called once everyone has drained it.
+   */
+  clearEvents(): void {
+    this.world.events.clear();
   }
 
   setPaused(paused: boolean): void {
