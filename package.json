@@ -37,9 +37,13 @@
     "art:placeholder": "tsx tools/placeholder-art/index.ts",
     "atlas:build": "tsx tools/atlas-build/index.ts",
     "generate": "npm run content:gen && npm run atlas:build",
-    "prebuild": "npm run generate"
+    "prebuild": "npm run generate",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android",
+    "android:run": "npm run android:sync && cap run android"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.2",
     "idb-keyval": "^6.3.0",
     "pixi.js": "^8.21.0",
     "react": "^19.3.0",
@@ -48,6 +52,8 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
     "@eslint/js": "^10.0.1",

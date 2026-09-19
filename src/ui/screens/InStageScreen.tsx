@@ -21,6 +21,7 @@ import { BoardView } from '@view/board';
 import { EffectsView } from '@view/effects';
 import { EntityView } from '@view/entities';
 import { initAssets, loadBundle } from '@view/assets';
+import { FrameMetrics } from '@view/metrics';
 import { logicalToCanvas } from '@view/viewport';
 import { Assets } from 'pixi.js';
 import type { Spritesheet } from 'pixi.js';
@@ -29,6 +30,7 @@ import { Button, Modal, Panel } from '../components/index.js';
 import { Hud } from '../hud/Hud.js';
 import type { HudModel } from '../hud/model.js';
 import { BuildMenu } from '../stage/BuildMenu.js';
+import { Diagnostics } from '../stage/Diagnostics.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
 import { useUiStore } from '../store.js';
 
@@ -65,6 +67,8 @@ export function InStageScreen(): ReactElement {
   const entityRef = useRef<EntityView | null>(null);
   const effectsRef = useRef<EffectsView | null>(null);
   const viewRef = useRef<GameView | null>(null);
+  /* Measured on the device rather than inferred; see Diagnostics. */
+  const metricsRef = useRef(new FrameMetrics());
 
   const [unsupported, setUnsupported] = useState(false);
   const [selection, setSelection] = useState<Selection>(NOTHING);
@@ -175,6 +179,7 @@ export function InStageScreen(): ReactElement {
           started = true;
         }
 
+        metricsRef.current.record(now);
         const alpha = session.update(now, () => entities.captureForInterpolation());
 
         entities.sync(session.world);
@@ -299,6 +304,12 @@ export function InStageScreen(): ReactElement {
       ) : (
         <>
           <Hud source={hudSource} />
+
+          <Diagnostics
+            read={() => metricsRef.current.stats()}
+            timeToFirstFrameMs={() => metricsRef.current.timeToFirstFrameMs}
+            enemies={() => sessionRef.current?.world.enemies.count ?? 0}
+          />
 
           {selection.plotId >= 0 && selection.towerSlot < 0 && options.length > 0 && (
             <BuildMenu

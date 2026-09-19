@@ -211,3 +211,48 @@
 .ui-star--earned {
   color: var(--c-gold);
 }
+
+/* ---- device diagnostics (#20, #56; replaced by the dev overlay in #41) ---- */
+
+.ui-diagnostics__toggle {
+  position: absolute;
+  left: calc(var(--s-3) + var(--safe-area-left));
+  bottom: calc(var(--s-3) + var(--safe-area-bottom));
+  z-index: var(--z-panel);
+  min-height: 36px;
+  padding: var(--s-1) var(--s-3);
+  font-size: var(--t-xs);
+  opacity: 0.5;
+}
+.ui-diagnostics {
+  position: absolute;
+  left: calc(var(--s-3) + var(--safe-area-left));
+  bottom: calc(var(--s-3) + var(--safe-area-bottom));
+  z-index: var(--z-panel);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 200px;
+  padding: var(--s-3);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--c-bg) 88%, transparent);
+  font: 500 var(--t-xs) / 1.4 var(--f-numeric);
+  font-variant-numeric: tabular-nums;
+}
+.ui-diagnostics__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.ui-diagnostics__good {
+  color: var(--c-success);
+}
+.ui-diagnostics__bad {
+  color: var(--c-danger);
+}
+.ui-diagnostics__renderer {
+  color: var(--c-text-dim);
+  word-break: break-word;
+  max-width: 220px;
+}
