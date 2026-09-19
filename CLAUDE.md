@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**M0 is complete.** Toolchain (#3), CI (#4), `core/` primitives (#5), the content pipeline (#6),
-the render stack (#7), the UI shell (#8) and the platform adapters (#9) are all done. No gameplay
-code exists yet — no simulation, no entities. **M1 starts at #10.**
+**M0 is complete; M1 is in progress.** The simulation skeleton (#10) is in: `src/sim/` has the
+`World`, five structure-of-arrays entity pools, the command queue, the event buffer, the single
+damage queue and the fifteen-step tick pipeline. **Most systems are stubs** — the ordering and
+shape are fixed, and #11 onward fill in behaviour. There is still no playable game.
 
 `src/platform/` isolates every platform difference behind an interface: `SaveAdapter` (localStorage
 for the profile, IndexedDB for snapshots, memory as a fallback), `Lifecycle`, `Haptics`,
@@ -69,9 +70,12 @@ Single test: `npx vitest run tests/smoke.test.ts`, or `npx vitest -t "test name"
 `dev`, `typecheck` and `test`, so it is normally invisible. After editing anything in
 `src/content/data` by hand, run it if your editor starts complaining about ids.
 
+`npm run test:determinism` is a real gate with its own CI step now — when it fails, something
+broke replays, bug reproduction and the balance simulator all at once.
+
 **Placeholders**, named now so the naming is settled, implemented later:
-`balance` (#35), `test:determinism` (#10, currently `--passWithNoTests`). `android:dev` /
-`android:build` arrive with #54. The balance sim will take arguments:
+`balance` (#35). `android:dev` / `android:build` arrive with #54. The balance sim will take
+arguments:
 `npm run balance -- --stage 1-8 --difficulty veteran --runs 2000 --strategy greedy`
 
 Howler is **not installed yet** — it arrives with #44. Don't add a dependency before the issue
@@ -103,7 +107,12 @@ Dependency direction: `core ← sim ← app`, with `view`, `ui` and `audio` depe
 
 These are spread across several doc sections. Getting any of them wrong causes bugs that are expensive to find later.
 
-**Determinism** — Iterate entities by stable entity ID, never by object-key or `Set` order. Commands are queued and applied at a **tick boundary**, never mid-tick. A replay is `{seed, stageId, difficulty, talents, commands}`; the determinism test (same seed ⇒ identical world hash after 10,000 ticks) runs on every PR from #10 onward.
+**Determinism** — Iterate entity slots `0..watermark` with an alive check, never a `Set` of live
+entities: slot order is stable and independent of allocation history. Commands are queued and
+applied at a **tick boundary**, never mid-tick. `hashWorld()` fingerprints the world and
+`tests/determinism/` asserts identical runs; that suite also proves the hash is *sensitive*, since
+a fingerprint that never changed would pass regardless. Extend it when you add state — and note
+`EnemyPool.meta` is not hashed, so whatever fills it must be.
 
 **Speed control is tick count, not delta scaling** — 3× speed runs 3 sim ticks per frame. It does not multiply `dt`. A stage simulated at 1× and at 3× must produce byte-identical final state. This is a correctness test, not an approximation.
 
