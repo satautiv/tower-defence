@@ -377,11 +377,27 @@ describe('the next wave', () => {
     const ring = route(layers, 'spawn-pulse:0').children[0];
     if (ring === undefined) throw new Error('fixture');
 
+    const radius = (): number => ring.getLocalBounds().width / 2;
+
     view.render(world, 0);
-    const early = { scale: ring.scale.x, alpha: ring.alpha };
+    const early = { radius: radius(), alpha: ring.alpha };
     view.render(world, 500);
-    expect(ring.scale.x).toBeGreaterThan(early.scale);
+    expect(radius()).toBeGreaterThan(early.radius);
     expect(ring.alpha).toBeLessThan(early.alpha);
+  });
+
+  /** Spawns sit on the map edge, so half of every ring is off the board. */
+  it('reaches well into the board before it fades', () => {
+    const { world, layers, view } = setup(stage);
+    const ring = route(layers, 'spawn-pulse:0').children[0];
+    if (ring === undefined) throw new Error('fixture');
+
+    let widest = 0;
+    for (let now = 0; now < 2000; now += 16) {
+      view.render(world, now);
+      widest = Math.max(widest, ring.getLocalBounds().width / 2);
+    }
+    expect(widest).toBeGreaterThanOrEqual(TILE_SIZE * 1.9);
   });
 
   it('singles nothing out when no wave is left to come', () => {

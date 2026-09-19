@@ -243,9 +243,14 @@ const ALPHA_EASE_RATE = 4;
 const IDLE_ROUTE_ALPHA = 0.3;
 
 /** One ring's journey outwards from the spawn portal, in milliseconds. */
-const PULSE_PERIOD_MS = 1400;
-/** How far a ring grows, as a multiple of the portal's radius. */
-const PULSE_GROWTH = 1.2;
+const PULSE_PERIOD_MS = 1600;
+const PORTAL_RADIUS = TILE_SIZE * 0.5;
+/**
+ * Where a ring stops growing. Spawns usually sit on the map edge with half of
+ * every ring off the board, so the ring has to reach well in to be noticed.
+ */
+const PULSE_REACH = TILE_SIZE * 2;
+const PULSE_WIDTH = 4;
 /** The pulse stays readable in a fight, so an early call is not a blind one. */
 const PULSE_BUSY_STRENGTH = 0.5;
 
@@ -283,7 +288,6 @@ export class RouteView {
   private readonly pulses = new Container();
   private readonly groundArrows = new Container();
   private readonly chevron = chevronContext();
-  private readonly ring = ringContext();
   private streams: ArrowStream[] = [];
   /** Per spawn point, its pulse; visible when the next wave comes from it. */
   private spawnPulses: Container[] = [];
@@ -383,7 +387,12 @@ export class RouteView {
     });
   }
 
-  /** Two rings a half-period apart, growing out of each spawn the next wave uses. */
+  /**
+   * Two rings a half-period apart, growing out of each spawn the next wave uses.
+   *
+   * Redrawn rather than scaled, unlike the arrows: scaling a ring this far would
+   * thicken its line with it, and two circles per spawn cost nothing to redraw.
+   */
   private renderPulses(nowMs: number): void {
     const calm = (this.arrowAlpha - ARROW_ALPHA_BUSY) / (ARROW_ALPHA_QUIET - ARROW_ALPHA_BUSY);
     const strength = PULSE_BUSY_STRENGTH + (1 - PULSE_BUSY_STRENGTH) * calm;
@@ -393,7 +402,10 @@ export class RouteView {
       for (let i = 0; i < pulse.children.length; i++) {
         const ring = pulse.children[i] as Graphics;
         const t = ((nowMs + (i * PULSE_PERIOD_MS) / 2) % PULSE_PERIOD_MS) / PULSE_PERIOD_MS;
-        ring.scale.set(1 + t * PULSE_GROWTH);
+        ring
+          .clear()
+          .circle(0, 0, PORTAL_RADIUS + (PULSE_REACH - PORTAL_RADIUS) * t)
+          .stroke({ width: PULSE_WIDTH, color: SPAWN_COLOUR });
         ring.alpha = (1 - t) * strength;
       }
     }
@@ -510,8 +522,8 @@ export class RouteView {
     }
 
     for (const spawn of this.routes.spawns) {
-      g.circle(spawn.x, spawn.y, TILE_SIZE * 0.5).fill({ color: SPAWN_COLOUR, alpha: 0.15 });
-      g.circle(spawn.x, spawn.y, TILE_SIZE * 0.5).stroke({
+      g.circle(spawn.x, spawn.y, PORTAL_RADIUS).fill({ color: SPAWN_COLOUR, alpha: 0.15 });
+      g.circle(spawn.x, spawn.y, PORTAL_RADIUS).stroke({
         width: 3,
         color: SPAWN_COLOUR,
         alpha: 0.9,
@@ -597,7 +609,7 @@ export class RouteView {
       const pulse = new Container({ label: `spawn-pulse:${index}` });
       pulse.position.set(spawn.x, spawn.y);
       pulse.visible = false;
-      pulse.addChild(new Graphics(this.ring), new Graphics(this.ring));
+      pulse.addChild(new Graphics(), new Graphics());
       this.pulses.addChild(pulse);
       return pulse;
     });
@@ -622,7 +634,6 @@ export class RouteView {
     this.pulses.destroy({ children: true });
     this.groundArrows.destroy({ children: true });
     this.chevron.destroy();
-    this.ring.destroy();
   }
 }
 
@@ -642,13 +653,6 @@ function chevronContext(): GraphicsContext {
     .lineTo(s, 0)
     .lineTo(-s, -s)
     .stroke({ width: 3, color: ARROW_COLOUR, join: 'round', cap: 'round' });
-}
-
-/** A portal-sized ring centred on the origin, scaled outwards as it pulses. */
-function ringContext(): GraphicsContext {
-  return new GraphicsContext()
-    .circle(0, 0, TILE_SIZE * 0.5)
-    .stroke({ width: 3, color: SPAWN_COLOUR });
 }
 
 /** The two-arc doodle bird: understood as "flying" without a word of text. */
