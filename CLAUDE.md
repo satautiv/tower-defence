@@ -4,7 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**M0 is complete; M1 is in progress.** #10–#13 are done. `src/sim/` has the `World`, five
+**M0 complete. M1 is code-complete; two criteria need hardware and humans.** #10–#18 are
+done and stage 1-1 plays start to finish in a browser: `npm run dev`, Campaign → 1-1.
+
+**#19 and #20 stay open on purpose.** #19 needs a playtest with three people who have not
+seen the design (protocol in `docs/PLAYTEST-M1.md`); #20 needs the slice run on a physical
+Android phone (steps in `docs/adr/0003-android-packaging.md`). Everything else on both is
+verified. The reaction gate the M1 gate was written to ask moved to **#62**, after #22,
+because the slice has no reactions.
+
+Historical note: #10–#13 covered `src/sim/` has the `World`, five
 structure-of-arrays entity pools, the command queue, event buffer, damage queue and the
 fifteen-step tick pipeline — and now paths and movement (#11), the wave spawner (#12), and
 targeting, firing and projectiles (#13). Enemies walk, waves arrive, towers shoot.
@@ -16,6 +25,15 @@ come in M1: damage (#14), economy (#15), lives and win/lose (#16), build UX (#17
 `src/sim/ruleset.ts` resolves authored content into flat numeric tables once per stage — towers,
 enemies, statuses, waves, paths. **No system reads a JSON object or a string id during a tick**,
 and it is the single place tiles become world pixels.
+
+`src/app/session.ts` owns the world and the clock; `src/ui/screens/InStageScreen.tsx` turns taps
+into commands and drives the render loop. **The UI never mutates the world** — everything goes
+through `session.dispatch`, the same route the balance simulator will take.
+
+Two findings from #19, recorded rather than fixed (balance is #50, content #36): stage 1-1 is
+won 3-star with zero leaks by a naive board on every seed, and that board is almost entirely
+Flame Vents. A 1:14 pick rate is what pillar P1 exists to prevent; the towers that would compete
+do not exist yet (#23).
 
 `src/platform/` isolates every platform difference behind an interface: `SaveAdapter` (localStorage
 for the profile, IndexedDB for snapshots, memory as a fallback), `Lifecycle`, `Haptics`,
