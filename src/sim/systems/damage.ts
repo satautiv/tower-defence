@@ -179,6 +179,7 @@ function resolveOne(world: World, index: number): void {
   }
 
   enemies.hp[slot] = (enemies.hp[slot] as number) - amount;
+  world.stats.damageDealt += amount;
   applyOnHitStatus(world, index, slot);
 
   emitDamageDealt(
@@ -237,6 +238,7 @@ function resolveDeaths(world: World): void {
     if (!enemies.isAlive(slot)) continue;
 
     const typeIdx = enemies.typeIdx[slot] as number;
+    world.stats.enemiesKilled += 1;
     awardKill(world, typeIdx);
     /* Economy towers add on top of the bounty, which is the whole reason to
        build one instead of more damage. */

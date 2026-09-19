@@ -480,6 +480,7 @@ export const EMPTY_RULESET: Ruleset = {
     earlyCallGoldPerSecond: 1.5,
     shatterMultiplier: 2.5,
     shatterThreshold: 40,
+    twoStarLivesFraction: 0.6,
   },
   towers: EMPTY_TOWERS,
   waves: EMPTY_WAVES,

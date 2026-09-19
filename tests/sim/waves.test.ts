@@ -108,7 +108,10 @@ describe('spawning follows the schedule', () => {
   it('releases the exact declared count, and no more', () => {
     const declared = stage.waves[0]!.groups.reduce((n, g) => n + g.count, 0);
     startWave(world, 0);
-    advance(world, TICK_HZ * 60);
+    /* Long enough to finish releasing, short enough that nothing has walked
+       the length of the map and been collected as a leak. */
+    const preview = describeWave(world.rules, 0)!;
+    advance(world, Math.ceil(preview.spawnDurationSeconds * TICK_HZ) + 2);
 
     /* Counted by wave tag: later waves auto-start during this window. */
     let fromWaveZero = 0;
@@ -270,7 +273,11 @@ describe('calling a wave early', () => {
     const world = freshWorld();
     startWave(world, 0);
     startWave(world, 1);
-    advance(world, TICK_HZ * 60);
+    const longest = Math.max(
+      describeWave(world.rules, 0)!.spawnDurationSeconds,
+      describeWave(world.rules, 1)!.spawnDurationSeconds,
+    );
+    advance(world, Math.ceil(longest * TICK_HZ) + 2);
 
     for (const index of [0, 1]) {
       const declared = stage.waves[index]!.groups.reduce((n, g) => n + g.count, 0);

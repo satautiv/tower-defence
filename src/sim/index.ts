@@ -34,6 +34,9 @@ export {
   bonusGoldFor,
 } from './economy.js';
 export { raiseTowerTier, setTowerSpecialisation, removeTower, plotOccupant } from './towers.js';
+export { lifecycleSystem, starsFor, stageResult } from './systems/lifecycle.js';
+export type { StageResult } from './systems/lifecycle.js';
+export type { StageStats } from './world.js';
 export type { BuildPlot } from './ruleset.js';
 export {
   placeTower,

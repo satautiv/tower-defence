@@ -50,6 +50,34 @@ export interface Resources {
   lives: number;
 }
 
+/**
+ * What the results screen reports.
+ *
+ * Counted as it happens rather than reconstructed at the end: the events that
+ * would have to be replayed are cleared every frame, and a player who lost on
+ * wave nine still wants to know how far they got.
+ */
+export interface StageStats {
+  enemiesKilled: number;
+  enemiesLeaked: number;
+  /** Income only. A sale returning your own money is not earnings. */
+  goldEarned: number;
+  goldSpent: number;
+  towersBuilt: number;
+  reactionsTriggered: number;
+  damageDealt: number;
+  /**
+   * Ticks elapsed when the stage ended, for the speedrun clock. -1 while
+   * running.
+   *
+   * Elapsed count, not the index of the final tick: `world.tick` increments
+   * after the systems run, so a system finishing during tick 50 has in fact
+   * seen 51 ticks complete. Recording the index would report every run one
+   * tick short.
+   */
+  finishedAtTick: number;
+}
+
 export interface WaveState {
   /** Index of the highest wave started. -1 before the first. */
   index: number;
@@ -58,6 +86,19 @@ export interface WaveState {
   /** Ticks until the next wave starts on its own. */
   autoStartIn: number;
   cleared: number;
+}
+
+function freshStats(): StageStats {
+  return {
+    enemiesKilled: 0,
+    enemiesLeaked: 0,
+    goldEarned: 0,
+    goldSpent: 0,
+    towersBuilt: 0,
+    reactionsTriggered: 0,
+    damageDealt: 0,
+    finishedAtTick: -1,
+  };
 }
 
 export class World {
@@ -99,6 +140,7 @@ export class World {
 
   readonly resources: Resources;
   readonly wave: WaveState;
+  readonly stats: StageStats;
   /** Per-wave spawn progress for everything currently in flight. */
   readonly waveRunner = new ActiveWaves();
 
@@ -115,6 +157,7 @@ export class World {
 
     this.resources = { gold: config.startingGold, aether: 0, lives: config.lives };
     this.wave = { index: -1, active: 0, autoStartIn: this.firstWaveDelay(), cleared: 0 };
+    this.stats = freshStats();
   }
 
   /** Back to the state a fresh stage starts in, reusing every allocation. */
@@ -150,6 +193,8 @@ export class World {
     this.wave.active = 0;
     this.wave.autoStartIn = this.firstWaveDelay();
     this.wave.cleared = 0;
+
+    Object.assign(this.stats, freshStats());
   }
 
   /** The build phase before wave one, taken from authored content. */

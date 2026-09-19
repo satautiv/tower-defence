@@ -33,6 +33,13 @@ export const TuningSchema = z.object({
   shatterMultiplier: Positive,
   /** Minimum damage before a blow counts as a shatter rather than a chip. */
   shatterThreshold: NonNegative,
+
+  /**
+   * Fraction of starting lives still needed for two stars. Three stars always
+   * means losing none, so only this one needs authoring — and expressing it as
+   * a fraction keeps it correct on every difficulty rather than assuming 20.
+   */
+  twoStarLivesFraction: z.number().min(0).max(1),
 });
 
 export type TuningDefinition = z.infer<typeof TuningSchema>;

@@ -4,6 +4,7 @@ import { movementSystem } from './movement.js';
 import { economySystem } from '../economy.js';
 import { damageResolutionSystem } from './damage.js';
 import { firingSystem } from './firing.js';
+import { lifecycleSystem } from './lifecycle.js';
 import { projectileSystem } from './projectiles.js';
 import { targetingSystem } from './targeting.js';
 import { waveSpawnerSystem } from './waves.js';
@@ -96,7 +97,7 @@ export const SYSTEMS: readonly SimSystem[] = [
   { name: 'economySystem', run: economySystem },
 
   /** 13. Leak detection, lives, win and loss conditions. #16. */
-  { name: 'lifecycleSystem', run: noop },
+  { name: 'lifecycleSystem', run: lifecycleSystem },
 
   /**
    * 14. The tick's output is complete.

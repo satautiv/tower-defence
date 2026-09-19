@@ -10,6 +10,7 @@ import {
   advance,
   createWorldForStage,
   enemyIndex,
+  movementSystem,
   spawnEnemy,
   speedMultiplier,
 } from '@sim/index';
@@ -229,17 +230,24 @@ describe('flyers', () => {
   it('reaches the core and is marked leaked', () => {
     const world = freshWorld();
     const slot = spawnEnemy(world, enemyIndex(world, 'rift_bat'), 0);
-    advance(world, TICK_HZ * 60);
+    /* movementSystem alone, so the mark can be observed before the lifecycle
+       system collects the body in the same tick. */
+    world.enemies.pathDist[slot] = 1e9;
+    movementSystem(world);
 
     expect(world.enemies.flags[slot]! & EnemyFlag.Leaked).toBeTruthy();
   });
 });
 
 describe('reaching the core', () => {
-  it('marks a walker leaked without removing it, which is the lifecycle system job', () => {
+  /* Movement only marks. Charging lives and removing the body is the lifecycle
+     system's job — two systems both deciding an entity is gone is how a bounty
+     gets paid twice. */
+  it('marks a walker leaked without removing it', () => {
     const world = freshWorld();
     const slot = spawnEnemy(world, enemyIndex(world, 'riftling'), 0);
-    advance(world, TICK_HZ * 120);
+    world.enemies.pathDist[slot] = 1e9;
+    movementSystem(world);
 
     expect(world.enemies.flags[slot]! & EnemyFlag.Leaked).toBeTruthy();
     expect(world.enemies.isAlive(slot)).toBe(true);
@@ -248,10 +256,11 @@ describe('reaching the core', () => {
   it('stops advancing once it has leaked', () => {
     const world = freshWorld();
     const slot = spawnEnemy(world, enemyIndex(world, 'riftling'), 0);
-    advance(world, TICK_HZ * 120);
+    world.enemies.pathDist[slot] = 1e9;
+    movementSystem(world);
 
     const settled = world.enemies.pathDist[slot]!;
-    advance(world, 60);
+    movementSystem(world);
     expect(world.enemies.pathDist[slot]).toBe(settled);
   });
 });

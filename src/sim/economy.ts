@@ -22,9 +22,10 @@ const LAST_BASE_TIER = 2;
 /** The capstone of a specialisation. */
 const MAX_TIER = 4;
 
-export function addGold(world: World, amount: number): void {
+export function addGold(world: World, amount: number, income = true): void {
   if (amount <= 0) return;
   world.resources.gold += amount;
+  if (income) world.stats.goldEarned += amount;
 }
 
 export function canAfford(world: World, cost: number): boolean {
@@ -35,6 +36,7 @@ export function canAfford(world: World, cost: number): boolean {
 export function spendGold(world: World, cost: number): boolean {
   if (cost < 0 || !canAfford(world, cost)) return false;
   world.resources.gold -= cost;
+  world.stats.goldSpent += cost;
   return true;
 }
 

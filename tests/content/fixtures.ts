@@ -43,6 +43,7 @@ export function validContent(): RawContent {
         earlyCallGoldPerSecond: 1.5,
         shatterMultiplier: 2.5,
         shatterThreshold: 40,
+        twoStarLivesFraction: 0.6,
       },
     },
     statuses: {

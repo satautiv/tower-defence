@@ -133,7 +133,7 @@ function applyBuild(world: World, plotId: number, typeIdx: number): void {
   }
 
   if (placeTower(world, typeIdx, plot.x, plot.y, plotId) < 0) {
-    addGold(world, cost);
+    addGold(world, cost, false);
     reject(world, CommandKind.BuildTower, RejectReason.PoolFull);
   }
 }
@@ -181,7 +181,8 @@ function applySell(world: World, towerSlot: number): void {
   if (!world.towers.isAlive(towerSlot)) {
     return reject(world, CommandKind.SellTower, RejectReason.NoSuchTower);
   }
-  addGold(world, sellValue(world, towerSlot));
+  /* Not income: this is the player's own money coming back. */
+  addGold(world, sellValue(world, towerSlot), false);
   removeTower(world, towerSlot);
 }
 

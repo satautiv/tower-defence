@@ -77,6 +77,7 @@ export function placeTower(
   world.towers.cooldown[slot] = 0;
   world.towers.invested[slot] = world.rules.towers.cost[typeIdx * TIER_SLOTS] as number;
 
+  world.stats.towersBuilt += 1;
   emitTowerBuilt(world.events, world.towers.ids[slot] as number, typeIdx, plotId);
   return slot;
 }
