@@ -22,6 +22,7 @@ import { EffectsView } from '@view/effects';
 import { EntityView } from '@view/entities';
 import { initAssets, loadBundle } from '@view/assets';
 import { FrameMetrics } from '@view/metrics';
+import { RouteView } from '@view/routes';
 import { logicalToCanvas } from '@view/viewport';
 import { Assets } from 'pixi.js';
 import type { Spritesheet } from 'pixi.js';
@@ -145,6 +146,9 @@ export function InStageScreen(): ReactElement {
       if (session === null) return;
       sessionRef.current = session;
 
+      const routes = new RouteView(view.layers);
+      routes.sync(session.world);
+
       const board = new BoardView(view.layers);
       boardRef.current = board;
       board.syncPlots(session.world);
@@ -187,6 +191,7 @@ export function InStageScreen(): ReactElement {
         /* Both consumers have read the buffer, so it can be dropped. */
         session.clearEvents();
 
+        routes.render(session.world, now);
         board.render(
           session.world,
           selectionRef.current.plotId,
