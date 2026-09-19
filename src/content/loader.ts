@@ -7,9 +7,11 @@ import {
   StageSchema,
   StatusFileSchema,
   TalentSchema,
+  TuningSchema,
   TowerSchema,
 } from './schema/index.js';
 import type {
+  TuningDefinition,
   EnemyDefinition,
   HeroDefinition,
   PowerDefinition,
@@ -36,6 +38,7 @@ export interface RawFile {
 }
 
 export interface RawContent {
+  tuning: RawFile;
   statuses: RawFile;
   reactions: RawFile;
   towers: RawFile[];
@@ -47,6 +50,7 @@ export interface RawContent {
 }
 
 export interface ContentRegistry {
+  tuning: TuningDefinition;
   statuses: ReadonlyMap<string, StatusDefinition>;
   reactions: ReadonlyMap<string, ReactionDefinition>;
   towers: ReadonlyMap<string, TowerDefinition>;
@@ -141,7 +145,13 @@ function indexArrayFile<T extends { id: string }>(
 export function buildRegistry(raw: RawContent): ContentRegistry {
   const issues: ContentIssue[] = [];
 
+  const tuning = TuningSchema.safeParse(raw.tuning.data);
+  if (!tuning.success) issues.push(...issuesFrom(raw.tuning.path, tuning.error));
+
   const registry: ContentRegistry = {
+    /* Parsed above; the cast only holds while `issues` is empty, which is
+       checked before the registry is returned. */
+    tuning: (tuning.success ? tuning.data : {}) as TuningDefinition,
     statuses: indexArrayFile(raw.statuses, StatusFileSchema, issues),
     reactions: indexArrayFile(raw.reactions, ReactionFileSchema, issues),
     towers: indexBy(raw.towers, TowerSchema, issues),

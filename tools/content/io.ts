@@ -45,6 +45,7 @@ function readDir(root: string, sub: string): RawFile[] {
 
 export function readContentFromDisk(root = CONTENT_ROOT): RawContent {
   return {
+    tuning: read(join(root, 'tuning.json')),
     statuses: read(join(root, 'statuses.json')),
     reactions: read(join(root, 'reactions.json')),
     towers: readDir(root, 'towers'),

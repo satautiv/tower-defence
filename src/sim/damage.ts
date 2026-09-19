@@ -35,6 +35,11 @@ export const enum DamageFlag {
   NoStatus = 1 << 3,
   /** Eligible for the Shatter bonus against a frozen target. */
   CanShatter = 1 << 4,
+  /**
+   * Can be dodged. Only projectiles set this: beams, auras and damage over time
+   * never miss, which is what makes them the answer to evasion.
+   */
+  Evadable = 1 << 5,
 }
 
 const NO_STATUS = 255;

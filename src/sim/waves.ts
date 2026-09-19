@@ -138,7 +138,7 @@ export function describeWave(rules: Ruleset, index: number): WavePreview | null 
 export function earlyCallBonus(rules: Ruleset, waveIndex: number, ticksRemaining: number): number {
   if (waveIndex < 0 || waveIndex >= rules.waves.count) return 0;
   const seconds = Math.max(0, ticksRemaining) / TICK_HZ;
-  const raw = Math.floor(seconds * 1.5);
+  const raw = Math.floor(seconds * rules.tuning.earlyCallGoldPerSecond);
   const cap = rules.waves.totalBounty[waveIndex] as number;
   return Math.min(raw, cap);
 }

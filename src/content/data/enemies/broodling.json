@@ -1,0 +1,11 @@
+{
+  "id": "broodling",
+  "nameKey": "enemy.broodling.name",
+  "hp": 90,
+  "speed": 1.1,
+  "armour": 5,
+  "ward": 5,
+  "bounty": 5,
+  "meleeDamage": 6,
+  "meleeIntervalSeconds": 1.0
+}

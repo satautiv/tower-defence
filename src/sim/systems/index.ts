@@ -1,6 +1,7 @@
 import type { World } from '../world.js';
 import { drainCommandQueue } from './commands.js';
 import { movementSystem } from './movement.js';
+import { damageResolutionSystem } from './damage.js';
 import { firingSystem } from './firing.js';
 import { projectileSystem } from './projectiles.js';
 import { targetingSystem } from './targeting.js';
@@ -88,7 +89,7 @@ export const SYSTEMS: readonly SimSystem[] = [
    * drained, so nothing dies mid-pipeline and the result does not depend on
    * which system fired first.
    */
-  { name: 'damageResolution', run: noop },
+  { name: 'damageResolution', run: damageResolutionSystem },
 
   /** 12. Bounty, Aether charge, wave-clear and early-call bonuses. #15. */
   { name: 'economySystem', run: noop },

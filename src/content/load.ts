@@ -36,6 +36,10 @@ export function loadContent(): ContentRegistry {
   if (cached !== undefined) return cached;
 
   cached = buildRegistry({
+    tuning: singleFile(
+      import.meta.glob('./data/tuning.json', { eager: true, import: 'default' }),
+      'tuning.json',
+    ),
     statuses: singleFile(
       import.meta.glob('./data/statuses.json', { eager: true, import: 'default' }),
       'statuses.json',

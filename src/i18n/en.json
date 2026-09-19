@@ -72,5 +72,7 @@
   "talent.cascade.name": "Cascade",
   "talent.cascade.desc": "Reactions can trigger again sooner.",
   "talent.foundry_edge.name": "Foundry Edge",
-  "talent.foundry_edge.desc": "All towers deal more damage."
+  "talent.foundry_edge.desc": "All towers deal more damage.",
+  "enemy.broodling.name": "Broodling",
+  "enemy.chitin_mother.name": "Chitin Mother"
 }

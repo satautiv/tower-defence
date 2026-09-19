@@ -130,6 +130,11 @@ a fingerprint that never changed would pass regardless. Extend it when you add s
 
 **Zero allocation in the tick loop** — no object literals, no closures, no `.map`/`.filter` inside `sim/systems/**`. Entities use structure-of-arrays typed pools; range queries write into caller-supplied buffers. This is what keeps GC pauses out of the frame budget on mobile.
 
+**Parenthesise a cast before a bitwise operator** — `x as number & Flag` parses as the *type
+intersection* `number & Flag`, not a bitwise AND, and silently makes the test meaningless. Write
+`(x as number) & Flag`. This has bitten twice; the compiler catches it only because the flag enums
+are const enums with no overlap with `0`.
+
 **Typed-array reads need `!`** — `noUncheckedIndexedAccess` is on and it applies to typed arrays,
 so `hp[i]` is `number | undefined`. The flag stays on because it catches real bugs on `Map.get()`
 and plain arrays; at typed-array sites the index is guaranteed by `SlotAllocator`, so assert with

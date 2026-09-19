@@ -1,0 +1,17 @@
+{
+  "id": "chitin_mother",
+  "nameKey": "enemy.chitin_mother.name",
+  "hp": 320,
+  "speed": 0.8,
+  "armour": 15,
+  "ward": 15,
+  "bounty": 20,
+  "livesCost": 2,
+  "traits": ["splitter"],
+  "traitConfig": {
+    "splitsInto": "broodling",
+    "splitCount": 2
+  },
+  "meleeDamage": 16,
+  "meleeIntervalSeconds": 1.2
+}

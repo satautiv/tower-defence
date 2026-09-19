@@ -1,6 +1,7 @@
 import { TICK_HZ, TILE_SIZE } from '@core/constants';
 import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
+import type { TuningDefinition } from '@content/schema/tuning';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
 import { EnemyFlag } from './flags.js';
@@ -34,6 +35,11 @@ export interface EnemyTable {
   readonly livesCost: Int32Array;
   readonly meleeDamage: Float32Array;
   readonly meleeIntervalTicks: Float32Array;
+  /** Chance in [0,1] to ignore a projectile entirely. */
+  readonly evasion: Float32Array;
+  /** Enemy index this splits into on death, or -1, and how many. */
+  readonly splitsInto: Int16Array;
+  readonly splitCount: Uint8Array;
   /** EnemyFlag bits implied by the enemy's traits. */
   readonly flags: Uint16Array;
   readonly indexOf: ReadonlyMap<string, number>;
@@ -136,6 +142,8 @@ export interface SpawnPoint {
 }
 
 export interface Ruleset {
+  /** Global combat and economy constants. */
+  readonly tuning: TuningDefinition;
   readonly towers: TowerTable;
   readonly enemies: EnemyTable;
   readonly statuses: StatusTable;
@@ -182,6 +190,9 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
     livesCost: new Int32Array(count),
     meleeDamage: new Float32Array(count),
     meleeIntervalTicks: new Float32Array(count),
+    evasion: new Float32Array(count),
+    splitsInto: new Int16Array(count).fill(-1),
+    splitCount: new Uint8Array(count),
     flags: new Uint16Array(count),
     indexOf: new Map(ids.map((id, index) => [id, index])),
   };
@@ -199,7 +210,16 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
     table.livesCost[i] = enemy.livesCost;
     table.meleeDamage[i] = enemy.meleeDamage;
     table.meleeIntervalTicks[i] = enemy.meleeIntervalSeconds * TICK_HZ;
+    table.evasion[i] = enemy.traitConfig.evasionChance ?? 0;
+    table.splitCount[i] = enemy.traitConfig.splitCount ?? 0;
     table.flags[i] = flagsForTraits(enemy.traits);
+  });
+
+  /* Resolved in a second pass: a splitter may name an enemy that appears later
+     in the sorted list, so every index has to exist first. */
+  ids.forEach((id, i) => {
+    const into = registry.enemies.get(id)?.traitConfig.splitsInto;
+    if (into !== undefined) table.splitsInto[i] = table.indexOf.get(into) ?? -1;
   });
 
   return table;
@@ -371,6 +391,7 @@ export function buildRuleset(registry: ContentRegistry, stage: StageDefinition):
   const enemies = buildEnemyTable(registry);
 
   return {
+    tuning: registry.tuning,
     towers: buildTowerTable(registry),
     enemies,
     statuses: buildStatusTable(registry),
@@ -431,6 +452,17 @@ const EMPTY_TOWERS: TowerTable = {
 };
 
 export const EMPTY_RULESET: Ruleset = {
+  tuning: {
+    defenceHalfPoint: 50,
+    defenceCap: 200,
+    aetherPerKill: 1,
+    aetherPerReaction: 4,
+    aetherPerSecond: 0.5,
+    aetherMax: 100,
+    earlyCallGoldPerSecond: 1.5,
+    shatterMultiplier: 2.5,
+    shatterThreshold: 40,
+  },
   towers: EMPTY_TOWERS,
   waves: EMPTY_WAVES,
   enemies: {
@@ -445,6 +477,9 @@ export const EMPTY_RULESET: Ruleset = {
     livesCost: new Int32Array(0),
     meleeDamage: new Float32Array(0),
     meleeIntervalTicks: new Float32Array(0),
+    evasion: new Float32Array(0),
+    splitsInto: new Int16Array(0),
+    splitCount: new Uint8Array(0),
     flags: new Uint16Array(0),
     indexOf: new Map(),
   },

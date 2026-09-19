@@ -44,6 +44,15 @@ export class EnemyPool extends EntityPool {
   readonly blockedBy = new Int32Array(this.capacity);
   /** Tick before which no reaction may trigger, enforcing the per-enemy lockout. */
   readonly reactionReadyTick = new Int32Array(this.capacity);
+  /**
+   * Temporary multiplier on armour and ward, and the tick it lapses.
+   *
+   * Generic rather than a Superconduct flag: the reaction that sets it is one
+   * of several effects that will want to soften a target for a few seconds, and
+   * the damage formula should not have to know which one did it.
+   */
+  readonly defenceMultiplier = new Float32Array(this.capacity);
+  readonly defenceMultiplierUntil = new Int32Array(this.capacity);
   /** Facing along the path, for directional armour. Radians. */
   readonly facing = new Float32Array(this.capacity);
 
@@ -76,6 +85,8 @@ export class EnemyPool extends EntityPool {
     this.waveIndex[slot] = -1;
     this.blockedBy[slot] = -1;
     this.reactionReadyTick[slot] = 0;
+    this.defenceMultiplier[slot] = 1;
+    this.defenceMultiplierUntil[slot] = 0;
     this.facing[slot] = 0;
     this.statusDirty[slot] = 0;
     this.meta[slot] = null;

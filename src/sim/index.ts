@@ -17,6 +17,7 @@ export { drainCommandQueue, RejectReason } from './systems/commands.js';
 export { targetingSystem, pickTarget, canTarget, canTargetAny } from './systems/targeting.js';
 export { firingSystem } from './systems/firing.js';
 export { projectileSystem } from './systems/projectiles.js';
+export { damageResolutionSystem, effectiveDefence } from './systems/damage.js';
 export {
   placeTower,
   towerIndex,

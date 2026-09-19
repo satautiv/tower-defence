@@ -31,6 +31,20 @@ export function validContent(): RawContent {
   });
 
   return {
+    tuning: {
+      path: 'tuning.json',
+      data: {
+        defenceHalfPoint: 50,
+        defenceCap: 200,
+        aetherPerKill: 1,
+        aetherPerReaction: 4,
+        aetherPerSecond: 0.5,
+        aetherMax: 100,
+        earlyCallGoldPerSecond: 1.5,
+        shatterMultiplier: 2.5,
+        shatterThreshold: 40,
+      },
+    },
     statuses: {
       path: 'statuses.json',
       data: [

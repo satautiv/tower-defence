@@ -6,6 +6,7 @@ import type { World } from '@sim/index';
 import {
   EnemyFlag,
   FiringMode,
+  SimEventKind,
   TIER_SLOTS,
   advance,
   applyTowerStats,
@@ -45,6 +46,22 @@ function enemyOnPath(world: World, id: string, distance: number, hold = true): n
   return slot;
 }
 
+/**
+ * Damage is queued and resolved within the same tick now that step 11 is real,
+ * so the queue is empty by the time a test looks. The emitted events are what
+ * survives, and they are what the view and audio layers read too.
+ */
+function damageEvents(world: World): Array<{ id: number; amount: number }> {
+  const out: Array<{ id: number; amount: number }> = [];
+  for (let i = 0; i < world.events.count; i++) {
+    const event = world.events.at(i);
+    if (event.kind === SimEventKind.DamageDealt) out.push({ id: event.a, amount: event.b });
+  }
+  return out;
+}
+
+const idOf = (world: World, slot: number): number => world.enemies.ids[slot] as number;
+
 function pathPoint(world: World, distance: number): { x: number; y: number } {
   const sample = { x: 0, y: 0, dirX: 0, dirY: 0 };
   world.rules.paths[0]!.sample(distance, sample);
@@ -63,7 +80,7 @@ describe('firing cadence', () => {
     enemyOnPath(world, 'husk', 400);
 
     tick(world);
-    expect(world.damage.count + world.projectiles.count).toBeGreaterThan(0);
+    expect(damageEvents(world).length + world.projectiles.count).toBeGreaterThan(0);
   });
 
   it('waits its authored interval between shots', () => {
@@ -93,8 +110,10 @@ describe('beams resolve the same tick', () => {
     const enemy = enemyOnPath(world, 'husk', 400);
 
     tick(world);
-    expect(world.damage.count).toBe(1);
-    expect(world.damage.target[0]).toBe(enemy);
+    const hits = damageEvents(world);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.id).toBe(idOf(world, enemy));
+    expect(world.enemies.hp[enemy]).toBeLessThan(world.enemies.maxHp[enemy]!);
   });
 });
 
@@ -120,10 +139,9 @@ describe('chain lightning', () => {
     tick(world);
 
     const struck = new Set<number>();
-    for (let i = 0; i < world.damage.count; i++) {
-      const target = world.damage.target[i]!;
-      expect(struck.has(target), `enemy ${target} struck twice`).toBe(false);
-      struck.add(target);
+    for (const hit of damageEvents(world)) {
+      expect(struck.has(hit.id), `enemy ${hit.id} struck twice`).toBe(false);
+      struck.add(hit.id);
     }
   });
 
@@ -134,9 +152,10 @@ describe('chain lightning', () => {
     for (let i = 0; i < 4; i++) enemyOnPath(world, 'husk', 390 + i * 10);
 
     tick(world);
-    expect(world.damage.count).toBeGreaterThan(1);
-    for (let i = 1; i < world.damage.count; i++) {
-      expect(world.damage.amount[i]!).toBeLessThan(world.damage.amount[i - 1]!);
+    const hits = damageEvents(world);
+    expect(hits.length).toBeGreaterThan(1);
+    for (let i = 1; i < hits.length; i++) {
+      expect(hits[i]!.amount).toBeLessThan(hits[i - 1]!.amount);
     }
   });
 
@@ -147,7 +166,7 @@ describe('chain lightning', () => {
     enemyOnPath(world, 'husk', 400);
 
     tick(world);
-    expect(world.damage.count).toBe(1);
+    expect(damageEvents(world)).toHaveLength(1);
   });
 });
 
@@ -160,7 +179,7 @@ describe('auras and cones sweep an area', () => {
     for (let i = 0; i < 4; i++) enemyOnPath(world, 'husk', 380 + i * 15);
 
     tick(world);
-    expect(world.damage.count).toBe(4);
+    expect(damageEvents(world)).toHaveLength(4);
   });
 
   it('a cone hits only what is in front of it', () => {
@@ -176,8 +195,8 @@ describe('auras and cones sweep an area', () => {
     tick(world);
 
     const struck = new Set<number>();
-    for (let i = 0; i < world.damage.count; i++) struck.add(world.damage.target[i]!);
-    expect(struck.has(ahead) || struck.has(behind)).toBe(true);
+    for (const hit of damageEvents(world)) struck.add(hit.id);
+    expect(struck.has(idOf(world, ahead)) || struck.has(idOf(world, behind))).toBe(true);
     expect(struck.size).toBeLessThan(2);
   });
 });
@@ -192,7 +211,7 @@ describe('projectiles travel and land', () => {
 
     tick(world);
     expect(world.projectiles.count).toBe(1);
-    expect(world.damage.count).toBe(0);
+    expect(damageEvents(world)).toHaveLength(0);
 
     advance(world, 30);
     expect(world.projectiles.count).toBe(0);
@@ -239,12 +258,12 @@ describe('projectiles travel and land', () => {
     tick(world);
     expect(world.projectiles.count).toBe(1);
 
+    const wanted = idOf(world, enemy);
     advance(world, 120);
-    let hit = false;
-    for (let i = 0; i < world.damage.count; i++) if (world.damage.target[i] === enemy) hit = true;
-    /* Damage is queued and cleared per tick, so check the shell is gone and
-       the enemy was reachable at impact. */
-    expect(hit || world.projectiles.count === 0).toBe(true);
+
+    /* The shell must actually connect: a shot aimed where the enemy stood
+       would land behind a riftling every time. */
+    expect(damageEvents(world).some((hit) => hit.id === wanted)).toBe(true);
   });
 
   it('splash catches neighbours but only the direct hit carries the status', () => {
