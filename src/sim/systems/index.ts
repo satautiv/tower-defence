@@ -1,6 +1,7 @@
 import type { World } from '../world.js';
 import { drainCommandQueue } from './commands.js';
 import { movementSystem } from './movement.js';
+import { economySystem } from '../economy.js';
 import { damageResolutionSystem } from './damage.js';
 import { firingSystem } from './firing.js';
 import { projectileSystem } from './projectiles.js';
@@ -92,7 +93,7 @@ export const SYSTEMS: readonly SimSystem[] = [
   { name: 'damageResolution', run: damageResolutionSystem },
 
   /** 12. Bounty, Aether charge, wave-clear and early-call bonuses. #15. */
-  { name: 'economySystem', run: noop },
+  { name: 'economySystem', run: economySystem },
 
   /** 13. Leak detection, lives, win and loss conditions. #16. */
   { name: 'lifecycleSystem', run: noop },

@@ -19,6 +19,23 @@ export { firingSystem } from './systems/firing.js';
 export { projectileSystem } from './systems/projectiles.js';
 export { damageResolutionSystem, effectiveDefence } from './systems/damage.js';
 export {
+  addGold,
+  spendGold,
+  canAfford,
+  addAether,
+  spendAether,
+  buildCost,
+  upgradeCost,
+  specialiseCost,
+  sellValue,
+  economySystem,
+  awardKill,
+  awardReactionAether,
+  bonusGoldFor,
+} from './economy.js';
+export { raiseTowerTier, setTowerSpecialisation, removeTower, plotOccupant } from './towers.js';
+export type { BuildPlot } from './ruleset.js';
+export {
   placeTower,
   towerIndex,
   tierSlot,

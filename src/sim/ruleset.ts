@@ -141,6 +141,14 @@ export interface SpawnPoint {
   readonly pathId: number;
 }
 
+export interface BuildPlot {
+  readonly id: number;
+  readonly x: number;
+  readonly y: number;
+  /** Ley node type, or null. The bonus itself lands with #30. */
+  readonly leyNode: string | null;
+}
+
 export interface Ruleset {
   /** Global combat and economy constants. */
   readonly tuning: TuningDefinition;
@@ -151,6 +159,9 @@ export interface Ruleset {
   readonly paths: readonly BakedPath[];
   readonly pathById: ReadonlyMap<number, BakedPath>;
   readonly spawnPoints: readonly SpawnPoint[];
+  readonly plots: readonly BuildPlot[];
+  /** Fraction of gold returned on sale, per tower id. */
+  readonly towerRefund: ReadonlyMap<string, number>;
   readonly core: { readonly x: number; readonly y: number };
   /** How far apart a pack spreads sideways, in world pixels. */
   readonly laneWidth: number;
@@ -403,6 +414,13 @@ export function buildRuleset(registry: ContentRegistry, stage: StageDefinition):
       y: spawn.position.y * TILE_SIZE,
       pathId: spawn.pathId,
     })),
+    towerRefund: new Map([...registry.towers.values()].map((t) => [t.id, t.sellRefund])),
+    plots: stage.plots.map((plot) => ({
+      id: plot.id,
+      x: plot.position.x * TILE_SIZE,
+      y: plot.position.y * TILE_SIZE,
+      leyNode: plot.leyNode ?? null,
+    })),
     core: { x: stage.core.x * TILE_SIZE, y: stage.core.y * TILE_SIZE },
     laneWidth: TILE_SIZE * 0.6,
   };
@@ -497,6 +515,8 @@ export const EMPTY_RULESET: Ruleset = {
   paths: [],
   pathById: new Map(),
   spawnPoints: [],
+  plots: [],
+  towerRefund: new Map(),
   core: { x: 0, y: 0 },
   laneWidth: TILE_SIZE * 0.6,
 };

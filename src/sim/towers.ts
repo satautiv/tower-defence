@@ -81,6 +81,54 @@ export function placeTower(
   return slot;
 }
 
+/**
+ * Moves a tower up one rung and re-resolves its stats.
+ *
+ * Cost and affordability are the caller's business; this is the state change
+ * alone, so the command handler can refuse cleanly without having to undo a
+ * half-applied upgrade.
+ */
+export function raiseTowerTier(world: World, slot: number, invested: number): void {
+  world.towers.tier[slot] = (world.towers.tier[slot] as number) + 1;
+  world.towers.invested[slot] = (world.towers.invested[slot] as number) + invested;
+  applyTowerStats(world, slot);
+  /* Re-targeted next tick: the new tier may reach further or stop reaching air. */
+  world.towers.target[slot] = -1;
+}
+
+/**
+ * Takes a tier-four branch.
+ *
+ * Re-specialising an already-branched tower is allowed and simply overwrites
+ * the branch at tier four — the price was paid again, and dropping back to
+ * tier four is what makes the choice cost something.
+ */
+export function setTowerSpecialisation(
+  world: World,
+  slot: number,
+  branch: number,
+  invested: number,
+): void {
+  world.towers.specialisation[slot] = branch;
+  world.towers.tier[slot] = 3;
+  world.towers.invested[slot] = (world.towers.invested[slot] as number) + invested;
+  applyTowerStats(world, slot);
+  world.towers.target[slot] = -1;
+}
+
+export function removeTower(world: World, slot: number): void {
+  world.towers.free(slot);
+}
+
+/** Whether a plot already carries a tower. */
+export function plotOccupant(world: World, plotId: number): number {
+  for (let slot = 0; slot < world.towers.watermark; slot++) {
+    if (!world.towers.isAlive(slot)) continue;
+    if ((world.towers.plotId[slot] as number) === plotId) return slot;
+  }
+  return -1;
+}
+
 export function towerIndex(world: World, id: string): number {
   return world.rules.towers.indexOf.get(id) ?? -1;
 }

@@ -1,4 +1,5 @@
 import { DAMAGE_INDEX, DamageFlag } from '../damage.js';
+import { addGold, awardKill, bonusGoldFor } from '../economy.js';
 import { emitDamageDealt, emitEnemyDied } from '../events.js';
 import { EnemyFlag } from '../flags.js';
 import { laneOffsetFor } from '../path.js';
@@ -193,7 +194,7 @@ function resolveOne(world: World, index: number): void {
        later entry aimed at it resolves against a corpse-check rather than a
        recycled slot holding someone else. */
     enemies.flags[slot] = (enemies.flags[slot] as number) | EnemyFlag.Dying;
-    world.deaths.push(slot, type);
+    world.deaths.push(slot, type, source);
   }
 }
 
@@ -230,18 +231,16 @@ function rollsEvade(world: World, slot: number): boolean {
 function resolveDeaths(world: World): void {
   const deaths = world.deaths;
   const enemies = world.enemies;
-  const tuning = world.rules.tuning;
 
   for (let i = 0; i < deaths.count; i++) {
     const slot = deaths.slots[i] as number;
     if (!enemies.isAlive(slot)) continue;
 
     const typeIdx = enemies.typeIdx[slot] as number;
-    world.resources.gold += world.rules.enemies.bounty[typeIdx] as number;
-    world.resources.aether = Math.min(
-      tuning.aetherMax,
-      world.resources.aether + tuning.aetherPerKill,
-    );
+    awardKill(world, typeIdx);
+    /* Economy towers add on top of the bounty, which is the whole reason to
+       build one instead of more damage. */
+    addGold(world, bonusGoldFor(world, deaths.killedBySource[i] as number));
 
     emitEnemyDied(
       world.events,

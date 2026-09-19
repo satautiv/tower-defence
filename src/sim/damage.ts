@@ -111,16 +111,19 @@ export class DeathList {
   readonly slots = new Int32Array(MAX_ENEMIES);
   /** Damage type of the killing blow, for the death animation. */
   readonly killedBy = new Uint8Array(MAX_ENEMIES);
+  /** Tower that landed it, so an economy tower can be paid its bonus. */
+  readonly killedBySource = new Int32Array(MAX_ENEMIES);
   private used = 0;
 
   get count(): number {
     return this.used;
   }
 
-  push(slot: number, damageType: number): void {
+  push(slot: number, damageType: number, source = -1): void {
     if (this.used >= this.slots.length) return;
     this.slots[this.used] = slot;
     this.killedBy[this.used] = damageType;
+    this.killedBySource[this.used] = source;
     this.used++;
   }
 
