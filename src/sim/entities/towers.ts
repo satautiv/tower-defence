@@ -1,0 +1,55 @@
+import { MAX_TOWERS } from '../capacity.js';
+import { EntityPool } from './pool.js';
+
+export class TowerPool extends EntityPool {
+  readonly x = new Float32Array(this.capacity);
+  readonly y = new Float32Array(this.capacity);
+
+  /** Index into the tower definition table, and which rung of its path. */
+  readonly typeIdx = new Uint16Array(this.capacity);
+  /** 0-2 for the base path, 3-4 once specialised. */
+  readonly tier = new Uint8Array(this.capacity);
+  /** Which of the two branches was taken at tier 4, or -1. */
+  readonly specialisation = new Int8Array(this.capacity);
+
+  /** Resolved stats, so systems never walk back to content during a tick. */
+  readonly damage = new Float32Array(this.capacity);
+  readonly range = new Float32Array(this.capacity);
+  readonly minRange = new Float32Array(this.capacity);
+  readonly fireInterval = new Float32Array(this.capacity);
+  /** Ticks remaining before the next shot. */
+  readonly cooldown = new Float32Array(this.capacity);
+
+  /** Slot of the current target, or -1. Re-picked only when it lapses. */
+  readonly target = new Int32Array(this.capacity);
+  /** First / Last / Strongest / Weakest / Closest, persisted per tower. */
+  readonly targetMode = new Uint8Array(this.capacity);
+
+  readonly plotId = new Uint16Array(this.capacity);
+  /** Total gold sunk in, so selling can refund a fraction of it. */
+  readonly invested = new Int32Array(this.capacity);
+  /** Ticks remaining while a sapper holds it down. */
+  readonly disabledUntil = new Int32Array(this.capacity);
+
+  constructor(capacity = MAX_TOWERS) {
+    super(capacity);
+  }
+
+  protected resetSlot(slot: number): void {
+    this.x[slot] = 0;
+    this.y[slot] = 0;
+    this.typeIdx[slot] = 0;
+    this.tier[slot] = 0;
+    this.specialisation[slot] = -1;
+    this.damage[slot] = 0;
+    this.range[slot] = 0;
+    this.minRange[slot] = 0;
+    this.fireInterval[slot] = 0;
+    this.cooldown[slot] = 0;
+    this.target[slot] = -1;
+    this.targetMode[slot] = 0;
+    this.plotId[slot] = 0;
+    this.invested[slot] = 0;
+    this.disabledUntil[slot] = 0;
+  }
+}

@@ -48,6 +48,12 @@ jobs:
         # references; this reports it in language a content author can act on.
         run: npm run content:lint
 
+      - name: Determinism
+        # Its own step rather than buried in the suite: this is the invariant
+        # replays, bug reproduction and the balance simulator all rest on, and
+        # when it breaks the failure should say so by name.
+        run: npm run test:determinism
+
       - name: Test
         run: npm run test:coverage
 
