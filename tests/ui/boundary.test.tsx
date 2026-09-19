@@ -1,10 +1,18 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs';
 import '@testing-library/jest-dom/vitest';
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
-import {
+import { act, cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+/* The canvas host has to mount inside a real Overlay for the structural test
+   below, and creating a Pixi application needs a GPU that no test runner has. */
+vi.mock('@view/app', () => ({
+  createGameView: vi.fn(async () => Promise.resolve(null)),
+}));
+
+const {
   Button,
+  GameCanvas,
   INTERACTIVE,
   Interactive,
   Modal,
@@ -13,7 +21,7 @@ import {
   Slider,
   Toggle,
   Tooltip,
-} from '@ui/index';
+} = await import('@ui/index');
 
 /**
  * The canvas/DOM boundary.
@@ -26,9 +34,13 @@ import {
  * Tested from both ends: the stylesheet really declares the rules, and every
  * primitive really carries the class. Neither alone is enough — happy-dom does
  * no layout, so actual hit-testing belongs to the Playwright pass in #53.
+ *
+ * The board is covered last, and separately, because it is the one element the
+ * overlay sits on top of rather than one of the controls inside it.
  */
 
 const TOKENS_CSS = readFileSync('src/ui/tokens.css', 'utf8');
+const UI_CSS = readFileSync('src/ui/ui.css', 'utf8');
 
 /* Vitest globals are off, so Testing Library's automatic cleanup does not
    register itself. Without this, renders stack across tests and queries match
@@ -169,5 +181,50 @@ describe('Modal', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(dialog).toHaveAttribute('aria-label', 'Paused');
+  });
+});
+
+/**
+ * The board is the one thing under the overlay, and it was the one thing that
+ * never opted back in.
+ *
+ * `pointer-events` is inherited, so `.ui-overlay { pointer-events: none }`
+ * propagated straight into the canvas host nested inside it and from there into
+ * the Pixi canvas that CameraController listens on. Every tap, drag and pinch
+ * was discarded before it reached the board: no panning, no zooming and no way
+ * to build a tower — while every button still worked, so the game looked
+ * completely normal and behaved as though the player had simply missed.
+ *
+ * The suite above checks that each primitive opts in. That is the same rule and
+ * it missed this, because the canvas is not a primitive and was never listed.
+ */
+describe('the board itself accepts clicks', () => {
+  it('re-enables pointer events on the canvas host', () => {
+    expect(declaration(UI_CSS, '.game-canvas-host', 'pointer-events')).toBe('auto');
+  });
+
+  it('renders the host with the class the stylesheet re-enables', async () => {
+    render(<GameCanvas />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    /* Asserted by class rather than by test id: the class is what the CSS rule
+       above selects, so a rename that breaks the rule fails here too. */
+    expect(screen.getByTestId('game-canvas-host')).toHaveClass('game-canvas-host');
+  });
+
+  it('mounts the host inside the overlay, which is why it must opt back in', async () => {
+    render(
+      <Overlay>
+        <GameCanvas />
+      </Overlay>,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const host = screen.getByTestId('game-canvas-host');
+    expect(host.closest('.ui-overlay')).not.toBeNull();
   });
 });

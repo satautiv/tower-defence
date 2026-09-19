@@ -23,9 +23,19 @@
   background: var(--c-bg);
 }
 
+/*
+ * The board opts back into pointer events.
+ *
+ * `pointer-events` inherits, and this host sits inside `.ui-overlay`, which
+ * turns them off so clicks fall through to the canvas. Without re-enabling them
+ * here the canvas inherits `none` and the board cannot be clicked at all — no
+ * panning, no zooming, and no way to build a tower — while every button still
+ * works and the game looks entirely normal.
+ */
 .game-canvas-host {
   position: absolute;
   inset: 0;
+  pointer-events: auto;
 }
 
 .ui-splash__title,
