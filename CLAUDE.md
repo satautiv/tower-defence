@@ -4,9 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**M0 is in progress.** Toolchain (#3), CI (#4), `core/` primitives (#5), the content pipeline (#6),
-the render stack (#7) and the UI shell (#8) are done. No gameplay code exists yet — no simulation,
-no entities.
+**M0 is complete.** Toolchain (#3), CI (#4), `core/` primitives (#5), the content pipeline (#6),
+the render stack (#7), the UI shell (#8) and the platform adapters (#9) are all done. No gameplay
+code exists yet — no simulation, no entities. **M1 starts at #10.**
+
+`src/platform/` isolates every platform difference behind an interface: `SaveAdapter` (localStorage
+for the profile, IndexedDB for snapshots, memory as a fallback), `Lifecycle`, `Haptics`,
+`Analytics`. `detect.ts` is the only file that knows what platform this is, and it reads
+Capacitor's injected global rather than importing the package.
 
 `src/ui/` holds the React shell: `store` (UI state only), `Router`, `Overlay`, `GameCanvas`
 (owns the renderer's lifetime), `components/` primitives and `hooks/useThrottledValue`.
@@ -69,8 +74,8 @@ Single test: `npx vitest run tests/smoke.test.ts`, or `npx vitest -t "test name"
 `android:build` arrive with #54. The balance sim will take arguments:
 `npm run balance -- --stage 1-8 --difficulty veteran --runs 2000 --strategy greedy`
 
-React, Zustand and Howler are **not installed yet** — they arrive with #8 and #44. Don't add a
-dependency before the issue that needs it.
+Howler is **not installed yet** — it arrives with #44. Don't add a dependency before the issue
+that needs it.
 
 ## The architecture invariant everything depends on
 
@@ -119,6 +124,10 @@ and plain arrays; at typed-array sites the index is guaranteed by `SlotAllocator
 **The UI never renders at 60Hz** — React is chrome around the Pixi canvas, not the game loop. HUD counters read throttled selectors (~10Hz). All input becomes a `Command`; the UI has no direct path to world mutation — the same interface the balance simulator's scripted AI uses.
 
 **The sim never calls out** — it emits typed `SimEvent`s into a buffer that view and audio drain. That is precisely what makes it headless-testable.
+
+**No platform conditionals outside `src/platform/`** — no `isNativePlatform`, no `Capacitor`, no
+direct `localStorage` or `indexedDB`. Storage goes through `SaveAdapter` so #54 can swap it.
+`tests/platform/no-conditionals.test.ts` scans `src/` and fails on a violation.
 
 ## Budgets these choices exist to protect
 
