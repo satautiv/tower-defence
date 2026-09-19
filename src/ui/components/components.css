@@ -13,14 +13,17 @@
     background var(--motion-fast) var(--ease-out),
     border-color var(--motion-fast) var(--ease-out);
 }
-.ui-button:hover:not(:disabled) {
+.ui-button:hover:not(:disabled, [aria-disabled='true']) {
   background: var(--c-border);
 }
 .ui-button:focus-visible {
   outline: 2px solid var(--c-focus);
   outline-offset: 2px;
 }
-.ui-button:disabled {
+/* aria-disabled rather than disabled where the control must still take hover:
+   a build option locked by the pause still previews its range. */
+.ui-button:disabled,
+.ui-button[aria-disabled='true'] {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -28,7 +31,7 @@
   background: var(--c-accent-dim);
   border-color: var(--c-accent);
 }
-.ui-button--primary:hover:not(:disabled) {
+.ui-button--primary:hover:not(:disabled, [aria-disabled='true']) {
   background: var(--c-accent);
   color: var(--c-bg);
 }

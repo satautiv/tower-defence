@@ -3,7 +3,9 @@ import { DAMAGE_BY_INDEX } from './damage.js';
 import { canAfford, sellValue, specialiseCost, upgradeCost } from './economy.js';
 import { EnemyFlag } from './flags.js';
 import { FiringMode, TIER_SLOTS } from './ruleset.js';
-import { STATUS_BY_INDEX } from './status.js';
+import { STATUS_BY_INDEX, STATUS_COUNT } from './status.js';
+import { effectiveDefence } from './systems/damage.js';
+import { speedMultiplier } from './systems/movement.js';
 import { statIndexOf, tierSlot } from './towers.js';
 import { describeWave, earlyCallBonus } from './waves.js';
 import type { World } from './world.js';
@@ -316,4 +318,119 @@ export function nextWave(world: World): NextWave | null {
     callBonus: earlyCallBonus(rules, index, ticks),
     canCall: world.waveRunner.freeSlot() >= 0,
   };
+}
+
+export interface EnemyStatus {
+  id: string;
+  stacks: number;
+  secondsLeft: number;
+}
+
+export interface EnemyInfo {
+  slot: number;
+  /** Stays with this enemy; the slot is reused once it is gone. */
+  entityId: number;
+  enemyId: string;
+  hp: number;
+  maxHp: number;
+  overshield: number;
+  /** As it applies now — Corrode and every other modifier included. */
+  armour: number;
+  baseArmour: number;
+  ward: number;
+  baseWard: number;
+  /** Tiles per second, as it moves now: slows applied, zero while frozen. */
+  speed: number;
+  baseSpeed: number;
+  statuses: EnemyStatus[];
+  threats: ThreatTag[];
+  bounty: number;
+  livesCost: number;
+}
+
+/** An enemy is gone once it is dying or through, even before its slot is freed. */
+function inspectable(world: World, slot: number): boolean {
+  if (slot < 0 || !world.enemies.isAlive(slot)) return false;
+  const flags = world.enemies.flags[slot] as number;
+  return (flags & (EnemyFlag.Dying | EnemyFlag.Leaked | EnemyFlag.Burrowed)) === 0;
+}
+
+/**
+ * One enemy, as the player inspects it (docs/GAME_DESIGN.md §17.3: while
+ * paused, the player can read enemy stats).
+ *
+ * Asked for by slot and entity id together. Slots are recycled, so a slot
+ * alone could quietly answer about whatever spawned into it after the enemy
+ * the player chose had died; the id makes that a null instead.
+ *
+ * Armour and ward come from the damage formula itself, measured from in
+ * front, so the panel shows exactly what a hit would meet — "no stat that only
+ * exists in a wiki" (§2, P2).
+ */
+export function enemyInfo(world: World, slot: number, entityId: number): EnemyInfo | null {
+  if (!inspectable(world, slot)) return null;
+  const enemies = world.enemies;
+  if ((enemies.ids[slot] as number) !== entityId) return null;
+
+  const x = enemies.x[slot] as number;
+  const y = enemies.y[slot] as number;
+  const facing = enemies.facing[slot] as number;
+  const frontX = x + Math.cos(facing);
+  const frontY = y + Math.sin(facing);
+  const typeIdx = enemies.typeIdx[slot] as number;
+  const table = world.rules.enemies;
+
+  const statuses: EnemyStatus[] = [];
+  for (let status = 0; status < STATUS_COUNT; status++) {
+    const stacks = enemies.stacksOf(slot, status);
+    if (stacks === 0) continue;
+    const expiry = enemies.statusExpiry[slot * STATUS_COUNT + status] as number;
+    statuses.push({
+      id: STATUS_BY_INDEX[status] as string,
+      stacks,
+      secondsLeft: Math.max(0, expiry - world.tick) / TICK_HZ,
+    });
+  }
+
+  const baseSpeed = (enemies.speed[slot] as number) / TILE;
+  return {
+    slot,
+    entityId,
+    enemyId: table.ids[typeIdx] ?? 'unknown',
+    hp: enemies.hp[slot] as number,
+    maxHp: enemies.maxHp[slot] as number,
+    overshield: enemies.overshield[slot] as number,
+    armour: effectiveDefence(world, slot, true, 0, frontX, frontY),
+    baseArmour: enemies.armour[slot] as number,
+    ward: effectiveDefence(world, slot, false, 0, frontX, frontY),
+    baseWard: enemies.ward[slot] as number,
+    speed: baseSpeed * speedMultiplier(world, slot),
+    baseSpeed,
+    statuses,
+    threats: threatsOf(world, typeIdx),
+    bounty: table.bounty[typeIdx] as number,
+    livesCost: table.livesCost[typeIdx] as number,
+  };
+}
+
+/**
+ * The enemy under a tap, or -1: the nearest inspectable one within `radius`
+ * world pixels. Underground enemies are not drawn, so they cannot be tapped.
+ */
+export function enemyNear(world: World, x: number, y: number, radius: number): number {
+  const enemies = world.enemies;
+  let nearest = -1;
+  let nearestSq = radius * radius;
+
+  for (let slot = 0; slot < enemies.watermark; slot++) {
+    if (!inspectable(world, slot)) continue;
+    const dx = (enemies.x[slot] as number) - x;
+    const dy = (enemies.y[slot] as number) - y;
+    const distanceSq = dx * dx + dy * dy;
+    if (distanceSq <= nearestSq) {
+      nearest = slot;
+      nearestSq = distanceSq;
+    }
+  }
+  return nearest;
 }

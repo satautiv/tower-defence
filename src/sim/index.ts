@@ -48,8 +48,12 @@ export {
   nextWave,
   threatsOf,
   THREAT_TAGS,
+  enemyInfo,
+  enemyNear,
 } from './inspect.js';
 export type {
+  EnemyInfo,
+  EnemyStatus,
   NextWave,
   WaveEnemy,
   ThreatTag,

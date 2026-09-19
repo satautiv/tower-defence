@@ -36,6 +36,8 @@ interface Bound {
 const HEALTH_BAR_WIDTH = 26;
 const HEALTH_BAR_HEIGHT = 3;
 const STATUS_DOT = 3;
+/** How far the selection ring sits outside the sprite, so it never hides it. */
+const SELECTION_GAP = 4;
 
 /** Status colours, matching the damage types that apply them. */
 const STATUS_COLOUR: Readonly<Record<string, number>> = {
@@ -163,8 +165,11 @@ export class EntityView {
    * `alpha` is the fraction of a tick elapsed since the last one. Interpolating
    * is what makes a fixed 60Hz simulation look continuous on a 144Hz display —
    * and what keeps it smooth on a phone when one frame runs long.
+   *
+   * `selectedEnemy` is a slot to ring, or -1. The caller checks it still
+   * holds the enemy the player chose; the view only draws it.
    */
-  render(world: World, alpha: number): void {
+  render(world: World, alpha: number, selectedEnemy = -1): void {
     for (const bound of this.enemies.values()) {
       const x = bound.prevX + (bound.x - bound.prevX) * alpha;
       const y = bound.prevY + (bound.y - bound.prevY) * alpha;
@@ -178,6 +183,18 @@ export class EntityView {
     }
 
     this.drawOverlay(world, alpha);
+    this.drawSelection(selectedEnemy, alpha);
+  }
+
+  /** A ring round the enemy being inspected, so the panel is tied to a body. */
+  private drawSelection(slot: number, alpha: number): void {
+    const bound = slot < 0 ? undefined : this.enemies.get(slot);
+    if (bound === undefined || !bound.sprite.visible) return;
+
+    const x = bound.prevX + (bound.x - bound.prevX) * alpha;
+    const y = bound.prevY + (bound.y - bound.prevY) * alpha;
+    const radius = Math.max(bound.sprite.width, bound.sprite.height) / 2 + SELECTION_GAP;
+    this.overlay.circle(x, y, radius).stroke({ width: 2, color: 0xe6e9f2, alpha: 0.9 });
   }
 
   /**

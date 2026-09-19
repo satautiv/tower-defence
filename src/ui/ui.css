@@ -87,6 +87,30 @@
   font-size: var(--t-sm);
   color: var(--c-text-muted);
 }
+/* Paused, the middle of the bar is the pause menu. */
+.ui-hud__paused {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.ui-hud__paused-label {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-accent);
+}
+/* A frame round the whole screen: a paused board looks exactly like a quiet
+   one, and the state has to read from the corner of the eye. Drawn by the
+   compositor over the canvas, so it costs the renderer nothing. */
+.ui-screen--paused::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-hud);
+  box-shadow: inset 0 0 0 3px var(--c-accent-dim);
+  pointer-events: none;
+}
 .ui-hud__controls {
   display: flex;
   align-items: center;
@@ -197,6 +221,58 @@
 }
 .ui-stat__after {
   color: var(--c-success);
+}
+/* Neutral, unlike an upgrade's green: a live enemy stat can move either way. */
+.ui-stat__changed {
+  font-weight: 600;
+  color: var(--c-text);
+}
+.ui-muted-inline {
+  color: var(--c-text-muted);
+}
+
+/* The inspected enemy. Same slot as the tower panel: only one thing is ever
+   selected, so the two never compete for it. */
+.ui-enemy-panel {
+  position: absolute;
+  right: calc(var(--s-4) + var(--safe-area-right));
+  bottom: calc(var(--s-4) + var(--safe-area-bottom));
+  width: min(300px, calc(100% - var(--s-6)));
+  z-index: var(--z-panel);
+}
+.ui-enemy-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.ui-enemy-panel__name {
+  flex: 1;
+  margin: 0;
+  font-size: var(--t-md);
+  font-weight: 600;
+}
+.ui-enemy-panel__health {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--c-surface-raised);
+  overflow: hidden;
+}
+.ui-enemy-panel__bar {
+  height: 100%;
+  background: var(--c-success);
+}
+.ui-enemy-panel__bar--low {
+  background: var(--c-danger);
+}
+.ui-enemy-panel__statuses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: 0;
+  padding: var(--s-2) 0 0;
+  border-top: 1px solid var(--c-border);
+  list-style: none;
+  font-size: var(--t-sm);
 }
 
 /* The wave preview (#28). Bottom-right, where the GDD layout puts it, and

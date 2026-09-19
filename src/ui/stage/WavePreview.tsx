@@ -5,6 +5,7 @@ import type { AtlasIndex } from '@view/assets';
 import { Button, Panel } from '../components/index.js';
 import { useThrottledValue } from '../hooks/useThrottledValue.js';
 import { SpriteIcon } from './SpriteIcon.js';
+import { THREAT_LABEL, THREAT_SHORT } from './threats.js';
 
 export interface WavePreviewProps {
   read: () => NextWave | null;
@@ -12,25 +13,9 @@ export interface WavePreviewProps {
   atlas: AtlasIndex | null;
   nameOf: (enemyId: string) => string;
   onCall: () => void;
+  /** Paused: the wave still reads, but cannot be called. */
+  locked?: boolean;
 }
-
-/** Words, not colours: the tag has to read without colour (docs/GAME_DESIGN.md §18). */
-const THREAT_LABEL: Readonly<Record<ThreatTag, string>> = {
-  boss: 'Boss',
-  air: 'Air',
-  armoured: 'Armoured',
-  warded: 'Warded',
-  evasive: 'Evasive',
-};
-
-/** For a phone held landscape, where the full words would push the panel over plots. */
-const THREAT_SHORT: Readonly<Record<ThreatTag, string>> = {
-  boss: 'Boss',
-  air: 'Air',
-  armoured: 'Arm',
-  warded: 'Ward',
-  evasive: 'Eva',
-};
 
 const ICON_SIZE = 28;
 const FULL_BOARD = 'Too many waves already in play.';
@@ -73,7 +58,13 @@ function ThreatChip({ threat, short }: { threat: ThreatTag; short: boolean }): R
  * that brings them where there is room, and gathered into the heading on a
  * phone, where a tag per enemy would widen the panel over the build plots.
  */
-export function WavePreview({ read, atlas, nameOf, onCall }: WavePreviewProps): ReactElement {
+export function WavePreview({
+  read,
+  atlas,
+  nameOf,
+  onCall,
+  locked = false,
+}: WavePreviewProps): ReactElement {
   const wave = useThrottledValue(read, undefined, sameWave);
 
   if (wave === null) {
@@ -141,9 +132,12 @@ export function WavePreview({ read, atlas, nameOf, onCall }: WavePreviewProps): 
       <Button
         variant="primary"
         className="ui-wave__call"
-        onClick={onCall}
+        onClick={() => {
+          if (!locked) onCall();
+        }}
         disabled={!wave.canCall}
-        title={wave.canCall ? undefined : FULL_BOARD}
+        aria-disabled={locked || undefined}
+        title={!wave.canCall ? FULL_BOARD : locked ? 'Resume to call' : undefined}
         aria-label={
           bonus > 0 ? `Call wave ${number} now for ${bonus} bonus gold` : `Call wave ${number} now`
         }

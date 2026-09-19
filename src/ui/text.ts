@@ -19,3 +19,8 @@ export function enemyName(enemyId: string): string {
   const key = loadContent().enemies.get(enemyId)?.nameKey;
   return key === undefined ? enemyId : text(key);
 }
+
+export function statusName(statusId: string): string {
+  const key = loadContent().statuses.get(statusId)?.nameKey;
+  return key === undefined ? statusId : text(key);
+}

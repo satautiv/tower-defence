@@ -5,6 +5,8 @@ import {
   buildOptions,
   buildTower,
   callWave,
+  enemyInfo,
+  enemyNear,
   nextWave,
   plotInfo,
   prospectiveRange,
@@ -16,7 +18,7 @@ import {
   undoSecondsRemaining,
   upgradeTower,
 } from '@sim/index';
-import type { BuildOption, TowerInfo } from '@sim/index';
+import type { BuildOption, EnemyInfo, TowerInfo } from '@sim/index';
 import { GameSession } from '@app/session';
 import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
@@ -30,15 +32,16 @@ import { logicalToCanvas } from '@view/viewport';
 import { Assets } from 'pixi.js';
 import type { Spritesheet } from 'pixi.js';
 import { GameCanvas } from '../GameCanvas.js';
-import { Button, Modal, Panel } from '../components/index.js';
+import { Button, Panel } from '../components/index.js';
 import { Hud } from '../hud/Hud.js';
 import type { HudModel } from '../hud/model.js';
 import { BuildMenu } from '../stage/BuildMenu.js';
 import { Diagnostics } from '../stage/Diagnostics.js';
+import { EnemyPanel } from '../stage/EnemyPanel.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
 import { WavePreview } from '../stage/WavePreview.js';
 import { useUiStore } from '../store.js';
-import { enemyName } from '../text.js';
+import { enemyName, statusName } from '../text.js';
 
 /**
  * The only screen that mounts the renderer, and the one that runs a stage.
@@ -47,12 +50,24 @@ import { enemyName } from '../text.js';
  * commands. Nothing here mutates the world: every action goes through
  * `session.dispatch`, which is the same route the balance simulator's scripted
  * AI takes.
+ *
+ * Paused, the board stays in view and answers taps — towers and enemies can be
+ * inspected, and the build menu previews ranges — but nothing that would change
+ * the world goes through until play resumes (docs/GAME_DESIGN.md §17.3).
  */
 
 const ATLAS_SRC = 'assets/atlas/game.json';
 
 /** How close a tap must land to count as hitting a plot. */
 const PLOT_HIT_RADIUS = TILE_SIZE * 0.75;
+/** And an enemy. Tighter than a plot: enemies crowd, and the nearest one wins. */
+const ENEMY_HIT_RADIUS = TILE_SIZE * 0.5;
+
+/** An enemy is held by slot and entity id together; the slot alone is recycled. */
+interface EnemyPick {
+  slot: number;
+  entityId: number;
+}
 
 interface Selection {
   plotId: number;
@@ -84,14 +99,26 @@ export function InStageScreen(): ReactElement {
   const [previewRadius, setPreviewRadius] = useState(0);
   const [undoLeft, setUndoLeft] = useState(0);
   const [atlas, setAtlas] = useState<AtlasIndex | null>(null);
+  const [enemy, setEnemy] = useState<EnemyInfo | null>(null);
+
+  const paused = openPanel === 'pause';
 
   /* Read by the ticker, which must not re-subscribe when React re-renders. */
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   const previewRef = useRef(previewRadius);
   previewRef.current = previewRadius;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const enemyPickRef = useRef<EnemyPick | null>(null);
 
+  /**
+   * The one route into the world, so it is also the one place the pause holds.
+   * The buttons show as locked too, but a keyboard shortcut or a stray handler
+   * must not slip a command through either.
+   */
   const dispatch = useCallback((issue: Parameters<GameSession['dispatch']>[0]) => {
+    if (pausedRef.current) return;
     sessionRef.current?.dispatch(issue);
   }, []);
 
@@ -100,11 +127,14 @@ export function InStageScreen(): ReactElement {
     setTower(null);
     setOptions([]);
     setPreviewRadius(0);
+    enemyPickRef.current = null;
+    setEnemy(null);
   }, []);
 
   /**
-   * A tap either opens the build menu on an empty plot, selects the tower on a
-   * taken one, or dismisses whatever is open.
+   * A tap inspects the enemy under it, opens the build menu on an empty plot,
+   * selects the tower on a taken one, or dismisses whatever is open. Enemies
+   * are checked first: they walk past plots, and are the smaller target.
    */
   const handleTap = useCallback(
     (logicalX: number, logicalY: number) => {
@@ -113,6 +143,16 @@ export function InStageScreen(): ReactElement {
       if (session === null || view === null) return;
 
       const world = view.camera.screenToWorld(logicalX, logicalY);
+
+      const enemySlot = enemyNear(session.world, world.x, world.y, ENEMY_HIT_RADIUS);
+      if (enemySlot >= 0) {
+        clearSelection();
+        const entityId = session.world.enemies.ids[enemySlot] as number;
+        enemyPickRef.current = { slot: enemySlot, entityId };
+        setEnemy(enemyInfo(session.world, enemySlot, entityId));
+        return;
+      }
+
       const plots = plotInfo(session.world);
 
       let nearest = null;
@@ -131,6 +171,9 @@ export function InStageScreen(): ReactElement {
 
       const onScreen = view.camera.worldToScreen(nearest.x, nearest.y);
       const canvas = logicalToCanvas(view.viewport, onScreen.x, onScreen.y);
+
+      enemyPickRef.current = null;
+      setEnemy(null);
 
       if (nearest.occupiedBy >= 0) {
         setSelection({ plotId: nearest.id, towerSlot: nearest.occupiedBy, screen: canvas });
@@ -187,12 +230,19 @@ export function InStageScreen(): ReactElement {
       view.camera.centreOnWorld();
 
       let started = false;
+      /* The board's own clock, for arrows and pulses. It stops with the pause,
+         so a paused board is a still frame rather than a map that keeps
+         moving under a frozen fight. */
+      let boardMs = 0;
+      let lastNow = -1;
       view.app.ticker.add(() => {
         const now = performance.now();
         if (!started) {
           session.start(now);
           started = true;
         }
+        if (lastNow >= 0 && !pausedRef.current) boardMs += now - lastNow;
+        lastNow = now;
 
         metricsRef.current.record(now);
         const alpha = session.update(now, () => entities.captureForInterpolation());
@@ -202,15 +252,28 @@ export function InStageScreen(): ReactElement {
         /* Both consumers have read the buffer, so it can be dropped. */
         session.clearEvents();
 
-        routes.render(session.world, now);
+        routes.render(session.world, boardMs);
         board.render(
           session.world,
           selectionRef.current.plotId,
           previewRef.current,
           selectionRef.current.towerSlot,
         );
-        entities.render(session.world, alpha);
-        effects.render();
+
+        /* Ringed only while the slot still holds the enemy that was picked;
+           the panel closes on the next poll once it does not. */
+        const pick = enemyPickRef.current;
+        const enemies = session.world.enemies;
+        const ringed =
+          pick !== null &&
+          enemies.isAlive(pick.slot) &&
+          (enemies.ids[pick.slot] as number) === pick.entityId
+            ? pick.slot
+            : -1;
+        entities.render(session.world, alpha, ringed);
+
+        /* Death puffs count down per frame; skipping them holds them mid-fade. */
+        if (!pausedRef.current) effects.render();
       });
     },
     [selectedStageId],
@@ -227,6 +290,14 @@ export function InStageScreen(): ReactElement {
       const slot = selectionRef.current.towerSlot;
       setTower(slot >= 0 ? towerInfo(session.world, slot) : null);
       setUndoLeft(undoSecondsRemaining(session.world));
+
+      const pick = enemyPickRef.current;
+      if (pick !== null) {
+        const info = enemyInfo(session.world, pick.slot, pick.entityId);
+        /* Dead or through: the panel goes with it. */
+        if (info === null) enemyPickRef.current = null;
+        setEnemy(info);
+      }
 
       if (session.world.finished) {
         /* Captured before navigating: the session is torn down with this
@@ -255,6 +326,9 @@ export function InStageScreen(): ReactElement {
       if (session === null) return;
 
       if (event.key === 'Escape') return clearSelection();
+      /* Paused, keys that would act do nothing — including picking a build
+         option, which would otherwise close the menu as if it had built. */
+      if (pausedRef.current) return;
       if (event.key === ' ') {
         event.preventDefault();
         return dispatch(callWave);
@@ -304,11 +378,20 @@ export function InStageScreen(): ReactElement {
   }, []);
 
   useEffect(() => {
-    sessionRef.current?.setPaused(openPanel === 'pause');
-  }, [openPanel]);
+    sessionRef.current?.setPaused(paused);
+  }, [paused]);
+
+  const restart = useCallback(() => {
+    sessionRef.current?.restart();
+    closePanel();
+    clearSelection();
+  }, [closePanel, clearSelection]);
 
   return (
-    <div className="ui-screen ui-screen--stage" data-testid="screen-in-stage">
+    <div
+      className={`ui-screen ui-screen--stage${paused ? ' ui-screen--paused' : ''}`}
+      data-testid="screen-in-stage"
+    >
       {!unsupported && (
         <GameCanvas
           onReady={handleReady}
@@ -324,13 +407,19 @@ export function InStageScreen(): ReactElement {
         </Panel>
       ) : (
         <>
-          <Hud source={hudSource} onSpeed={(speed) => dispatch((q) => setSpeed(q, speed))} />
+          <Hud
+            source={hudSource}
+            onSpeed={(speed) => dispatch((q) => setSpeed(q, speed))}
+            onRestart={restart}
+            onQuit={() => navigate('stageSelect')}
+          />
 
           <WavePreview
             read={readNextWave}
             atlas={atlas}
             nameOf={enemyName}
             onCall={() => dispatch(callWave)}
+            locked={paused}
           />
 
           <Diagnostics
@@ -345,6 +434,7 @@ export function InStageScreen(): ReactElement {
               at={selection.screen}
               onBuild={build}
               onCancel={clearSelection}
+              locked={paused}
               onHover={(typeIdx) =>
                 setPreviewRadius(
                   sessionRef.current === null
@@ -370,28 +460,21 @@ export function InStageScreen(): ReactElement {
                 clearSelection();
               }}
               onClose={clearSelection}
+              locked={paused}
+            />
+          )}
+
+          {enemy !== null && (
+            <EnemyPanel
+              enemy={enemy}
+              atlas={atlas}
+              nameOf={enemyName}
+              statusOf={statusName}
+              onClose={clearSelection}
             />
           )}
         </>
       )}
-
-      <Modal open={openPanel === 'pause'} title="Paused" onClose={closePanel}>
-        <Button variant="primary" onClick={closePanel}>
-          Resume
-        </Button>
-        <Button
-          onClick={() => {
-            sessionRef.current?.restart();
-            closePanel();
-            clearSelection();
-          }}
-        >
-          Restart
-        </Button>
-        <Button variant="danger" onClick={() => navigate('stageSelect')}>
-          Quit to stage select
-        </Button>
-      </Modal>
     </div>
   );
 }

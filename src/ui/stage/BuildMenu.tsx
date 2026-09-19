@@ -9,6 +9,8 @@ export interface BuildMenuProps {
   onBuild: (typeIdx: number) => void;
   onCancel: () => void;
   onHover: (typeIdx: number) => void;
+  /** Paused: the options still preview their range, but build nothing. */
+  locked?: boolean;
 }
 
 /**
@@ -30,6 +32,7 @@ export function BuildMenu({
   onBuild,
   onCancel,
   onHover,
+  locked = false,
 }: BuildMenuProps): ReactElement {
   const count = Math.max(1, options.length);
 
@@ -57,7 +60,11 @@ export function BuildMenu({
             <Button
               variant={option.affordable ? 'primary' : 'secondary'}
               disabled={!option.affordable}
-              onClick={() => onBuild(option.typeIdx)}
+              aria-disabled={locked || undefined}
+              title={locked ? 'Resume to build' : undefined}
+              onClick={() => {
+                if (!locked) onBuild(option.typeIdx);
+              }}
               onPointerEnter={() => onHover(option.typeIdx)}
               onFocus={() => onHover(option.typeIdx)}
               className="ui-build__card"

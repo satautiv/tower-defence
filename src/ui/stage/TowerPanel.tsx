@@ -10,6 +10,8 @@ export interface TowerPanelProps {
   onSell: () => void;
   onUndo: () => void;
   onClose: () => void;
+  /** Paused: everything reads, nothing changes the tower. */
+  locked?: boolean;
 }
 
 const round = (value: number): string =>
@@ -87,7 +89,20 @@ export function TowerPanel({
   onSell,
   onUndo,
   onClose,
+  locked = false,
 }: TowerPanelProps): ReactElement {
+  /* Locked controls stay visible, so the player can still see what an upgrade
+     costs and buys while planning. */
+  const guard =
+    (action: () => void): (() => void) =>
+    () => {
+      if (!locked) action();
+    };
+  const lock = {
+    'aria-disabled': locked || undefined,
+    title: locked ? 'Resume to act' : undefined,
+  };
+
   return (
     <Panel className="ui-tower-panel" title={tower.id.replace(/_/g, ' ')}>
       <Stats stats={tower.current} />
@@ -100,7 +115,12 @@ export function TowerPanel({
             before={tower.upgrade.before.rangeTiles}
             after={tower.upgrade.after.rangeTiles}
           />
-          <Button variant="primary" disabled={!tower.upgrade.affordable} onClick={onUpgrade}>
+          <Button
+            variant="primary"
+            disabled={!tower.upgrade.affordable}
+            onClick={guard(onUpgrade)}
+            {...lock}
+          >
             Upgrade &mdash; {tower.upgrade.cost}
           </Button>
         </div>
@@ -115,7 +135,8 @@ export function TowerPanel({
             <Button
               key={option.branch}
               disabled={!option.affordable}
-              onClick={() => onSpecialise(option.branch)}
+              onClick={guard(() => onSpecialise(option.branch))}
+              {...lock}
             >
               Branch {option.branch + 1} &mdash; {option.cost}
             </Button>
@@ -127,11 +148,11 @@ export function TowerPanel({
         {/* A full refund while the window is open: a misplaced tap on a
             touchscreen is a slip, not a change of mind. */}
         {tower.undoable && undoSeconds > 0 ? (
-          <Button variant="primary" onClick={onUndo}>
+          <Button variant="primary" onClick={guard(onUndo)} {...lock}>
             Undo ({undoSeconds.toFixed(1)}s)
           </Button>
         ) : (
-          <Button variant="danger" onClick={onSell}>
+          <Button variant="danger" onClick={guard(onSell)} {...lock}>
             Sell &mdash; {tower.sellValue}
           </Button>
         )}
