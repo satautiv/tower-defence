@@ -9,6 +9,7 @@ import {
   plotInfo,
   prospectiveRange,
   sellTower,
+  setSpeed,
   specialiseTower,
   towerInfo,
   undoBuild,
@@ -323,7 +324,7 @@ export function InStageScreen(): ReactElement {
         </Panel>
       ) : (
         <>
-          <Hud source={hudSource} />
+          <Hud source={hudSource} onSpeed={(speed) => dispatch((q) => setSpeed(q, speed))} />
 
           <WavePreview
             read={readNextWave}

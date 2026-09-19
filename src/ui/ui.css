@@ -87,6 +87,29 @@
   font-size: var(--t-sm);
   color: var(--c-text-muted);
 }
+.ui-hud__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+/* One segmented control rather than three loose buttons: the speeds are one
+   setting, and the current one has to be findable at a glance. */
+.ui-speed {
+  display: flex;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.ui-speed .ui-speed__option {
+  min-width: var(--hit-min);
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  border-radius: 0;
+  font-family: var(--f-numeric);
+}
+.ui-speed .ui-speed__option + .ui-speed__option {
+  border-left: 1px solid var(--c-border-strong);
+}
 
 .ui-muted {
   margin: 0;
