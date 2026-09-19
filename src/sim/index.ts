@@ -45,8 +45,14 @@ export {
   prospectiveRange,
   canUndo,
   undoSecondsRemaining,
+  nextWave,
+  threatsOf,
+  THREAT_TAGS,
 } from './inspect.js';
 export type {
+  NextWave,
+  WaveEnemy,
+  ThreatTag,
   TowerInfo,
   BuildOption,
   PlotInfo,

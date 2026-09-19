@@ -45,6 +45,8 @@ export function validContent(): RawContent {
         shatterThreshold: 40,
         twoStarLivesFraction: 0.6,
         undoWindowSeconds: 3,
+        previewArmourThreshold: 30,
+        previewWardThreshold: 30,
       },
     },
     statuses: {

@@ -1,9 +1,11 @@
 import { TICK_HZ } from '@core/constants';
 import { DAMAGE_BY_INDEX } from './damage.js';
 import { canAfford, sellValue, specialiseCost, upgradeCost } from './economy.js';
+import { EnemyFlag } from './flags.js';
 import { FiringMode, TIER_SLOTS } from './ruleset.js';
 import { STATUS_BY_INDEX } from './status.js';
 import { statIndexOf, tierSlot } from './towers.js';
+import { describeWave, earlyCallBonus } from './waves.js';
 import type { World } from './world.js';
 
 /**
@@ -229,4 +231,89 @@ export function rangeOf(
 export function prospectiveRange(world: World, typeIdx: number): number {
   if (typeIdx < 0 || typeIdx >= world.rules.towers.ids.length) return 0;
   return world.rules.towers.range[typeIdx * TIER_SLOTS] as number;
+}
+
+/**
+ * What makes an enemy need a particular answer, most pressing first.
+ *
+ * Each maps onto a row of the tower coverage audit (docs/GAME_DESIGN.md §8.6):
+ * the preview names the problem, and the player already knows which towers
+ * solve it. Support enemies join this list when they exist (#29).
+ */
+export const THREAT_TAGS = ['boss', 'air', 'armoured', 'warded', 'evasive'] as const;
+export type ThreatTag = (typeof THREAT_TAGS)[number];
+
+export interface WaveEnemy {
+  enemyId: string;
+  /** Across every group in the wave, whichever spawn it comes from. */
+  count: number;
+  threats: ThreatTag[];
+}
+
+export interface NextWave {
+  /** Zero-based index into the wave table. */
+  index: number;
+  total: number;
+  /** In the order they first appear. */
+  enemies: WaveEnemy[];
+  /** Whole seconds until it starts on its own. */
+  startsInSeconds: number;
+  /** Gold for calling it now, paid on top of its bounty. */
+  callBonus: number;
+  /** False while the most waves the board can hold are already in flight. */
+  canCall: boolean;
+}
+
+export function threatsOf(world: World, typeIdx: number): ThreatTag[] {
+  const table = world.rules.enemies;
+  const tuning = world.rules.tuning;
+  const flags = table.flags[typeIdx] as number;
+
+  const threats: ThreatTag[] = [];
+  if ((flags & EnemyFlag.Boss) !== 0) threats.push('boss');
+  if ((flags & EnemyFlag.Flying) !== 0) threats.push('air');
+  if ((table.armour[typeIdx] as number) >= tuning.previewArmourThreshold) threats.push('armoured');
+  if ((table.ward[typeIdx] as number) >= tuning.previewWardThreshold) threats.push('warded');
+  if ((table.evasion[typeIdx] as number) > 0) threats.push('evasive');
+  return threats;
+}
+
+/**
+ * The wave the player would call next, or null once none is left to come.
+ *
+ * Read from the flattened wave table the spawner itself walks, so the preview
+ * cannot promise one composition while the spawner delivers another — the
+ * acceptance criterion #28 is written around. The bonus is the one calling now
+ * would pay, from the same function the command handler uses.
+ */
+export function nextWave(world: World): NextWave | null {
+  if (world.finished) return null;
+  const rules = world.rules;
+  const index = world.wave.index + 1;
+  const preview = describeWave(rules, index);
+  if (preview === null) return null;
+
+  const enemies: WaveEnemy[] = [];
+  for (const group of preview.groups) {
+    const listed = enemies.find((enemy) => enemy.enemyId === group.enemyId);
+    if (listed !== undefined) {
+      listed.count += group.count;
+      continue;
+    }
+    enemies.push({
+      enemyId: group.enemyId,
+      count: group.count,
+      threats: threatsOf(world, group.enemyTypeIdx),
+    });
+  }
+
+  const ticks = Math.max(0, world.wave.autoStartIn);
+  return {
+    index,
+    total: rules.waves.count,
+    enemies,
+    startsInSeconds: Math.ceil(ticks / TICK_HZ),
+    callBonus: earlyCallBonus(rules, index, ticks),
+    canCall: world.waveRunner.freeSlot() >= 0,
+  };
 }

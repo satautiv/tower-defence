@@ -482,6 +482,8 @@ export const EMPTY_RULESET: Ruleset = {
     shatterThreshold: 40,
     twoStarLivesFraction: 0.6,
     undoWindowSeconds: 3,
+    previewArmourThreshold: 30,
+    previewWardThreshold: 30,
   },
   towers: EMPTY_TOWERS,
   waves: EMPTY_WAVES,

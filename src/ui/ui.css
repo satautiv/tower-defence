@@ -176,13 +176,143 @@
   color: var(--c-success);
 }
 
-.ui-stage__call {
+/* The wave preview (#28). Bottom-right, where the GDD layout puts it, and
+   always on screen: it is read before every call and every build. */
+.ui-wave {
   position: absolute;
   right: calc(var(--s-4) + var(--safe-area-right));
-  top: calc(var(--s-6) + var(--safe-area-top));
+  bottom: calc(var(--s-4) + var(--safe-area-bottom));
   z-index: var(--z-hud);
-  display: flex;
+  width: min(300px, 42vw);
+  padding: var(--s-3);
+}
+.ui-wave .ui-panel__body {
   gap: var(--s-2);
+}
+.ui-wave__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--t-sm);
+  color: var(--c-text-muted);
+}
+.ui-wave__number,
+.ui-wave__timer {
+  font-family: var(--f-numeric);
+  color: var(--c-text);
+}
+.ui-wave__enemies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.ui-wave__enemy {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-md);
+}
+.ui-wave__count {
+  min-width: 3ch;
+  font-family: var(--f-numeric);
+}
+.ui-wave__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ui-wave__threats {
+  display: flex;
+  gap: var(--s-1);
+}
+.ui-wave__threat {
+  padding: 1px var(--s-2);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-sm);
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ui-wave__threats--gathered {
+  display: none;
+}
+abbr.ui-wave__threat {
+  text-decoration: none;
+  cursor: help;
+}
+.ui-wave__threat--boss {
+  border-color: var(--c-danger);
+  color: var(--c-danger);
+}
+.ui-wave__call {
+  display: flex;
+  justify-content: center;
+  gap: var(--s-2);
+  width: 100%;
+}
+.ui-wave__bonus {
+  font-family: var(--f-numeric);
+  color: var(--c-gold);
+}
+.ui-wave__note,
+.ui-wave__final {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--c-text-muted);
+}
+/* A phone held landscape has little height to spare, and a tall or wide panel
+   there covers build plots. It narrows to a column: names give way to icons the
+   board has already taught, threats gather into the heading instead of widening
+   every row, and the reason a call is refused moves into the button's title.
+   Full touch layout is #55. */
+@media (max-height: 480px) {
+  .ui-wave {
+    right: calc(var(--s-2) + var(--safe-area-right));
+    bottom: calc(var(--s-2) + var(--safe-area-bottom));
+    width: auto;
+    padding: var(--s-2);
+  }
+  .ui-wave .ui-panel__body {
+    gap: var(--s-1);
+  }
+  .ui-wave__head {
+    gap: var(--s-2);
+    font-size: var(--t-xs);
+  }
+  .ui-wave__enemies {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--s-1) var(--s-3);
+  }
+  .ui-wave__name,
+  .ui-wave__note,
+  .ui-wave__wordy,
+  .ui-wave__threats--each {
+    display: none;
+  }
+  .ui-wave__threats--gathered {
+    display: flex;
+  }
+}
+
+.ui-sprite {
+  display: inline-block;
+  flex: none;
+  background-repeat: no-repeat;
+}
+.ui-sprite--missing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--c-surface-raised);
+  color: var(--c-text-muted);
+  font-size: var(--t-xs);
 }
 
 /* Damage-type colours are reserved for gameplay information. */

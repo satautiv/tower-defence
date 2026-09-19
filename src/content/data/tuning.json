@@ -9,5 +9,7 @@
   "shatterMultiplier": 2.5,
   "shatterThreshold": 40,
   "twoStarLivesFraction": 0.6,
-  "undoWindowSeconds": 3
+  "undoWindowSeconds": 3,
+  "previewArmourThreshold": 30,
+  "previewWardThreshold": 30
 }

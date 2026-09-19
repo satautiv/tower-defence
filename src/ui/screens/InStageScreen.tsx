@@ -5,6 +5,7 @@ import {
   buildOptions,
   buildTower,
   callWave,
+  nextWave,
   plotInfo,
   prospectiveRange,
   sellTower,
@@ -20,7 +21,8 @@ import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
 import { EffectsView } from '@view/effects';
 import { EntityView } from '@view/entities';
-import { initAssets, loadBundle } from '@view/assets';
+import { indexAtlas, initAssets, loadBundle } from '@view/assets';
+import type { AtlasIndex } from '@view/assets';
 import { FrameMetrics } from '@view/metrics';
 import { RouteView } from '@view/routes';
 import { logicalToCanvas } from '@view/viewport';
@@ -33,7 +35,9 @@ import type { HudModel } from '../hud/model.js';
 import { BuildMenu } from '../stage/BuildMenu.js';
 import { Diagnostics } from '../stage/Diagnostics.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
+import { WavePreview } from '../stage/WavePreview.js';
 import { useUiStore } from '../store.js';
+import { enemyName } from '../text.js';
 
 /**
  * The only screen that mounts the renderer, and the one that runs a stage.
@@ -43,6 +47,8 @@ import { useUiStore } from '../store.js';
  * `session.dispatch`, which is the same route the balance simulator's scripted
  * AI takes.
  */
+
+const ATLAS_SRC = 'assets/atlas/game.json';
 
 /** How close a tap must land to count as hitting a plot. */
 const PLOT_HIT_RADIUS = TILE_SIZE * 0.75;
@@ -59,7 +65,6 @@ export function InStageScreen(): ReactElement {
   const navigate = useUiStore((state) => state.navigate);
   const openPanel = useUiStore((state) => state.openPanel);
   const closePanel = useUiStore((state) => state.closePanel);
-  const openPanelById = useUiStore((state) => state.openPanelById);
   const selectedStageId = useUiStore((state) => state.selectedStageId);
   const setResult = useUiStore((state) => state.setResult);
 
@@ -77,6 +82,7 @@ export function InStageScreen(): ReactElement {
   const [tower, setTower] = useState<TowerInfo | null>(null);
   const [previewRadius, setPreviewRadius] = useState(0);
   const [undoLeft, setUndoLeft] = useState(0);
+  const [atlas, setAtlas] = useState<AtlasIndex | null>(null);
 
   /* Read by the ticker, which must not re-subscribe when React re-renders. */
   const selectionRef = useRef(selection);
@@ -162,11 +168,15 @@ export function InStageScreen(): ReactElement {
          a frame later. */
       void (async () => {
         await initAssets({
-          bundles: [{ name: 'core', assets: [{ alias: 'game', src: 'assets/atlas/game.json' }] }],
+          bundles: [{ name: 'core', assets: [{ alias: 'game', src: ATLAS_SRC }] }],
         });
         await loadBundle('core');
         const sheet = Assets.get<Spritesheet>('game');
-        if (sheet !== undefined) entities.bindAtlas(sheet, session.world);
+        if (sheet !== undefined) {
+          entities.bindAtlas(sheet, session.world);
+          /* The same image, cut up for the interface's icons. */
+          setAtlas(indexAtlas(sheet.data, ATLAS_SRC));
+        }
       })();
 
       view.camera.setWorldSize(
@@ -270,6 +280,11 @@ export function InStageScreen(): ReactElement {
     return () => window.removeEventListener('keydown', onKey);
   }, [dispatch, clearSelection, build]);
 
+  const readNextWave = useCallback(() => {
+    const session = sessionRef.current;
+    return session === null ? null : nextWave(session.world);
+  }, []);
+
   const hudSource = useCallback((): HudModel => {
     const session = sessionRef.current;
     if (session === null) {
@@ -309,6 +324,13 @@ export function InStageScreen(): ReactElement {
       ) : (
         <>
           <Hud source={hudSource} />
+
+          <WavePreview
+            read={readNextWave}
+            atlas={atlas}
+            nameOf={enemyName}
+            onCall={() => dispatch(callWave)}
+          />
 
           <Diagnostics
             read={() => metricsRef.current.stats()}
@@ -369,15 +391,6 @@ export function InStageScreen(): ReactElement {
           Quit to stage select
         </Button>
       </Modal>
-
-      <div className="ui-stage__call">
-        <Button variant="primary" onClick={() => dispatch(callWave)}>
-          Call wave
-        </Button>
-        <Button variant="ghost" onClick={() => openPanelById('pause')} aria-label="Pause">
-          II
-        </Button>
-      </div>
     </div>
   );
 }

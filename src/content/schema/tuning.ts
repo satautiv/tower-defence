@@ -49,6 +49,15 @@ export const TuningSchema = z.object({
    * (docs/GAME_DESIGN.md §17.3).
    */
   undoWindowSeconds: NonNegative,
+
+  /**
+   * Armour and ward at which the wave preview flags an enemy as Armoured or
+   * Warded. A preview threshold, not a combat one: it decides when a defence
+   * is high enough that the player should change what they build, which is
+   * the question the preview exists to answer (docs/GAME_DESIGN.md §8.6).
+   */
+  previewArmourThreshold: Positive,
+  previewWardThreshold: Positive,
 });
 
 export type TuningDefinition = z.infer<typeof TuningSchema>;
