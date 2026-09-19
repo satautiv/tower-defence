@@ -173,7 +173,8 @@
           "delaySeconds": 0.0,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 12
     },
     {
       "autoStartDelaySeconds": 20,
@@ -185,7 +186,8 @@
           "delaySeconds": 0.0,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 15
     },
     {
       "autoStartDelaySeconds": 22,
@@ -197,7 +199,8 @@
           "delaySeconds": 0.0,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 18
     },
     {
       "autoStartDelaySeconds": 22,
@@ -216,7 +219,8 @@
           "delaySeconds": 4,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 21
     },
     {
       "autoStartDelaySeconds": 24,
@@ -228,7 +232,8 @@
           "delaySeconds": 0.0,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 24
     },
     {
       "autoStartDelaySeconds": 24,
@@ -247,7 +252,8 @@
           "delaySeconds": 5,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 27
     },
     {
       "autoStartDelaySeconds": 26,
@@ -259,7 +265,8 @@
           "delaySeconds": 0.0,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 30
     },
     {
       "autoStartDelaySeconds": 26,
@@ -278,7 +285,8 @@
           "delaySeconds": 6,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 33
     },
     {
       "autoStartDelaySeconds": 28,
@@ -297,7 +305,8 @@
           "delaySeconds": 4,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 36
     },
     {
       "autoStartDelaySeconds": 30,
@@ -323,7 +332,8 @@
           "delaySeconds": 8,
           "spawnPoint": 0
         }
-      ]
+      ],
+      "clearBonus": 39
     }
   ]
 }

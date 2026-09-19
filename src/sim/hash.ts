@@ -76,6 +76,11 @@ function foldWorld(hash: number, world: World): number {
   h = foldNumber(h, world.wave.autoStartIn);
   h = foldNumber(h, world.wave.cleared);
 
+  /* The wave runner is mutable state like any pool; leaving it out would let
+     two runs differ in spawn progress and still hash the same. */
+  h = foldNumber(h, world.waveRunner.activeCount);
+  h = foldPool(h, world.waveRunner);
+
   for (const pool of [
     world.enemies,
     world.towers,

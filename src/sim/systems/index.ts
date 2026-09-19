@@ -1,5 +1,7 @@
 import type { World } from '../world.js';
+import { drainCommandQueue } from './commands.js';
 import { movementSystem } from './movement.js';
+import { waveSpawnerSystem } from './waves.js';
 
 /**
  * The tick pipeline, in order (docs/TECH_DESIGN.md §6.4).
@@ -28,21 +30,10 @@ export const SYSTEMS: readonly SimSystem[] = [
    * tower fire on the tick it was placed in one run and not in another,
    * depending on when the click arrived. Handlers arrive with #17.
    */
-  {
-    name: 'drainCommandQueue',
-    run(world) {
-      for (let i = 0; i < world.commands.count; i++) {
-        const command = world.commands.at(i);
-        /* #17 dispatches on command.kind here. Reading it now keeps the drain
-           honest: commands are consumed, not left to fill the queue. */
-        void command;
-      }
-      world.commands.clear();
-    },
-  },
+  { name: 'drainCommandQueue', run: drainCommandQueue },
 
-  /** 1. Spawn due enemies and advance wave timers. #12. */
-  { name: 'waveSpawner', run: noop },
+  /** 1. Spawn due enemies and advance wave timers. */
+  { name: 'waveSpawner', run: waveSpawnerSystem },
 
   /**
    * 2. Tick damage over time, decay stacks, expire statuses. #21.

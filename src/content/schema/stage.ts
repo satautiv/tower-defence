@@ -26,6 +26,8 @@ export const WaveGroupSchema = z.object({
 export const WaveSchema = z.object({
   /** Seconds before the wave auto-starts if the player does not call it. */
   autoStartDelaySeconds: Seconds,
+  /** Gold awarded once every enemy from this wave is gone. */
+  clearBonus: z.number().int().nonnegative().default(0),
   groups: z.array(WaveGroupSchema).min(1),
 });
 

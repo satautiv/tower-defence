@@ -10,6 +10,10 @@ export { BakedPath, chooseBranch, laneOffsetFor } from './path.js';
 export type { PathSample, PathBranch } from './path.js';
 export { spawnEnemy, enemyIndex } from './spawn.js';
 export { movementSystem, speedMultiplier } from './systems/movement.js';
+export { ActiveWaves, describeWave, earlyCallBonus } from './waves.js';
+export type { WavePreview, WaveGroupPreview } from './waves.js';
+export { waveSpawnerSystem, startWave } from './systems/waves.js';
+export { drainCommandQueue, RejectReason } from './systems/commands.js';
 
 export { CommandQueue, CommandKind } from './commands.js';
 export * from './commands.js';

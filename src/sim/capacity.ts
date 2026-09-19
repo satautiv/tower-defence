@@ -16,6 +16,17 @@ export const MAX_TOWERS = 96;
 export const MAX_SOLDIERS = 64;
 export const MAX_GROUND_EFFECTS = 64;
 
+/**
+ * Waves that can be in flight at once.
+ *
+ * Calling early stacks waves deliberately — it is the game's main risk/reward
+ * dial — so more than one runs at a time. Four is far beyond what is survivable.
+ */
+export const MAX_ACTIVE_WAVES = 4;
+
+/** Parallel spawn groups within one wave. */
+export const MAX_GROUPS_PER_WAVE = 8;
+
 /** Commands queued between two ticks. A frame cannot produce many. */
 export const MAX_COMMANDS_PER_TICK = 64;
 

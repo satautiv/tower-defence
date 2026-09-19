@@ -37,6 +37,8 @@ export class EnemyPool extends EntityPool {
   /** Index into the stage's enemy definition table. */
   readonly typeIdx = new Uint16Array(this.capacity);
   readonly spawnPoint = new Uint8Array(this.capacity);
+  /** Wave this enemy belongs to, so a wave knows when it has been cleared. */
+  readonly waveIndex = new Int16Array(this.capacity);
 
   /** Slot of the soldier holding this enemy, or -1. */
   readonly blockedBy = new Int32Array(this.capacity);
@@ -71,6 +73,7 @@ export class EnemyPool extends EntityPool {
     this.laneOffset[slot] = 0;
     this.typeIdx[slot] = 0;
     this.spawnPoint[slot] = 0;
+    this.waveIndex[slot] = -1;
     this.blockedBy[slot] = -1;
     this.reactionReadyTick[slot] = 0;
     this.facing[slot] = 0;

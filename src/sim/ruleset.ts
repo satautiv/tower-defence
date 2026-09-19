@@ -1,6 +1,7 @@
 import { TICK_HZ, TILE_SIZE } from '@core/constants';
 import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
+import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
 import { EnemyFlag } from './flags.js';
 import { BakedPath } from './path.js';
@@ -50,6 +51,31 @@ export interface StatusTable {
   readonly reactive: Uint8Array;
 }
 
+/**
+ * Waves, flattened.
+ *
+ * Group data is laid out `wave * MAX_GROUPS_PER_WAVE + group` so the spawner
+ * indexes arithmetic rather than walking nested arrays, and so the wave preview
+ * reads the very same numbers the spawner does — the two cannot drift into
+ * telling the player one thing and spawning another.
+ */
+export interface WaveTable {
+  readonly count: number;
+  readonly groupCount: Uint8Array;
+  readonly autoStartTicks: Int32Array;
+  readonly clearBonus: Int32Array;
+  /** Total gold every enemy in the wave is worth. Caps the early-call bonus. */
+  readonly totalBounty: Int32Array;
+  /** Ticks from the wave starting until its last enemy has spawned. */
+  readonly spawnDurationTicks: Float32Array;
+
+  readonly groupEnemy: Int16Array;
+  readonly groupCountPer: Uint16Array;
+  readonly groupIntervalTicks: Float32Array;
+  readonly groupDelayTicks: Float32Array;
+  readonly groupSpawnPoint: Uint8Array;
+}
+
 export interface SpawnPoint {
   readonly x: number;
   readonly y: number;
@@ -59,6 +85,7 @@ export interface SpawnPoint {
 export interface Ruleset {
   readonly enemies: EnemyTable;
   readonly statuses: StatusTable;
+  readonly waves: WaveTable;
   readonly paths: readonly BakedPath[];
   readonly pathById: ReadonlyMap<number, BakedPath>;
   readonly spawnPoints: readonly SpawnPoint[];
@@ -154,12 +181,66 @@ function buildStatusTable(registry: ContentRegistry): StatusTable {
   return table;
 }
 
+function buildWaveTable(stage: StageDefinition, enemies: EnemyTable): WaveTable {
+  const count = stage.waves.length;
+  const slots = count * MAX_GROUPS_PER_WAVE;
+
+  const table: WaveTable = {
+    count,
+    groupCount: new Uint8Array(count),
+    autoStartTicks: new Int32Array(count),
+    clearBonus: new Int32Array(count),
+    totalBounty: new Int32Array(count),
+    spawnDurationTicks: new Float32Array(count),
+    groupEnemy: new Int16Array(slots).fill(-1),
+    groupCountPer: new Uint16Array(slots),
+    groupIntervalTicks: new Float32Array(slots),
+    groupDelayTicks: new Float32Array(slots),
+    groupSpawnPoint: new Uint8Array(slots),
+  };
+
+  stage.waves.forEach((wave, w) => {
+    table.autoStartTicks[w] = Math.round(wave.autoStartDelaySeconds * TICK_HZ);
+    table.clearBonus[w] = wave.clearBonus;
+
+    /* Groups beyond the cap are dropped rather than silently truncating the
+       wave mid-group; content-lint should be extended to reject them. */
+    const groups = wave.groups.slice(0, MAX_GROUPS_PER_WAVE);
+    table.groupCount[w] = groups.length;
+
+    let bounty = 0;
+    let longest = 0;
+    groups.forEach((group, g) => {
+      const i = w * MAX_GROUPS_PER_WAVE + g;
+      const typeIdx = enemies.indexOf.get(group.enemy) ?? -1;
+      table.groupEnemy[i] = typeIdx;
+      table.groupCountPer[i] = group.count;
+      table.groupIntervalTicks[i] = group.intervalSeconds * TICK_HZ;
+      table.groupDelayTicks[i] = group.delaySeconds * TICK_HZ;
+      table.groupSpawnPoint[i] = group.spawnPoint;
+
+      if (typeIdx >= 0) bounty += (enemies.bounty[typeIdx] as number) * group.count;
+      const finishes =
+        group.delaySeconds * TICK_HZ +
+        Math.max(0, group.count - 1) * group.intervalSeconds * TICK_HZ;
+      if (finishes > longest) longest = finishes;
+    });
+
+    table.totalBounty[w] = bounty;
+    table.spawnDurationTicks[w] = longest;
+  });
+
+  return table;
+}
+
 export function buildRuleset(registry: ContentRegistry, stage: StageDefinition): Ruleset {
   const paths = stage.paths.map((path) => new BakedPath(path));
+  const enemies = buildEnemyTable(registry);
 
   return {
-    enemies: buildEnemyTable(registry),
+    enemies,
     statuses: buildStatusTable(registry),
+    waves: buildWaveTable(stage, enemies),
     paths,
     pathById: new Map(paths.map((path) => [path.id, path])),
     spawnPoints: stage.spawnPoints.map((spawn) => ({
@@ -179,7 +260,22 @@ export function buildRuleset(registry: ContentRegistry, stage: StageDefinition):
  * data would be noise. Systems treat empty tables as "nothing to do" rather
  * than special-casing it.
  */
+const EMPTY_WAVES: WaveTable = {
+  count: 0,
+  groupCount: new Uint8Array(0),
+  autoStartTicks: new Int32Array(0),
+  clearBonus: new Int32Array(0),
+  totalBounty: new Int32Array(0),
+  spawnDurationTicks: new Float32Array(0),
+  groupEnemy: new Int16Array(0),
+  groupCountPer: new Uint16Array(0),
+  groupIntervalTicks: new Float32Array(0),
+  groupDelayTicks: new Float32Array(0),
+  groupSpawnPoint: new Uint8Array(0),
+};
+
 export const EMPTY_RULESET: Ruleset = {
+  waves: EMPTY_WAVES,
   enemies: {
     ids: [],
     hp: new Float32Array(0),

@@ -3,6 +3,7 @@ import { Rng } from '@core/rng';
 import { SpatialHash } from '@core/spatial';
 import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
+import { ActiveWaves } from './waves.js';
 import { EMPTY_RULESET, buildRuleset } from './ruleset.js';
 import type { Ruleset } from './ruleset.js';
 import { MAX_ENEMIES, MAX_QUERY_RESULTS } from './capacity.js';
@@ -98,6 +99,8 @@ export class World {
 
   readonly resources: Resources;
   readonly wave: WaveState;
+  /** Per-wave spawn progress for everything currently in flight. */
+  readonly waveRunner = new ActiveWaves();
 
   constructor(config: WorldConfig, rules: Ruleset = EMPTY_RULESET) {
     this.config = config;
@@ -111,7 +114,7 @@ export class World {
     this.airIndex = new SpatialHash(SPATIAL_CELL_SIZE, worldWidth, worldHeight, MAX_ENEMIES);
 
     this.resources = { gold: config.startingGold, aether: 0, lives: config.lives };
-    this.wave = { index: -1, active: 0, autoStartIn: 0, cleared: 0 };
+    this.wave = { index: -1, active: 0, autoStartIn: this.firstWaveDelay(), cleared: 0 };
   }
 
   /** Back to the state a fresh stage starts in, reusing every allocation. */
@@ -141,10 +144,17 @@ export class World {
     this.resources.aether = 0;
     this.resources.lives = this.config.lives;
 
+    this.waveRunner.clear();
+
     this.wave.index = -1;
     this.wave.active = 0;
-    this.wave.autoStartIn = 0;
+    this.wave.autoStartIn = this.firstWaveDelay();
     this.wave.cleared = 0;
+  }
+
+  /** The build phase before wave one, taken from authored content. */
+  private firstWaveDelay(): number {
+    return this.rules.waves.count > 0 ? (this.rules.waves.autoStartTicks[0] as number) : 0;
   }
 
   get finished(): boolean {
