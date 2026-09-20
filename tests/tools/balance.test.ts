@@ -272,6 +272,34 @@ describe('the report names design problems', () => {
     expect(codes).not.toContain('early-call-fatal');
   });
 
+  /**
+   * A single-type run probes one tower; it says nothing about the stage. A
+   * tower failing to solo a stage is what pillar P1 wants — one succeeding is
+   * the violation, and has its own finding.
+   */
+  it('exempts a single-tower probe from the authored band', () => {
+    const summary = summarise('1-1', 'single:a', towerIds, target, [
+      run({ won: false, livesRemaining: 0 }),
+    ]);
+    expect(findings(summary).some((f) => f.code === 'win-rate-out-of-band')).toBe(false);
+    expect(hasFailure([summary])).toBe(false);
+  });
+
+  it('warns when one tower carries the whole stage alone', () => {
+    const summary = summarise('1-1', 'single:a', towerIds, target, [run(), run()]);
+    const finding = findings(summary).find((f) => f.code === 'tower-solos-stage');
+    expect(finding?.message).toContain('a');
+    expect(finding?.severity).toBe('warn');
+  });
+
+  it('says nothing when a lone tower struggles, which is the point', () => {
+    const summary = summarise('1-1', 'single:a', towerIds, target, [
+      run({ won: true, livesRemaining: 6 }),
+      run({ won: false, livesRemaining: 0 }),
+    ]);
+    expect(findings(summary).some((f) => f.code === 'tower-solos-stage')).toBe(false);
+  });
+
   it('fails a run that never finished', () => {
     const summary = summarise('1-1', 'greedy', towerIds, target, [run({ timedOut: true })]);
     expect(findings(summary).some((f) => f.code === 'runs-timed-out')).toBe(true);

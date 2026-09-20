@@ -144,14 +144,21 @@ export function summarise(
 /**
  * Strategies the authored band is a statement about.
  *
- * `rush` is deliberately excluded. It calls every wave the instant it can,
- * which is the game's main risk/reward dial turned to its limit — a player
- * doing that *should* be able to lose, and holding it to the same band as
- * careful play would make the band mean nothing. It gets its own finding
- * instead.
+ * The band says how often *a player with the whole toolkit* clears the stage.
+ * Two kinds of run are deliberately outside it, because holding them to it
+ * would make the band mean nothing:
+ *
+ * - `rush` calls every wave the instant it can, the risk/reward dial at its
+ *   limit. A player doing that should be able to lose.
+ * - `single:*` is a probe of one tower, not a statement about the stage. A
+ *   single tower failing to solo a stage is **what pillar P1 wants**; one
+ *   succeeding is the violation, and gets its own finding below.
+ *
+ * Both are still measured and reported. They just do not fail a build for
+ * being what they are.
  */
 function bandApplies(strategy: string): boolean {
-  return strategy !== 'rush';
+  return strategy !== 'rush' && !strategy.startsWith('single:');
 }
 
 export function findings(summary: Summary): Finding[] {
@@ -227,6 +234,25 @@ export function findings(summary: Summary): Finding[] {
         message:
           `pick rates span ${spread.toFixed(1)}:1, past the ${MAX_PICK_SPREAD}:1 limit — ` +
           'a design problem to fix, not a number to nudge',
+      });
+    }
+  }
+
+  /**
+   * Pillar P1, measured at its sharpest: *no tower should be able to carry a
+   * stage by itself.* A roster where one can is a roster where the others are
+   * decoration, and the answer is a design change rather than a number to
+   * nudge.
+   */
+  if (summary.strategy.startsWith('single:') && summary.runs > 0) {
+    const tower = summary.strategy.slice('single:'.length);
+    if (summary.winRate >= 0.95 && summary.medianLivesRemaining === summary.startingLives) {
+      out.push({
+        severity: 'warn',
+        code: 'tower-solos-stage',
+        message:
+          `a board of nothing but ${tower} clears the stage ${pct(summary.winRate)} of the time ` +
+          'without losing a life — pillar P1 (no tower carries a stage alone)',
       });
     }
   }
