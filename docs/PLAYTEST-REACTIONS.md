@@ -185,7 +185,21 @@ mechanic one, and the fix is in [#36](https://github.com/satautiv/tower-defence/
 
 ## Recording the session
 
-One short note per tester, in a comment on [#62](https://github.com/satautiv/tower-defence/issues/62):
+Three places, in this order — the same shape #19's session took.
+
+1. **One comment on [#62](https://github.com/satautiv/tower-defence/issues/62) per tester**, written straight after their run rather than
+   saved up. Raw notes, not conclusions.
+2. **One final comment** with the verdict against the four acceptance criteria, and what
+   happens next. This is the gate decision, and it belongs beside the evidence for it.
+3. **The durable conclusion into `CLAUDE.md`**, if there is one — a finding that should
+   change how later work is done, the way #19's Flame Vent pick rate did. Raw session
+   notes do not go there; they are evidence for one decision, not reference material.
+
+**This repository is public.** Testers are "Tester 1/2/3" — no names, no handles, no
+workplace, nothing that identifies them. Quote what they said about the game, not about
+themselves.
+
+Per-tester template:
 
 ```
 Tester N — [how much tower defence they have played]
