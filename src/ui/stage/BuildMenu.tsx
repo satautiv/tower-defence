@@ -11,6 +11,8 @@ export interface BuildMenuProps {
   onHover: (typeIdx: number) => void;
   /** Paused: the options still preview their range, but build nothing. */
   locked?: boolean;
+  /** Resolves a tower id to its display name. */
+  name: (towerId: string) => string;
 }
 
 /**
@@ -22,19 +24,49 @@ export interface BuildMenuProps {
  * layout works with a mouse, where it simply means less travel.
  */
 const ARC_RADIUS = 96;
+/** The second ring, for a roster too big to fit on one. */
+const OUTER_RADIUS = 184;
+/** Most cards one arc holds before a second ring reads better than a crush. */
+const PER_RING = 4;
 /** Opens upward, so the choices are never hidden under the hand. */
 const ARC_START = -Math.PI * 0.85;
 const ARC_END = -Math.PI * 0.15;
 
 /**
- * Room the arc needs above the plot before it will open upward.
+ * Lays the options out on one arc or two.
+ *
+ * Three towers fitted on a single arc comfortably; eight do not, and naming
+ * them made each card wider still. A larger radius would have kept one ring at
+ * the cost of the thing the arc exists for — the plot is under the thumb, and
+ * sending the player's hand 300px away turns every build into a two-handed
+ * operation (§17.1). Two shorter rings keep it where the hand already is.
+ */
+export function arcLayout(count: number, index: number): { angle: number; radius: number } {
+  const rings = count > PER_RING ? 2 : 1;
+  const perRing = Math.ceil(count / rings);
+
+  const ring = Math.floor(index / perRing);
+  const within = index % perRing;
+  /* The last ring may be short; it is spread across the same arc so the two
+     read as concentric rather than as one arc and a gap. */
+  const inRing = ring === rings - 1 ? count - perRing * ring : perRing;
+
+  const t = inRing === 1 ? 0.5 : within / (inRing - 1);
+  return {
+    angle: ARC_START + (ARC_END - ARC_START) * t,
+    radius: ring === 0 ? ARC_RADIUS : OUTER_RADIUS,
+  };
+}
+
+/**
+ * Room the arcs need above the plot before they will open upward.
  *
  * The radius plus the height of a button and its label. Below this the arc
  * flips downward instead: a playtester tapping a plot near the top of the
  * screen lost one option entirely and had the other two clipped, because the
  * arc always opened up and nothing clamped it to the viewport.
  */
-const ARC_CLEARANCE = ARC_RADIUS + 56;
+const ARC_CLEARANCE = OUTER_RADIUS + 56;
 
 /** Whether the arc has to flip below the plot to stay on screen. */
 export function opensDownward(plotY: number, clearance = ARC_CLEARANCE): boolean {
@@ -47,6 +79,7 @@ export function BuildMenu({
   onBuild,
   onCancel,
   onHover,
+  name,
   locked = false,
 }: BuildMenuProps): ReactElement {
   const count = Math.max(1, options.length);
@@ -74,15 +107,14 @@ export function BuildMenu({
       )}
 
       {options.map((option, index) => {
-        const t = count === 1 ? 0.5 : index / (count - 1);
-        const angle = ARC_START + (ARC_END - ARC_START) * t;
+        const { angle, radius } = arcLayout(count, index);
 
         return (
           <div
             key={option.id}
             className="ui-build__slot"
             style={{
-              transform: `translate(${Math.cos(angle) * ARC_RADIUS}px, ${Math.sin(angle) * ARC_RADIUS * flip}px)`,
+              transform: `translate(${Math.cos(angle) * radius}px, ${Math.sin(angle) * radius * flip}px)`,
             }}
           >
             <Button
@@ -101,6 +133,11 @@ export function BuildMenu({
               }
               aria-label={`Build ${option.id} for ${option.cost} gold`}
             >
+              {/* Named, because a coloured dot and a price is not a choice.
+                  Both playtesters said the same thing unprompted: "the tower
+                  choices have no name or description, just a colored dot" —
+                  and that was with three towers, not eight. */}
+              <span className="ui-build__name">{name(option.id)}</span>
               <span className={`ui-build__type ui-type--${option.stats.damageType}`} />
               <span className="ui-build__cost">{option.cost}</span>
             </Button>

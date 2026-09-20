@@ -84,7 +84,7 @@ export function drainCommandQueue(world: World): void {
         break;
 
       case CommandKind.BuildTower:
-        applyBuild(world, command.a, command.b);
+        applyBuild(world, command.a, command.b, command.c);
         break;
 
       case CommandKind.UpgradeTower:
@@ -160,7 +160,7 @@ const reject = (world: World, kind: number, reason: RejectReason): void => {
   emitCommandRejected(world.events, kind, reason);
 };
 
-function applyBuild(world: World, plotId: number, typeIdx: number): void {
+function applyBuild(world: World, plotId: number, typeIdx: number, targetMode = 0): void {
   const plot = world.rules.plots.find((candidate) => candidate.id === plotId);
   if (plot === undefined) return reject(world, CommandKind.BuildTower, RejectReason.NoSuchPlot);
   if (plotOccupant(world, plotId) >= 0) {
@@ -183,6 +183,7 @@ function applyBuild(world: World, plotId: number, typeIdx: number): void {
     return;
   }
 
+  world.towers.targetMode[slot] = targetMode;
   world.lastBuild.towerSlot = slot;
   world.lastBuild.towerId = world.towers.ids[slot] as number;
   world.lastBuild.cost = cost;

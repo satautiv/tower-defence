@@ -30,6 +30,11 @@ export function powerName(powerId: string): string {
   return key === undefined ? powerId : text(key);
 }
 
+export function towerName(towerId: string): string {
+  const key = loadContent().towers.get(towerId)?.nameKey;
+  return key === undefined ? towerId : text(key);
+}
+
 export function heroName(heroId: string): string {
   const key = loadContent().heroes.get(heroId)?.nameKey;
   return key === undefined ? heroId : text(key);

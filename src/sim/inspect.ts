@@ -75,6 +75,9 @@ export interface TowerInfo {
   /** Soldiers standing, and how many the tier fields. */
   soldiersAlive: number;
   soldierCount: number;
+  /** What it has actually done this stage. */
+  kills: number;
+  damageDealt: number;
 }
 
 export interface PowerOption {
@@ -207,6 +210,8 @@ export function towerInfo(world: World, slot: number): TowerInfo | null {
     rallyRangeTiles: (world.rules.towers.rallyRange[statIndexOf(world, slot)] as number) / TILE,
     soldiersAlive: countSoldiers(world, slot),
     soldierCount: world.rules.towers.soldierCount[statIndexOf(world, slot)] as number,
+    kills: world.towers.kills[slot] as number,
+    damageDealt: world.towers.damageDealt[slot] as number,
   };
 }
 

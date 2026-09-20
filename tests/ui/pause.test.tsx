@@ -151,6 +151,7 @@ describe('actions locked by the pause', () => {
         onBuild={onBuild}
         onCancel={vi.fn()}
         onHover={onHover}
+        name={(id) => id}
         locked
       />,
     );
@@ -175,6 +176,7 @@ describe('actions locked by the pause', () => {
         onCancel={vi.fn()}
         onHover={vi.fn()}
         locked
+        name={(id) => id}
       />,
     );
     expect(screen.getByRole('status')).toHaveTextContent(/resume to build/i);
@@ -188,6 +190,7 @@ describe('actions locked by the pause', () => {
         onBuild={vi.fn()}
         onCancel={vi.fn()}
         onHover={vi.fn()}
+        name={(id) => id}
       />,
     );
     expect(screen.queryByRole('status')).toBeNull();
@@ -211,6 +214,8 @@ describe('actions locked by the pause', () => {
       rallyRangeTiles: 0,
       soldiersAlive: 0,
       soldierCount: 0,
+      kills: 0,
+      damageDealt: 0,
     };
     render(
       <TowerPanel
@@ -351,6 +356,7 @@ describe('the build arc stays on screen', () => {
         onBuild={vi.fn()}
         onCancel={vi.fn()}
         onHover={vi.fn()}
+        name={(id) => id}
       />,
     );
 
@@ -388,6 +394,8 @@ describe('the rally control', () => {
     rallyRangeTiles: 8,
     soldiersAlive: 3,
     soldierCount: 3,
+    kills: 0,
+    damageDealt: 0,
     ...over,
   });
 

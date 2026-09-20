@@ -31,6 +31,16 @@ export class TowerPool extends EntityPool {
    */
   readonly rallyX = new Float32Array(this.capacity);
   readonly rallyY = new Float32Array(this.capacity);
+
+  /**
+   * What this tower has actually done, for its info panel.
+   *
+   * Counted as it happens rather than derived: a tower's contribution is the
+   * one number a player cannot work out by looking, and it is what turns "is
+   * this worth upgrading" from a guess into a reading (pillar P2).
+   */
+  readonly kills = new Int32Array(this.capacity);
+  readonly damageDealt = new Float32Array(this.capacity);
   /** First / Last / Strongest / Weakest / Closest, persisted per tower. */
   readonly targetMode = new Uint8Array(this.capacity);
 
@@ -58,6 +68,8 @@ export class TowerPool extends EntityPool {
     this.target[slot] = -1;
     this.rallyX[slot] = 0;
     this.rallyY[slot] = 0;
+    this.kills[slot] = 0;
+    this.damageDealt[slot] = 0;
     this.targetMode[slot] = 0;
     this.plotId[slot] = 0;
     this.invested[slot] = 0;

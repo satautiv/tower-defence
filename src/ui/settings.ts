@@ -46,6 +46,15 @@ export const SettingsSchema = z.object({
    * it will use.
    */
   heroLevel: z.number().int().min(1).max(10).default(1),
+  /**
+   * The targeting mode each tower type defaults to, by tower id.
+   *
+   * A small thing players notice immediately: someone who always sets their
+   * mortars to Strongest should not have to set it again on every mortar, in
+   * every stage. Keyed by id rather than by index so that adding a tower
+   * cannot silently reassign everybody's preferences.
+   */
+  targetModes: z.record(z.string(), z.number().int().min(0).max(4)).default({}),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;
@@ -113,6 +122,7 @@ interface SettingsState extends Settings {
   setVolume: (volume: number) => void;
   setMuted: (muted: boolean) => void;
   setHeroLevel: (level: number) => void;
+  setTargetMode: (towerId: string, mode: number) => void;
 }
 
 /** The adapter settings are read from and written to. Replaced in tests. */
@@ -152,6 +162,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setMuted: (muted) => {
     if (get().muted === muted) return;
     set({ muted });
+    persist(SettingsSchema.parse(get()));
+  },
+
+  setTargetMode: (towerId, mode) => {
+    if (get().targetModes[towerId] === mode) return;
+    set({ targetModes: { ...get().targetModes, [towerId]: mode } });
     persist(SettingsSchema.parse(get()));
   },
 

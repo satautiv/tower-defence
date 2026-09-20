@@ -71,8 +71,19 @@ export class CommandQueue {
 /* Typed wrappers. The payload slots are positional and untyped in the buffer,
    so every command has exactly one place that knows what its numbers mean. */
 
-export const buildTower = (q: CommandQueue, plotId: number, towerTypeIdx: number): boolean =>
-  q.push(CommandKind.BuildTower, plotId, towerTypeIdx);
+/**
+ * Builds a tower, optionally with the targeting mode it should open on.
+ *
+ * The mode rides along rather than being a second command, because the slot
+ * does not exist until this one lands — and because a build and the preference
+ * it was made under are one intent, which is what a command is meant to be.
+ */
+export const buildTower = (
+  q: CommandQueue,
+  plotId: number,
+  towerTypeIdx: number,
+  targetMode = 0,
+): boolean => q.push(CommandKind.BuildTower, plotId, towerTypeIdx, targetMode);
 
 export const upgradeTower = (q: CommandQueue, towerSlot: number): boolean =>
   q.push(CommandKind.UpgradeTower, towerSlot);

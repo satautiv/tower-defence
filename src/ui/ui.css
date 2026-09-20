@@ -176,9 +176,33 @@
   border-radius: 50%;
   background: currentColor;
 }
+.ui-build__name {
+  font: 600 10px / 1.1 var(--f-ui);
+  text-align: center;
+  max-width: 76px;
+}
 .ui-build__cost {
   font: 600 var(--t-xs) / 1 var(--f-numeric);
   color: var(--c-gold);
+}
+
+/* ---- targeting modes ---- */
+
+.ui-tower-panel__note {
+  margin: 0;
+  font: 400 var(--t-xs) / 1.4 var(--f-ui);
+  color: var(--c-text-dim);
+}
+
+.ui-targeting {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+.ui-targeting__mode {
+  flex: 1 1 auto;
+  padding: var(--s-1) var(--s-2);
+  font: 600 10px / 1.1 var(--f-ui);
 }
 /* Sits just below the plot, clear of the arc whichever way it opened. */
 .ui-build__locked {

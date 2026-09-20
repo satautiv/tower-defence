@@ -13,6 +13,7 @@ import {
   prospectiveRange,
   sellTower,
   setRally,
+  setTargetMode,
   castHeroAbility,
   castPower,
   heroInfo,
@@ -67,6 +68,7 @@ import {
   heroAbilityName,
   heroName,
   powerName,
+  towerName,
   reactionName,
   statusName,
 } from '../text.js';
@@ -447,11 +449,25 @@ export function InStageScreen(): ReactElement {
     return () => clearInterval(id);
   }, []);
 
+  /**
+   * Builds, then applies whatever mode this tower type was last set to.
+   *
+   * Two commands rather than a parameter on the first: the build has to land
+   * before there is a slot to address, and both go through the queue so the
+   * balance simulator sees exactly what a player does.
+   */
   const build = useCallback(
     (typeIdx: number) => {
       const plotId = selectionRef.current.plotId;
       if (plotId < 0) return;
-      dispatch((queue) => buildTower(queue, plotId, typeIdx));
+      const session = sessionRef.current;
+      if (session === null) return;
+
+      const towerId = session.world.rules.towers.ids[typeIdx];
+      const preferred =
+        towerId === undefined ? undefined : useSettings.getState().targetModes[towerId];
+
+      dispatch((queue) => buildTower(queue, plotId, typeIdx, preferred ?? 0));
       clearSelection();
     },
     [dispatch, clearSelection],
@@ -708,11 +724,19 @@ export function InStageScreen(): ReactElement {
                     : prospectiveRange(sessionRef.current.world, typeIdx),
                 )
               }
+              name={towerName}
             />
           )}
 
           {tower !== null && (
             <TowerPanel
+              onTargetMode={(mode) => {
+                if (tower === null) return;
+                dispatch((queue) => setTargetMode(queue, tower.slot, mode));
+                /* Remembered for the type, so the next mortar opens the way
+                   this one was set. A small thing players notice immediately. */
+                useSettings.getState().setTargetMode(tower.id, mode);
+              }}
               onRally={
                 tower !== null && tower.rallyRangeTiles > 0
                   ? () => setRallyFor((armed) => (armed === tower.slot ? -1 : tower.slot))

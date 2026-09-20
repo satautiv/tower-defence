@@ -181,6 +181,12 @@ function resolveOne(world: World, index: number): void {
 
   enemies.hp[slot] = (enemies.hp[slot] as number) - amount;
   world.stats.damageDealt += amount;
+  /* Attributed where it came from, so a panel can say what this tower has
+     contributed. Sources that are not towers — burns, reactions, soldiers —
+     carry -1 and are counted only in the stage total. */
+  if (source >= 0 && world.towers.isAlive(source)) {
+    world.towers.damageDealt[source] = (world.towers.damageDealt[source] as number) + amount;
+  }
   applyOnHitStatus(world, index, slot);
 
   emitDamageDealt(
@@ -241,6 +247,11 @@ function resolveDeaths(world: World): void {
     const typeIdx = enemies.typeIdx[slot] as number;
     world.stats.enemiesKilled += 1;
     awardKill(world, typeIdx);
+
+    const killer = deaths.killedBySource[i] as number;
+    if (killer >= 0 && world.towers.isAlive(killer)) {
+      world.towers.kills[killer] = (world.towers.kills[killer] as number) + 1;
+    }
     /* Economy towers add on top of the bounty, which is the whole reason to
        build one instead of more damage. */
     addGold(world, bonusGoldFor(world, deaths.killedBySource[i] as number));
