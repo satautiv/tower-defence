@@ -140,6 +140,33 @@ crowd is where the game lives.
 
 ---
 
+## What to write down, and when
+
+Two kinds of evidence, kept apart. Mixing them into one narrative is how a confident
+answer covers for a board that contradicts it.
+
+**During the run — behaviour, and only what they volunteer.** What they build and in what
+order, where they hesitate and for how long, whether their next action changes after a
+burst. Write down anything they say **unprompted**, verbatim; that is the most valuable
+material the session produces, because you did not cue it. Ask nothing.
+
+**After the run — their answers, verbatim.** This matters more than it sounds. The second
+acceptance criterion is *literally* about their words: "can explain in their own words what
+happened". No amount of watching answers it. The gate turns on whether something like
+*"the fire one and the ice one together did something bigger"* actually comes out of their
+mouth, and a paraphrase destroys the one piece of evidence that decides it. "They seemed to
+get it" is not a finding.
+
+**When the two disagree, behaviour wins.** What someone does is evidence; what they say
+about why is a hypothesis about themselves. A tester who says they understood but never
+built a second overlapping pair has told you less than their hands did. Criteria 1, 3 and 4
+are behavioural and only 2 is verbal, so keep them in separate fields.
+
+You cannot write verbatim while watching. Either record audio with their permission, or
+jot keywords and reconstruct within minutes of the run — not after the third session.
+
+---
+
 ## Questions to ask afterwards
 
 In this order. Do not reorder them — each one gives away a little more, so an earlier
