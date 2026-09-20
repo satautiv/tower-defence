@@ -224,17 +224,29 @@ describe('the first of each reaction names itself', () => {
     expect(feed.labels[0]?.text).toBe(name('thermal_shock'));
   });
 
-  /* The first Thermal Shock should announce itself; the fiftieth should not
-     obscure the board (§4.5). */
-  it('does not label it again', () => {
+  /**
+   * Named more than once, but not forever.
+   *
+   * Once was the original rule and it was wrong: a player looking elsewhere on
+   * the first occurrence never got another chance, which is exactly how the
+   * first gate session was lost. A few repeats give a distracted player
+   * somewhere to land; unlimited ones turn the name into wallpaper.
+   */
+  it('names it again for the first few, then stops', () => {
     const feed = new ReactionFeed();
+    const seen: number[] = [];
 
-    for (let round = 0; round < 3; round++) {
+    for (let round = 0; round < 6; round++) {
       const world = createWorldForStage(registry, stage, 1);
       detonate(world);
       feed.consume(world, name);
+      /* Counted per round and then retired, so each entry is what that round
+         newly raised rather than what happens to still be on screen. */
+      seen.push(feed.labels.length);
+      for (let frame = 0; frame < 200; frame++) feed.advance();
     }
-    expect(feed.labels).toHaveLength(1);
+
+    expect(seen).toEqual([1, 1, 1, 0, 0, 0]);
   });
 
   it('labels a different reaction on its own first occurrence', () => {
@@ -278,6 +290,68 @@ describe('the first of each reaction names itself', () => {
   });
 });
 
+describe('the damage floats where it happened', () => {
+  /**
+   * The most direct answer to "what just killed that?" — the question §4.5
+   * says a player must never need a wiki to answer.
+   */
+  it('shows what the reaction dealt', () => {
+    const world = createWorldForStage(registry, stage, 1);
+    detonate(world);
+
+    const feed = new ReactionFeed();
+    feed.consume(world, name);
+
+    const thermal = registry.reactions.get('thermal_shock')!;
+    expect(feed.numbers).toHaveLength(1);
+    expect(feed.numbers[0]?.amount).toBeCloseTo(thermal.baseDamage + thermal.damagePerStack * 2, 2);
+  });
+
+  it('takes the reaction`s colour, like the burst', () => {
+    const world = createWorldForStage(registry, stage, 1);
+    detonate(world);
+
+    const feed = new ReactionFeed();
+    feed.consume(world, name);
+    expect(feed.numbers[0]?.colour).toBe(reactionStyle('thermal_shock').colour);
+  });
+
+  /* Superconduct strips armour instead of dealing damage. A floating "0"
+     would say something false about what just happened. */
+  it('shows nothing for a reaction that deals no damage', () => {
+    const world = createWorldForStage(registry, stage, 1);
+    const slot = spawnEnemy(world, enemyIndex(world, 'husk'), 0);
+    applyStatus(world, slot, STATUS_INDEX.chill, 1);
+    applyStatus(world, slot, STATUS_INDEX.charge, 1);
+    targetingSystem(world);
+    reactionSystem(world);
+
+    const feed = new ReactionFeed();
+    feed.consume(world, name);
+    expect(feed.bursts).toHaveLength(1);
+    expect(feed.numbers).toHaveLength(0);
+  });
+
+  it('keeps going up as it ages, then leaves', () => {
+    const world = createWorldForStage(registry, stage, 1);
+    detonate(world);
+
+    const feed = new ReactionFeed();
+    feed.consume(world, name);
+    for (let frame = 0; frame < 200; frame++) feed.advance();
+    expect(feed.numbers).toHaveLength(0);
+  });
+
+  it('caps how many can pile up at once', () => {
+    const world = createWorldForStage(registry, stage, 1);
+    for (let i = 0; i < 100; i++) detonate(world, 400 + i * 200, 400);
+
+    const feed = new ReactionFeed();
+    feed.consume(world, name);
+    expect(feed.numbers.length).toBeLessThanOrEqual(32);
+  });
+});
+
 describe('a restarted stage starts over', () => {
   /**
    * Including the record of what has been named. For the player, the restarted
@@ -310,6 +384,7 @@ describe('a restarted stage starts over', () => {
 
     expect(feed.bursts).toHaveLength(0);
     expect(feed.labels).toHaveLength(0);
+    expect(feed.numbers).toHaveLength(0);
     expect(feed.droppedBursts).toBe(0);
   });
 

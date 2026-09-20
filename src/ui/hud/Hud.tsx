@@ -9,8 +9,17 @@ import { useUiStore } from '../store.js';
 import { placeholderHudSource } from './model.js';
 import type { HudSource } from './model.js';
 
-/** How long a first tap on Quit stays armed, waiting for the second. */
-export const QUIT_CONFIRM_MS = 3000;
+/**
+ * How long a first tap on Quit stays armed, waiting for the second.
+ *
+ * Was three seconds, which a playtester hit three times in a row without ever
+ * quitting: they read "Quit?", thought about it, and by the time they clicked
+ * the button had disarmed itself — so the second click re-armed it instead.
+ * A confirmation that has to be read needs longer than it takes to read it,
+ * and the guard this exists for is an accidental tap, which happens within a
+ * second, not within ten.
+ */
+export const QUIT_CONFIRM_MS = 10_000;
 
 export interface HudProps {
   source?: HudSource;

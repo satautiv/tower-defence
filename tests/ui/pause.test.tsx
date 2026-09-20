@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BuildOption, EnemyInfo, NextWave, TowerInfo } from '@sim/index';
 import { Hud, QUIT_CONFIRM_MS } from '@ui/hud/Hud';
 import type { HudModel } from '@ui/hud/model';
-import { BuildMenu } from '@ui/stage/BuildMenu';
+import { BuildMenu, opensDownward } from '@ui/stage/BuildMenu';
 import { EnemyPanel } from '@ui/stage/EnemyPanel';
 import { TowerPanel } from '@ui/stage/TowerPanel';
 import { WavePreview } from '@ui/stage/WavePreview';
@@ -113,6 +113,24 @@ describe('an armed quit', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quit' }));
     expect(onQuit).not.toHaveBeenCalled();
   });
+
+  /**
+   * A playtester failed to quit three times in a row: they read "Quit?",
+   * considered it, and the window lapsed before the second click landed — so
+   * that click re-armed the button instead of quitting. The guard exists for
+   * an accidental tap, which happens within a second, not within ten.
+   */
+  it('stays armed long enough to be read and acted on', () => {
+    const onQuit = vi.fn();
+    render(<Hud source={() => MODEL} onRestart={vi.fn()} onQuit={onQuit} />);
+    pause();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quit' }));
+    /* Five seconds of thinking about it. */
+    act(() => vi.advanceTimersByTime(5000));
+    fireEvent.click(screen.getByRole('button', { name: 'Quit?' }));
+    expect(onQuit).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('actions locked by the pause', () => {
@@ -143,6 +161,36 @@ describe('actions locked by the pause', () => {
     expect(onHover).toHaveBeenCalledWith(0);
     expect(onBuild).not.toHaveBeenCalled();
     expect(button).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  /* Silence reads as a frozen game. A playtester paused to plan, clicked a
+     tower, got nothing at all, and thought the game had hung — the `title`
+     did not carry, because a tooltip does not exist on touch. */
+  it('says out loud why the build did nothing', () => {
+    render(
+      <BuildMenu
+        options={[]}
+        at={{ x: 0, y: 0 }}
+        onBuild={vi.fn()}
+        onCancel={vi.fn()}
+        onHover={vi.fn()}
+        locked
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(/resume to build/i);
+  });
+
+  it('says nothing of the kind while the game is running', () => {
+    render(
+      <BuildMenu
+        options={[]}
+        at={{ x: 0, y: 0 }}
+        onBuild={vi.fn()}
+        onCancel={vi.fn()}
+        onHover={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('shows a tower in full, but will not upgrade or sell it', () => {
@@ -261,5 +309,56 @@ describe('reading an enemy', () => {
     expect(screen.getByRole('list', { name: 'Statuses' })).toHaveTextContent('Corrode ×2 · 3.3s');
     expect(screen.getByTestId('enemy-panel')).toHaveTextContent('Armoured');
     expect(screen.getByTestId('enemy-panel')).toHaveTextContent('14 gold');
+  });
+});
+
+/**
+ * The arc used to open upward always, at a fixed radius, with nothing clamping
+ * it to the viewport. A playtester tapping a plot near the top of the screen
+ * lost one option entirely and had the other two clipped.
+ */
+describe('the build arc stays on screen', () => {
+  it('opens upward when there is room above the plot', () => {
+    expect(opensDownward(600)).toBe(false);
+  });
+
+  it('flips below the plot when there is not', () => {
+    expect(opensDownward(10)).toBe(true);
+    expect(opensDownward(0)).toBe(true);
+  });
+
+  it('needs clearance for the button as well as the arc', () => {
+    /* Exactly the radius is not enough — the button and its cost sit beyond it. */
+    expect(opensDownward(96)).toBe(true);
+  });
+
+  it('mirrors the options rather than reordering them', () => {
+    const options: BuildOption[] = [0, 1, 2].map((typeIdx) => ({
+      typeIdx,
+      id: `tower_${typeIdx}`,
+      cost: 100,
+      affordable: true,
+      stats: STATS,
+    }));
+
+    const { container } = render(
+      <BuildMenu
+        options={options}
+        at={{ x: 400, y: 0 }}
+        onBuild={vi.fn()}
+        onCancel={vi.fn()}
+        onHover={vi.fn()}
+      />,
+    );
+
+    const slots = [...container.querySelectorAll('.ui-build__slot')];
+    expect(slots).toHaveLength(3);
+    /* Every option sits below the plot, so none of them is off the top. */
+    for (const slot of slots) {
+      const y = Number(
+        /translate\([^,]+,\s*(-?[\d.]+)px\)/.exec((slot as HTMLElement).style.transform)?.[1],
+      );
+      expect(y).toBeGreaterThanOrEqual(0);
+    }
   });
 });

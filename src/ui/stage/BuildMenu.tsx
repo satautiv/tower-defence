@@ -26,6 +26,21 @@ const ARC_RADIUS = 96;
 const ARC_START = -Math.PI * 0.85;
 const ARC_END = -Math.PI * 0.15;
 
+/**
+ * Room the arc needs above the plot before it will open upward.
+ *
+ * The radius plus the height of a button and its label. Below this the arc
+ * flips downward instead: a playtester tapping a plot near the top of the
+ * screen lost one option entirely and had the other two clipped, because the
+ * arc always opened up and nothing clamped it to the viewport.
+ */
+const ARC_CLEARANCE = ARC_RADIUS + 56;
+
+/** Whether the arc has to flip below the plot to stay on screen. */
+export function opensDownward(plotY: number, clearance = ARC_CLEARANCE): boolean {
+  return plotY < clearance;
+}
+
 export function BuildMenu({
   options,
   at,
@@ -35,6 +50,9 @@ export function BuildMenu({
   locked = false,
 }: BuildMenuProps): ReactElement {
   const count = Math.max(1, options.length);
+  /* Mirrored through the horizontal, so the order the player reads left to
+     right is the same either way round. */
+  const flip = opensDownward(at.y) ? -1 : 1;
 
   return (
     <div className="ui-build" style={{ left: at.x, top: at.y }}>
@@ -45,6 +63,16 @@ export function BuildMenu({
         role="presentation"
       />
 
+      {/* A rejected build must say why. Silence reads as a frozen game — a
+          playtester paused to plan, clicked a tower, got nothing at all, and
+          thought it had hung. The `title` alone did not carry: a tooltip does
+          not exist on touch. */}
+      {locked && (
+        <div className="ui-build__locked" role="status">
+          Paused — resume to build
+        </div>
+      )}
+
       {options.map((option, index) => {
         const t = count === 1 ? 0.5 : index / (count - 1);
         const angle = ARC_START + (ARC_END - ARC_START) * t;
@@ -54,11 +82,11 @@ export function BuildMenu({
             key={option.id}
             className="ui-build__slot"
             style={{
-              transform: `translate(${Math.cos(angle) * ARC_RADIUS}px, ${Math.sin(angle) * ARC_RADIUS}px)`,
+              transform: `translate(${Math.cos(angle) * ARC_RADIUS}px, ${Math.sin(angle) * ARC_RADIUS * flip}px)`,
             }}
           >
             <Button
-              variant={option.affordable ? 'primary' : 'secondary'}
+              variant={option.affordable && !locked ? 'primary' : 'secondary'}
               disabled={!option.affordable}
               aria-disabled={locked || undefined}
               title={locked ? 'Resume to build' : undefined}

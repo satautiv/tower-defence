@@ -56,11 +56,34 @@ export function reactionStyle(id: string): ReactionStyle {
 /** Radius drawn for a reaction that has none of its own, in world pixels. */
 export const POINT_RADIUS = 28;
 
-const BURST_FRAMES = 24;
-const LABEL_FRAMES = 90;
+/**
+ * How long a burst lives, in frames.
+ *
+ * Longer than it first was. The reaction gate (#62) found a tester who
+ * triggered a Thermal Shock and did not notice it: he was watching his towers
+ * and his gold, not one enemy among eight, and by the time anything drew his
+ * eye the ring had gone. Half a second is the floor for something that has to
+ * be caught in peripheral vision.
+ */
+const BURST_FRAMES = 40;
+const LABEL_FRAMES = 100;
+const NUMBER_FRAMES = 50;
+
+/**
+ * How many times each reaction announces itself by name per stage.
+ *
+ * It was once, which was a mistake: correct for a player who already knows the
+ * mechanic, and useless for teaching one who does not. A player who happens to
+ * be looking elsewhere on the first occurrence never gets another chance, which
+ * is exactly what happened in the first gate session. Three gives a distracted
+ * player somewhere to land without the fiftieth reaction shouting its own name.
+ */
+const NAME_REPEATS = 3;
+
 /** The hard cap risk T3 calls for: a dense wave drops bursts, never stutters. */
 const MAX_BURSTS = 64;
 const MAX_LABELS = 8;
+const MAX_NUMBERS = 32;
 
 export interface Burst {
   x: number;
@@ -83,6 +106,22 @@ export interface Label {
 }
 
 /**
+ * A reaction's damage, floating where it happened.
+ *
+ * The most direct answer there is to "what just killed that?" — the question
+ * §4.5 says the player must never have to visit a wiki to answer. A name tells
+ * them something happened; a number tells them it mattered.
+ */
+export interface Number_ {
+  x: number;
+  y: number;
+  amount: number;
+  colour: number;
+  life: number;
+  maxLife: number;
+}
+
+/**
  * Turns reaction events into what should be on screen, and ages it.
  *
  * Pure: no renderer, no DOM, no clock of its own. Frames are counted rather
@@ -92,10 +131,11 @@ export interface Label {
 export class ReactionFeed {
   readonly bursts: Burst[] = [];
   readonly labels: Label[] = [];
+  readonly numbers: Number_[] = [];
 
   private readonly spareBursts: Burst[] = [];
-  /** Reaction rows already named this stage, so a label appears exactly once. */
-  private readonly named = new Set<number>();
+  /** Times each reaction row has named itself this stage. */
+  private readonly named = new Map<number, number>();
   private dropped = 0;
 
   constructor() {
@@ -136,12 +176,18 @@ export class ReactionFeed {
       const radius = (table.radius[row] as number) || POINT_RADIUS;
 
       this.addBurst(event.b, event.c, radius, style);
-      /* Named once per stage: the first Thermal Shock should announce itself,
-         the fiftieth should not obscure the board. */
-      if (!this.named.has(row)) {
-        this.named.add(row);
+
+      /* The first few of each reaction announce themselves; the fiftieth does
+         not, or the name becomes wallpaper and stops being read at all. */
+      const shown = this.named.get(row) ?? 0;
+      if (shown < NAME_REPEATS) {
+        this.named.set(row, shown + 1);
         this.addLabel(event.b, event.c, name(id), style.colour);
       }
+
+      /* Magnitude rides in the event's last slot. A reaction that deals none —
+         Superconduct strips armour instead — shows no number. */
+      if (event.d > 0) this.addNumber(event.b, event.c, event.d, style.colour);
     }
   }
 
@@ -169,6 +215,11 @@ export class ReactionFeed {
     this.labels.push({ x, y, text, colour, life: LABEL_FRAMES, maxLife: LABEL_FRAMES });
   }
 
+  private addNumber(x: number, y: number, amount: number, colour: number): void {
+    if (this.numbers.length >= MAX_NUMBERS) return;
+    this.numbers.push({ x, y, amount, colour, life: NUMBER_FRAMES, maxLife: NUMBER_FRAMES });
+  }
+
   /** Ages everything by a frame and retires what has finished. */
   advance(): void {
     for (let i = this.bursts.length - 1; i >= 0; i--) {
@@ -183,6 +234,12 @@ export class ReactionFeed {
       const label = this.labels[i] as Label;
       label.life -= 1;
       if (label.life <= 0) this.labels.splice(i, 1);
+    }
+
+    for (let i = this.numbers.length - 1; i >= 0; i--) {
+      const number = this.numbers[i] as Number_;
+      number.life -= 1;
+      if (number.life <= 0) this.numbers.splice(i, 1);
     }
   }
 
@@ -201,6 +258,7 @@ export class ReactionFeed {
     for (const burst of this.bursts) this.spareBursts.push(burst);
     this.bursts.length = 0;
     this.labels.length = 0;
+    this.numbers.length = 0;
     this.named.clear();
     this.dropped = 0;
   }
@@ -234,6 +292,7 @@ export class ReactionsView {
   private readonly graphics = new Graphics();
   private readonly labelHost = new Container();
   private readonly labelPool: Text[] = [];
+  private readonly numberPool: Text[] = [];
   private readonly feed = new ReactionFeed();
   private readonly scratch: number[] = [];
 
@@ -250,6 +309,7 @@ export class ReactionsView {
     this.feed.advance();
     this.drawBursts();
     this.drawLabels();
+    this.drawNumbers();
   }
 
   private drawBursts(): void {
@@ -258,15 +318,33 @@ export class ReactionsView {
 
     for (const burst of this.feed.bursts) {
       const t = ReactionFeed.progress(burst);
-      const alpha = 1 - t;
+      /* Holds full strength for the first third and only then fades, rather
+         than dimming from the first frame. A burst that starts disappearing
+         immediately is one a player glancing across the board never catches —
+         which is how the first gate session was lost. */
+      const alpha = t < 0.35 ? 1 : 1 - (t - 0.35) / 0.65;
       /* Expands to the reaction's true radius, so the ring the player watches
          is the area that was actually caught in it. */
       const radius = burst.radius * (0.25 + 0.75 * t);
 
+      /* A white core for the first few frames. Colour tells the player *which*
+         reaction; the flash is what tells them one happened at all. */
+      if (t < 0.25) {
+        const flash = 1 - t / 0.25;
+        g.circle(burst.x, burst.y, radius * 0.5).fill({
+          color: 0xffffff,
+          alpha: flash * 0.55,
+        });
+      }
+
+      /* Filled wash under every shape, so the area reads as an area rather
+         than as an outline the eye can slide past. */
+      g.circle(burst.x, burst.y, radius).fill({ color: burst.colour, alpha: alpha * 0.14 });
+
       switch (burst.shape) {
         case 'hex':
           polygonPoints(burst.x, burst.y, radius, 6, t * 0.5, this.scratch);
-          g.poly(this.scratch).stroke({ width: 3, color: burst.colour, alpha });
+          g.poly(this.scratch).stroke({ width: 4, color: burst.colour, alpha });
           break;
 
         case 'arc':
@@ -274,21 +352,20 @@ export class ReactionsView {
           break;
 
         case 'bloom':
-          g.circle(burst.x, burst.y, radius).fill({ color: burst.colour, alpha: alpha * 0.18 });
-          g.circle(burst.x, burst.y, radius).stroke({ width: 3, color: burst.colour, alpha });
+          g.circle(burst.x, burst.y, radius).stroke({ width: 5, color: burst.colour, alpha });
           break;
 
         case 'rings':
-          g.circle(burst.x, burst.y, radius).stroke({ width: 2, color: burst.colour, alpha });
+          g.circle(burst.x, burst.y, radius).stroke({ width: 3, color: burst.colour, alpha });
           g.circle(burst.x, burst.y, radius * 0.6).stroke({
-            width: 2,
+            width: 3,
             color: burst.colour,
             alpha,
           });
           break;
 
         default:
-          g.circle(burst.x, burst.y, radius).stroke({ width: 3, color: burst.colour, alpha });
+          g.circle(burst.x, burst.y, radius).stroke({ width: 4, color: burst.colour, alpha });
           this.drawSpokes(burst.x, burst.y, radius, burst.colour, alpha);
       }
     }
@@ -303,7 +380,7 @@ export class ReactionsView {
       g.moveTo(x + cos * radius * 0.6, y + sin * radius * 0.6);
       g.lineTo(x + cos * radius * 1.15, y + sin * radius * 1.15);
     }
-    g.stroke({ width: 2, color: colour, alpha });
+    g.stroke({ width: 3, color: colour, alpha });
   }
 
   private drawJaggedRing(
@@ -322,7 +399,7 @@ export class ReactionsView {
       g.moveTo(x + Math.cos(from) * radius, y + Math.sin(from) * radius);
       g.lineTo(x + Math.cos(to) * near, y + Math.sin(to) * near);
     }
-    g.stroke({ width: 2, color: colour, alpha });
+    g.stroke({ width: 3, color: colour, alpha });
   }
 
   private drawLabels(): void {
@@ -352,14 +429,62 @@ export class ReactionsView {
     const existing = this.labelPool[index];
     if (existing !== undefined) return existing;
 
-    /* At most one per reaction per stage, so these are created a handful of
-       times and then reused for the life of the view. */
+    /* A handful per stage, created once and then reused for the life of the
+       view. */
     const text = new Text({
       text: '',
-      style: { fontFamily: 'sans-serif', fontSize: 18, fontWeight: 'bold', fill: 0xffffff },
+      style: { fontFamily: 'sans-serif', fontSize: 20, fontWeight: 'bold', fill: 0xffffff },
     });
     text.anchor.set(0.5, 1);
     this.labelPool.push(text);
+    this.labelHost.addChild(text);
+    return text;
+  }
+
+  /**
+   * The damage a reaction did, where it did it.
+   *
+   * The most direct answer to "what just killed that?", which §4.5 says a
+   * player must be able to reach without a wiki. The name says a reaction
+   * happened; the number says it was worth caring about.
+   */
+  private drawNumbers(): void {
+    const numbers = this.feed.numbers;
+
+    for (let i = 0; i < numbers.length; i++) {
+      const number = numbers[i] as Number_;
+      const view = this.numberAt(i);
+      const t = ReactionFeed.progress(number);
+
+      view.text = String(Math.round(number.amount));
+      view.style.fill = number.colour;
+      view.x = number.x;
+      view.y = number.y - 8 - t * 34;
+      view.alpha = t < 0.6 ? 1 : (1 - t) / 0.4;
+      view.visible = true;
+    }
+
+    for (let i = numbers.length; i < this.numberPool.length; i++) {
+      (this.numberPool[i] as Text).visible = false;
+    }
+  }
+
+  private numberAt(index: number): Text {
+    const existing = this.numberPool[index];
+    if (existing !== undefined) return existing;
+
+    const text = new Text({
+      text: '',
+      style: {
+        fontFamily: 'sans-serif',
+        fontSize: 22,
+        fontWeight: 'bold',
+        fill: 0xffffff,
+        stroke: { color: 0x000000, width: 4 },
+      },
+    });
+    text.anchor.set(0.5, 1);
+    this.numberPool.push(text);
     this.labelHost.addChild(text);
     return text;
   }
@@ -368,6 +493,7 @@ export class ReactionsView {
     this.feed.reset();
     this.graphics.clear();
     for (const text of this.labelPool) text.visible = false;
+    for (const text of this.numberPool) text.visible = false;
   }
 
   get activeCount(): number {
@@ -377,7 +503,9 @@ export class ReactionsView {
   destroy(): void {
     this.graphics.destroy();
     for (const text of this.labelPool) text.destroy();
+    for (const text of this.numberPool) text.destroy();
     this.labelPool.length = 0;
+    this.numberPool.length = 0;
     this.labelHost.destroy();
   }
 }
