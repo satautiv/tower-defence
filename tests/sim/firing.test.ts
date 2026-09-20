@@ -6,14 +6,19 @@ import type { World } from '@sim/index';
 import {
   EnemyFlag,
   FiringMode,
+  STATUS_INDEX,
   SimEventKind,
   TIER_SLOTS,
   advance,
+  applyStatus,
   applyTowerStats,
+  damageResolutionSystem,
+  firingSystem,
   createWorldForStage,
   enemyIndex,
   placeTower,
   spawnEnemy,
+  targetingSystem,
   tick,
   towerIndex,
 } from '@sim/index';
@@ -167,6 +172,47 @@ describe('chain lightning', () => {
 
     tick(world);
     expect(damageEvents(world)).toHaveLength(1);
+  });
+
+  /**
+   * Charge on the struck enemy conducts the arc further — "+1 chain target per
+   * 2 stacks" (docs/GAME_DESIGN.md §4.2). This is the whole of what Charge does
+   * by itself, so a Volt tower that stopped granting it would look fine in
+   * every other test.
+   */
+  describe('charge conducts it further', () => {
+    const chainOf = (chargeStacks: number): number => {
+      const w = freshWorld();
+      retune(w, 'arbalest_post', {
+        firingMode: FiringMode.Chain,
+        chainTargets: 1,
+        chainFalloff: 1,
+      });
+
+      const spot = pathPoint(w, 400);
+      const tower = placeTower(w, towerIndex(w, 'arbalest_post'), spot.x, spot.y);
+      applyTowerStats(w, tower);
+      for (let i = 0; i < 6; i++) enemyOnPath(w, 'husk', 400 + i * 10);
+
+      /* Charge goes on whichever enemy the tower actually settles on, since
+         that is the one the bonus is read from. Stepping the systems by hand is
+         the only way to get between the choice and the shot. */
+      targetingSystem(w);
+      applyStatus(w, w.towers.target[tower] as number, STATUS_INDEX.charge, chargeStacks);
+      firingSystem(w);
+      damageResolutionSystem(w);
+
+      return damageEvents(w).length;
+    };
+
+    it.each([
+      [0, 2],
+      [1, 2],
+      [2, 3],
+      [4, 4],
+    ])('reaches %i-charged targets across %i enemies', (charge, struck) => {
+      expect(chainOf(charge)).toBe(struck);
+    });
   });
 });
 

@@ -2,6 +2,7 @@ import { TICK_HZ, TILE_SIZE } from '@core/constants';
 import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
 import type { TuningDefinition } from '@content/schema/tuning';
+import { STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
 import { EnemyFlag } from './flags.js';
@@ -52,6 +53,10 @@ export interface StatusTable {
   readonly slowPerStack: Float32Array;
   readonly defenceReductionPerStack: Float32Array;
   readonly vulnerabilityPerStack: Float32Array;
+  /** Extra chain jumps this status grants, per stack. */
+  readonly chainTargetsPerStack: Float32Array;
+  /** Damage type a damage-over-time status deals, so armour and ward apply. */
+  readonly damageType: Uint8Array;
   /** Status this escalates into at max stacks, or -1. */
   readonly escalatesTo: Int8Array;
   readonly stacksAfterEscalation: Uint8Array;
@@ -236,6 +241,23 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
   return table;
 }
 
+/**
+ * Which element's damage a status's damage-over-time deals.
+ *
+ * Inverted from the authored damage-type-to-status map rather than restated, so
+ * Scorch burning as Pyro and Corrode as Toxic follows from the same table
+ * content-lint validates towers against. A status with no element of its own —
+ * Freeze, which is derived — falls back to Arcane, matching reaction damage.
+ */
+function dotDamageTypes(): Uint8Array {
+  const types = new Uint8Array(STATUS_COUNT).fill(DAMAGE_INDEX.arcane);
+  for (const [damageType, status] of Object.entries(STATUS_BY_DAMAGE_TYPE)) {
+    if (status === undefined) continue;
+    types[STATUS_INDEX[status]] = DAMAGE_INDEX[damageType as keyof typeof DAMAGE_INDEX];
+  }
+  return types;
+}
+
 function buildStatusTable(registry: ContentRegistry): StatusTable {
   const table: StatusTable = {
     maxStacks: new Uint8Array(STATUS_COUNT),
@@ -244,6 +266,8 @@ function buildStatusTable(registry: ContentRegistry): StatusTable {
     slowPerStack: new Float32Array(STATUS_COUNT),
     defenceReductionPerStack: new Float32Array(STATUS_COUNT),
     vulnerabilityPerStack: new Float32Array(STATUS_COUNT),
+    chainTargetsPerStack: new Float32Array(STATUS_COUNT),
+    damageType: dotDamageTypes(),
     escalatesTo: new Int8Array(STATUS_COUNT).fill(-1),
     stacksAfterEscalation: new Uint8Array(STATUS_COUNT),
     reactive: new Uint8Array(STATUS_COUNT),
@@ -258,6 +282,7 @@ function buildStatusTable(registry: ContentRegistry): StatusTable {
     table.slowPerStack[i] = status.slowPerStack;
     table.defenceReductionPerStack[i] = status.defenceReductionPerStack;
     table.vulnerabilityPerStack[i] = status.vulnerabilityPerStack;
+    table.chainTargetsPerStack[i] = status.chainTargetsPerStack;
     table.escalatesTo[i] = status.escalatesTo === undefined ? -1 : STATUS_INDEX[status.escalatesTo];
     table.stacksAfterEscalation[i] = status.stacksAfterEscalation;
     table.reactive[i] = status.reactive ? 1 : 0;
@@ -512,6 +537,8 @@ export const EMPTY_RULESET: Ruleset = {
     slowPerStack: new Float32Array(STATUS_COUNT),
     defenceReductionPerStack: new Float32Array(STATUS_COUNT),
     vulnerabilityPerStack: new Float32Array(STATUS_COUNT),
+    chainTargetsPerStack: new Float32Array(STATUS_COUNT),
+    damageType: dotDamageTypes(),
     escalatesTo: new Int8Array(STATUS_COUNT).fill(-1),
     stacksAfterEscalation: new Uint8Array(STATUS_COUNT),
     reactive: new Uint8Array(STATUS_COUNT),

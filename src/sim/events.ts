@@ -97,6 +97,18 @@ export const emitDamageDealt = (
   fromReaction: number,
 ) => ev.push(SimEventKind.DamageDealt, targetId, amount, damageType, fromReaction);
 
+/**
+ * A status landed or was topped up. Carries the resulting stack count rather
+ * than the number applied, because that is what an icon above the health bar
+ * has to show — and the two differ whenever a hit lands against the cap.
+ */
+export const emitStatusApplied = (
+  ev: SimEvents,
+  targetId: number,
+  statusIdx: number,
+  stacks: number,
+) => ev.push(SimEventKind.StatusApplied, targetId, statusIdx, stacks);
+
 export const emitReactionTriggered = (
   ev: SimEvents,
   reactionIdx: number,

@@ -4,8 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**M0 complete. M1 is code-complete; two criteria need hardware and humans.** #10–#18 are
-done and stage 1-1 plays start to finish in a browser: `npm run dev`, Campaign → 1-1.
+**M0 complete. M1 is code-complete; two criteria need hardware and humans. M2 has started.**
+#10–#18 are done and stage 1-1 plays start to finish in a browser: `npm run dev`, Campaign → 1-1.
+**#21 is done**: all seven statuses apply, stack, decay and expire, and Scorch and Corrode burn.
 
 **#19 and #20 stay open on purpose.** #19 needs a playtest with three people who have not
 seen the design (protocol in `docs/PLAYTEST-M1.md`); #20 needs the slice run on a physical
@@ -13,14 +14,22 @@ Android phone (steps in `docs/adr/0003-android-packaging.md`). Everything else o
 verified. The reaction gate the M1 gate was written to ask moved to **#62**, after #22,
 because the slice has no reactions.
 
-Historical note: #10–#13 covered `src/sim/` has the `World`, five
-structure-of-arrays entity pools, the command queue, event buffer, damage queue and the
-fifteen-step tick pipeline — and now paths and movement (#11), the wave spawner (#12), and
-targeting, firing and projectiles (#13). Enemies walk, waves arrive, towers shoot.
+`src/sim/` holds the `World`, five structure-of-arrays entity pools, the command queue, event
+buffer, damage queue and the fifteen-step tick pipeline, plus paths and movement (#11), the wave
+spawner (#12), targeting, firing and projectiles (#13), damage resolution (#14), economy (#15),
+lives and win/lose (#16). Four of the pipeline's fifteen steps are still `noop`:
+`reactionSystem` (#22), `soldierSystem` (#24), `heroSystem` (#25) and `groundEffectSystem` (#31).
+`flushEvents` is deliberately empty, because the consumer drains and clears.
 
-**Nothing takes damage yet.** Firing queues onto `world.damage`; resolving it is #14. Still to
-come in M1: damage (#14), economy (#15), lives and win/lose (#16), build UX (#17), the view layer
-(#18), and the #19 gate.
+**Statuses (#21) are live.** `src/sim/systems/status.ts` owns the whole substrate, and
+`applyStatus` is the *only* supported way to put one on an enemy — every source funnels through
+it so the stack cap, the refresh, boss immunity and Chill's escalation into Freeze are decided in
+one place. One rule governs presence everywhere: a status is on an enemy for exactly the ticks
+where `tick < expiry`. Damage over time pushes onto the shared damage queue like everything else,
+so a kill by fire pays bounty and splits through the same path a projectile's kill takes.
+Two consequences worth knowing: a Frost Cairn can now actually freeze (1 Chill/s against a 3s
+duration means it takes two overlapping Cairns to reach the cap of 5), and Charge finally does
+its one solo job — `chainTargetsPerStack` in `statuses.json` lengthens a chain by +1 per 2 stacks.
 
 `src/sim/ruleset.ts` resolves authored content into flat numeric tables once per stage — towers,
 enemies, statuses, waves, paths. **No system reads a JSON object or a string id during a tick**,
@@ -34,6 +43,11 @@ Two findings from #19, recorded rather than fixed (balance is #50, content #36):
 won 3-star with zero leaks by a naive board on every seed, and that board is almost entirely
 Flame Vents. A 1:14 pick rate is what pillar P1 exists to prevent; the towers that would compete
 do not exist yet (#23).
+
+A third, from #21: turning the DoT on shortens the naive 1-1 clear by 142 ticks out of 15,346 —
+under 1%. Scorch reaches its cap of 5 stacks and burns for its full authored 30 dmg/s, but
+enemies die to projectile damage so quickly that the burn barely gets to work. It is a real
+buff to the tower that was already dominant, and a small one.
 
 `src/platform/` isolates every platform difference behind an interface: `SaveAdapter` (localStorage
 for the profile, IndexedDB for snapshots, memory as a fallback), `Lifecycle`, `Haptics`,

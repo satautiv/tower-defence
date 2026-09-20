@@ -5,6 +5,7 @@ import { EnemyFlag } from '../flags.js';
 import { laneOffsetFor } from '../path.js';
 import { spawnEnemy } from '../spawn.js';
 import { STATUS_COUNT, STATUS_INDEX } from '../status.js';
+import { applyStatus } from './status.js';
 import { statIndexOf } from '../towers.js';
 import type { World } from '../world.js';
 
@@ -199,21 +200,21 @@ function resolveOne(world: World, index: number): void {
   }
 }
 
+/**
+ * The status a hit carries, handed to the one applier.
+ *
+ * Going through `applyStatus` rather than writing the arrays here is what gives
+ * an on-hit Chill the same escalation into Freeze that any other source gets —
+ * a Frost Cairn stacking a target to five freezes it, exactly as the design
+ * says it should, without the firing code knowing Freeze exists.
+ */
 function applyOnHitStatus(world: World, index: number, slot: number): void {
   const queue = world.damage;
   const statusId = queue.statusId[index] as number;
   if (statusId >= STATUS_COUNT) return;
   if (((queue.flags[index] as number) & DamageFlag.NoStatus) !== 0) return;
 
-  const enemies = world.enemies;
-  const max = world.rules.statuses.maxStacks[statusId] as number;
-  const at = slot * STATUS_COUNT + statusId;
-  const next = (enemies.statusStacks[at] as number) + (queue.statusStacks[index] as number);
-
-  enemies.statusStacks[at] = next > max ? max : next;
-  enemies.statusExpiry[at] = world.tick + (world.rules.statuses.durationTicks[statusId] as number);
-  /* Tells the reaction system this enemy is worth re-examining (#22). */
-  enemies.statusDirty[slot] = 1;
+  applyStatus(world, slot, statusId, queue.statusStacks[index] as number);
 }
 
 /** Seeded, so a dodge is part of the replay rather than a surprise. */

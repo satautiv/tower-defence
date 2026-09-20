@@ -21,8 +21,22 @@ if (stage === undefined) throw new Error('stage 1-1 missing');
 
 const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed);
 
+/**
+ * Pins a status on, out of reach of expiry.
+ *
+ * These tests are about what a slow does to movement, not about how long it
+ * lasts — that is tests/sim/status.test.ts. Without a deadline the status
+ * system would age it away on the first tick and every distance below would be
+ * measured on an enemy that is no longer chilled.
+ *
+ * The deadline is the largest int32, because `statusExpiry` is an Int32Array
+ * and MAX_SAFE_INTEGER stores as -1 there — which reads as long expired.
+ */
+const FOREVER = 0x7fffffff;
+
 const setStatus = (world: World, slot: number, status: number, stacks: number): void => {
   world.enemies.statusStacks[slot * STATUS_COUNT + status] = stacks;
+  world.enemies.statusExpiry[slot * STATUS_COUNT + status] = stacks > 0 ? FOREVER : 0;
 };
 
 describe('spawning', () => {

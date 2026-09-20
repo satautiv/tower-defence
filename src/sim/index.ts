@@ -18,6 +18,7 @@ export { targetingSystem, pickTarget, canTarget, canTargetAny } from './systems/
 export { firingSystem } from './systems/firing.js';
 export { projectileSystem } from './systems/projectiles.js';
 export { damageResolutionSystem, effectiveDefence } from './systems/damage.js';
+export { statusSystem, applyStatus } from './systems/status.js';
 export {
   addGold,
   spendGold,

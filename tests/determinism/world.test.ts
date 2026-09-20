@@ -57,6 +57,22 @@ describe('the hash notices state changing', () => {
         w.enemies.statusStacks[slot * 7] = 1;
       },
     ],
+    /* Two runs whose burns lapse a tick apart are not the same run, even while
+       the stack counts still agree (#21). */
+    [
+      'a status deadline moving',
+      (w) => {
+        const slot = w.enemies.alloc();
+        w.enemies.statusExpiry[slot * 7] = 240;
+      },
+    ],
+    [
+      'an enemy being queued for the reaction scan',
+      (w) => {
+        const slot = w.enemies.alloc();
+        w.enemies.statusDirty[slot] = 1;
+      },
+    ],
   ])('changes when %s', (_label, mutate) => {
     const world = freshWorld();
     const before = hashWorld(world);

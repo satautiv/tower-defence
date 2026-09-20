@@ -6,6 +6,7 @@ import { damageResolutionSystem } from './damage.js';
 import { firingSystem } from './firing.js';
 import { lifecycleSystem } from './lifecycle.js';
 import { projectileSystem } from './projectiles.js';
+import { statusSystem } from './status.js';
 import { targetingSystem } from './targeting.js';
 import { waveSpawnerSystem } from './waves.js';
 
@@ -42,12 +43,12 @@ export const SYSTEMS: readonly SimSystem[] = [
   { name: 'waveSpawner', run: waveSpawnerSystem },
 
   /**
-   * 2. Tick damage over time, decay stacks, expire statuses. #21.
+   * 2. Tick damage over time, decay stacks, expire statuses.
    *
    * Before reactions, so a burn can apply the stack that triggers a reaction on
    * the same tick it lands.
    */
-  { name: 'statusSystem', run: noop },
+  { name: 'statusSystem', run: statusSystem },
 
   /**
    * 3. Detect status pairs and resolve reactions. #22.

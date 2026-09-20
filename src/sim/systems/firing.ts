@@ -3,6 +3,7 @@ import { DamageFlag } from '../damage.js';
 import { EnemyFlag, ProjectileFlag } from '../flags.js';
 import { emitProjectileFired } from '../events.js';
 import { FiringMode } from '../ruleset.js';
+import { STATUS_COUNT } from '../status.js';
 import { statIndexOf } from '../towers.js';
 import { canTarget } from './targeting.js';
 import type { World } from '../world.js';
@@ -84,13 +85,33 @@ function fireBeam(world: World, towerSlot: number, stats: number, target: number
 }
 
 /**
+ * Extra jumps a chain earns from the statuses already on the enemy it strikes.
+ *
+ * Charge is the one that does this today: "+1 chain target per 2 stacks",
+ * authored as 0.5 per stack and floored, so an odd stack alone buys nothing.
+ * Read from the first target rather than recomputed at every hop — the player
+ * has to be able to look at one charged enemy and know the chain will go
+ * further, which a bonus that shifted mid-arc would not give them.
+ */
+function bonusChainTargets(world: World, target: number): number {
+  const table = world.rules.statuses;
+  let bonus = 0;
+  for (let status = 0; status < STATUS_COUNT; status++) {
+    const per = table.chainTargetsPerStack[status] as number;
+    if (per > 0) bonus += per * world.enemies.stacksOf(target, status);
+  }
+  return Math.floor(bonus);
+}
+
+/**
  * Walks outward from the first target, losing a fraction of its damage each
  * jump and never striking the same enemy twice — a chain that could double back
  * would deal unbounded damage to a lone target.
  */
 function fireChain(world: World, towerSlot: number, stats: number, target: number): void {
   const table = world.rules.towers;
-  const jumps = Math.min(table.chainTargets[stats] as number, visited.length - 1);
+  const reach = (table.chainTargets[stats] as number) + bonusChainTargets(world, target);
+  const jumps = Math.min(reach, visited.length - 1);
   const falloff = table.chainFalloff[stats] as number;
   const range = world.towers.range[towerSlot] as number;
 

@@ -18,6 +18,11 @@ export const StatusSchema = z.object({
   defenceReductionPerStack: NonNegative.default(0),
   /** Fractional increase to damage taken per stack, e.g. unravel, fracture. */
   vulnerabilityPerStack: NonNegative.default(0),
+  /**
+   * Extra targets a chain gains from this status, per stack. Fractional on
+   * purpose: charge reads "+1 chain target per 2 stacks", which is 0.5 here.
+   */
+  chainTargetsPerStack: NonNegative.default(0),
   /** Reaching max stacks converts into this status, e.g. chill becomes freeze. */
   escalatesTo: StatusIdSchema.optional(),
   /** Stacks remaining after escalation resolves. */

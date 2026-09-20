@@ -29,7 +29,8 @@
     "nameKey": "status.charge.name",
     "descriptionKey": "status.charge.desc",
     "maxStacks": 5,
-    "durationSeconds": 3
+    "durationSeconds": 3,
+    "chainTargetsPerStack": 0.5
   },
   {
     "id": "corrode",
