@@ -1,7 +1,7 @@
 {
   "id": "rift_bat",
   "nameKey": "enemy.rift_bat.name",
-  "hp": 60,
+  "hp": 150,
   "speed": 2.0,
   "ward": 5,
   "bounty": 5,

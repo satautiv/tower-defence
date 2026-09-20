@@ -1,7 +1,7 @@
 {
   "id": "ironclad_revenant",
   "nameKey": "enemy.ironclad_revenant.name",
-  "hp": 260,
+  "hp": 650,
   "speed": 0.7,
   "armour": 40,
   "bounty": 14,

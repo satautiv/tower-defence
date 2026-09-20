@@ -128,10 +128,23 @@ export function summarise(
  * number invites someone to nudge it until the warning stops — which is
  * precisely the failure this tool exists to prevent.
  */
+/**
+ * Strategies the authored band is a statement about.
+ *
+ * `rush` is deliberately excluded. It calls every wave the instant it can,
+ * which is the game's main risk/reward dial turned to its limit — a player
+ * doing that *should* be able to lose, and holding it to the same band as
+ * careful play would make the band mean nothing. It gets its own finding
+ * instead.
+ */
+function bandApplies(strategy: string): boolean {
+  return strategy !== 'rush';
+}
+
 export function findings(summary: Summary): Finding[] {
   const out: Finding[] = [];
 
-  if (!summary.withinTarget) {
+  if (!summary.withinTarget && bandApplies(summary.strategy)) {
     out.push({
       severity: 'fail',
       code: 'win-rate-out-of-band',
@@ -139,6 +152,31 @@ export function findings(summary: Summary): Finding[] {
         `win rate ${pct(summary.winRate)} is outside the authored band ` +
         `${pct(summary.target.minWinRate)}–${pct(summary.target.maxWinRate)}`,
     });
+  }
+
+  /**
+   * The early-call bonus is a bet. Whether it is priced right shows up at the
+   * extremes: if rushing never costs anything the bonus is free money, and if
+   * it never pays off nobody will ever press the button.
+   */
+  if (summary.strategy === 'rush' && summary.runs > 0) {
+    if (summary.winRate >= 0.95 && summary.medianLivesRemaining === summary.startingLives) {
+      out.push({
+        severity: 'warn',
+        code: 'early-call-free',
+        message:
+          `rushing every wave wins ${pct(summary.winRate)} without losing a life — ` +
+          'the early-call bonus costs nothing, so it is not a decision',
+      });
+    } else if (summary.winRate <= 0.05) {
+      out.push({
+        severity: 'warn',
+        code: 'early-call-fatal',
+        message:
+          `rushing every wave wins ${pct(summary.winRate)} — nobody will press the button, ` +
+          'so the risk/reward dial has no usable range',
+      });
+    }
   }
 
   if (summary.timedOut > 0) {

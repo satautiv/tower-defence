@@ -38,14 +38,19 @@ function afflict(world: World, slot: number, status: string, stacks: number, sec
 }
 
 describe('what the panel reads', () => {
+  /* Health is read back out of the content rather than typed in: this test is
+     about the panel reporting what was authored, not about any one number, and
+     a balance edit should move it rather than break it. */
   it('reports an unhurt enemy as authored', () => {
     const world = freshWorld();
     const { slot, entityId } = spawn(world, 'riftling');
+    const authored = registry.enemies.get('riftling');
+    if (authored === undefined) throw new Error('riftling missing');
 
     expect(enemyInfo(world, slot, entityId)).toMatchObject({
       enemyId: 'riftling',
-      hp: 45,
-      maxHp: 45,
+      hp: authored.hp,
+      maxHp: authored.hp,
       armour: 0,
       ward: 0,
       /* Float32 storage: 1.6 reads back a hair over. */
@@ -53,8 +58,8 @@ describe('what the panel reads', () => {
       baseSpeed: expect.closeTo(1.6, 5),
       statuses: [],
       threats: [],
-      bounty: 4,
-      livesCost: 1,
+      bounty: authored.bounty,
+      livesCost: authored.livesCost,
     });
   });
 

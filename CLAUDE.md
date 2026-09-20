@@ -101,12 +101,33 @@ than hoping they find it.
 | `balanced` — round-robin | median **1** reaction. Pick rates span **4.5:1**, past the limit |
 | Peak unspent gold | **~500**, on a stage whose towers cost 100–150 |
 
-Two things that were not obvious before. **Any one tower clears 1-1 alone with full lives**,
-which is pillar P1 failing outright rather than drifting. And **building different towers is not
-sufficient to produce a reaction** — greedy puts all three damage types down and gets nothing,
-because a reaction needs *overlapping coverage* and which tower lands on which plot decides it.
-That is the thing to fix in 1-1 (#36): the plot layout has to make overlap the natural build,
-not a lucky one.
+**Chased down, and the obvious answer was wrong.** The plot layout is not the problem: 1-1 has
+**43 ordered plot pairs** where a Flame Vent and a Frost Cairn share path coverage. The problem
+was that **enemies died 1.9 seconds after spawning**, at the very start of the path, so they
+never reached a second tower's zone. With a deliberately perfect board an enemy carried both
+Scorch and Chill for **six ticks across the entire stage** — the mechanic had no window to
+express itself in.
+
+Region 1 enemy health is now **×2.5** (riftling 45→110, husk 90→225, and so on across the
+roster, so the set stays calibrated against itself). A mixed board goes from **1 reaction to 36**
+per run, with the stage still won 100% at 20/20 lives — it is no harder, the enemies just live
+long enough for two statuses to meet. Verified by `npm run balance`, which is what found the
+mechanism in the first place.
+
+Three things it did *not* fix, left for #50 and #23:
+
+- **`greedy` still triggers zero reactions at any health.** 600 starting gold buys exactly six
+  Flame Vents, which take plots 0–5, so the cheaper Frost Cairns always end up at the far end of
+  the path and never share a segment. Tuning starting gold to fix it produced chaotic results
+  (0 → 24 → 6 → 0 reactions), because it depends on precisely when gold crosses a price
+  threshold. That is a caricature of a player, not a stage defect — both real playtesters mixed
+  towers unprompted.
+- **`rush` now loses every run**, where before it won 100% without losing a life. Calling every
+  wave early went from free to fatal in one step. The simulator warns rather than fails on it:
+  `rush` is exempt from the authored band, because a player turning the risk dial to its limit
+  should be *able* to lose — a band that forbade it would mean nothing.
+- **Any one tower still clears 1-1 alone**, which is pillar P1 failing outright rather than
+  drifting.
 
 `src/platform/` isolates every platform difference behind an interface: `SaveAdapter` (localStorage
 for the profile, IndexedDB for snapshots, memory as a fallback), `Lifecycle`, `Haptics`,

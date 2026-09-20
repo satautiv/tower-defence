@@ -235,6 +235,43 @@ describe('the report names design problems', () => {
     expect(hasFailure([summary])).toBe(true);
   });
 
+  /**
+   * `rush` calls every wave the instant it can — the risk/reward dial at its
+   * limit. A player doing that should be able to lose, so holding it to the
+   * same band as careful play would make the band mean nothing.
+   */
+  it('exempts the rush strategy from the authored band', () => {
+    const summary = summarise('1-1', 'rush', towerIds, target, [run({ won: false })]);
+    expect(summary.withinTarget).toBe(false);
+    expect(findings(summary).some((f) => f.code === 'win-rate-out-of-band')).toBe(false);
+    expect(hasFailure([summary])).toBe(false);
+  });
+
+  /* If rushing never costs anything, the bonus is not a decision. */
+  it('warns when rushing every wave is free', () => {
+    const summary = summarise('1-1', 'rush', towerIds, target, [run(), run()]);
+    expect(findings(summary).some((f) => f.code === 'early-call-free')).toBe(true);
+  });
+
+  /* And if it never pays off, nobody will ever press the button. */
+  it('warns when rushing every wave is fatal', () => {
+    const summary = summarise('1-1', 'rush', towerIds, target, [
+      run({ won: false, livesRemaining: 0 }),
+      run({ won: false, livesRemaining: 0 }),
+    ]);
+    expect(findings(summary).some((f) => f.code === 'early-call-fatal')).toBe(true);
+  });
+
+  it('says neither when rushing is a real gamble', () => {
+    const summary = summarise('1-1', 'rush', towerIds, target, [
+      run({ won: true, livesRemaining: 4 }),
+      run({ won: false, livesRemaining: 0 }),
+    ]);
+    const codes = findings(summary).map((f) => f.code);
+    expect(codes).not.toContain('early-call-free');
+    expect(codes).not.toContain('early-call-fatal');
+  });
+
   it('fails a run that never finished', () => {
     const summary = summarise('1-1', 'greedy', towerIds, target, [run({ timedOut: true })]);
     expect(findings(summary).some((f) => f.code === 'runs-timed-out')).toBe(true);
