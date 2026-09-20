@@ -20,6 +20,8 @@ export { projectileSystem } from './systems/projectiles.js';
 export { damageResolutionSystem, effectiveDefence } from './systems/damage.js';
 export { statusSystem, applyStatus } from './systems/status.js';
 export { soldierSystem, moveRally, setRallyPoint, release } from './systems/soldiers.js';
+export { groundEffectSystem, createGroundEffect } from './systems/groundEffects.js';
+export type { GroundEffectSpec } from './systems/groundEffects.js';
 export { reactionSystem } from './systems/reactions.js';
 export {
   addGold,

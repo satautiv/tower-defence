@@ -202,6 +202,29 @@ export interface BuildPlot {
   readonly leyNode: string | null;
 }
 
+/**
+ * The stage's one-shot lever, resolved into the units the simulation works in.
+ *
+ * Null when the map has none. Every field is already a tick count or a pixel
+ * by the time a tick can see it, like the rest of the ruleset.
+ */
+export interface Interactable {
+  readonly id: string;
+  readonly nameKey: string;
+  readonly x: number;
+  readonly y: number;
+  readonly cost: number;
+  readonly effect: string;
+  readonly radiusTiles: number;
+  readonly seconds: number;
+  readonly damagePerSecond: number;
+  readonly damageType: number;
+  readonly blocks: boolean;
+  /** 255 when the lever leaves no status behind. */
+  readonly statusId: number;
+  readonly statusStacks: number;
+}
+
 export interface Ruleset {
   /** Global combat and economy constants. */
   readonly tuning: TuningDefinition;
@@ -219,6 +242,8 @@ export interface Ruleset {
   readonly core: { readonly x: number; readonly y: number };
   /** How far apart a pack spreads sideways, in world pixels. */
   readonly laneWidth: number;
+  /** The map's one-shot lever, or null. */
+  readonly interactable: Interactable | null;
 }
 
 /** Traits that map directly onto a per-entity flag. */
@@ -580,6 +605,29 @@ export function buildRuleset(registry: ContentRegistry, stage: StageDefinition):
     })),
     core: { x: stage.core.x * TILE_SIZE, y: stage.core.y * TILE_SIZE },
     laneWidth: TILE_SIZE * 0.6,
+    interactable: buildInteractable(stage),
+  };
+}
+
+function buildInteractable(stage: StageDefinition): Interactable | null {
+  const authored = stage.interactable;
+  if (authored === undefined) return null;
+
+  return {
+    id: authored.id,
+    nameKey: authored.nameKey,
+    x: authored.position.x * TILE_SIZE,
+    y: authored.position.y * TILE_SIZE,
+    cost: authored.cost,
+    effect: authored.effect,
+    radiusTiles: authored.radiusTiles,
+    seconds: authored.durationSeconds,
+    damagePerSecond: authored.damagePerSecond,
+    damageType: DAMAGE_INDEX[authored.damageType],
+    blocks: authored.blocks,
+    statusId:
+      authored.statusApplied === undefined ? 255 : STATUS_INDEX[authored.statusApplied.status],
+    statusStacks: authored.statusApplied?.stacks ?? 0,
   };
 }
 
@@ -713,4 +761,5 @@ export const EMPTY_RULESET: Ruleset = {
   towerRefund: new Map(),
   core: { x: 0, y: 0 },
   laneWidth: TILE_SIZE * 0.6,
+  interactable: null,
 };

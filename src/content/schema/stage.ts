@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  DamageTypeSchema,
   IdSchema,
   LeyNodeTypeSchema,
   LocaleKeySchema,
@@ -8,6 +9,7 @@ import {
   Positive,
   Seconds,
   StageIdSchema,
+  StatusApplicationSchema,
   Tiles,
 } from './common.js';
 
@@ -63,13 +65,30 @@ export const SpawnPointSchema = z.object({
   pathId: z.number().int().nonnegative(),
 });
 
-/** A one-shot, gold-cost map lever. One per map, for identity. */
+/**
+ * A one-shot, gold-cost map lever. One per map, for identity.
+ *
+ * Every lever resolves to a patch of ground with a payload, which is why the
+ * three named effects need no code of their own: a collapsed bridge is ground
+ * that blocks, a dropped boulder is ground that hits once and vanishes, an
+ * ignited vent is ground that burns. The enum stays because the art and the
+ * sound differ even where the mechanics do not.
+ */
 export const InteractableSchema = z.object({
   id: IdSchema,
   nameKey: LocaleKeySchema,
   position: PointSchema,
   cost: z.number().int().nonnegative(),
   effect: z.enum(['collapse_bridge', 'drop_boulder', 'ignite_vent']),
+  radiusTiles: Tiles.default(2),
+  /** How long the ground stays changed. A boulder's is a moment. */
+  durationSeconds: Seconds.default(1),
+  /** Total damage dealt per second to whatever is standing in it. */
+  damagePerSecond: NonNegative.default(0),
+  damageType: DamageTypeSchema.default('kinetic'),
+  /** Seals the path while it lasts, e.g. a collapsed bridge. */
+  blocks: z.boolean().default(false),
+  statusApplied: StatusApplicationSchema.optional(),
 });
 
 /**
@@ -112,5 +131,6 @@ export const StageSchema = z.object({
 });
 
 export type StageDefinition = z.infer<typeof StageSchema>;
+export type InteractableDefinition = z.infer<typeof InteractableSchema>;
 export type BalanceTarget = z.infer<typeof BalanceTargetSchema>;
 export type WaveDefinition = z.infer<typeof WaveSchema>;

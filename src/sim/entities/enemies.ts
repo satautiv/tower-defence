@@ -93,6 +93,18 @@ export class EnemyPool extends EntityPool {
   /** Set when a status changed this tick, so reactions scan only what moved. */
   readonly statusDirty = new Uint8Array(this.capacity);
 
+  /**
+   * Movement multiplier from the ground the enemy is standing on, 1 for clear.
+   *
+   * Recomputed from scratch every tick by the ground-effect system rather than
+   * accumulated, which is what keeps overlapping fields from multiplying out
+   * of control: three pools that each halve speed leave an enemy at half, not
+   * at an eighth. The strongest one wins and the rest are ignored.
+   */
+  readonly groundSlow = new Float32Array(this.capacity);
+  /** Standing in something that blocks the road outright, e.g. a Rift Seal. */
+  readonly groundBlocked = new Uint8Array(this.capacity);
+
   readonly meta: (EnemyMeta | null)[] = new Array<EnemyMeta | null>(this.capacity).fill(null);
 
   constructor(capacity = MAX_ENEMIES) {
@@ -125,6 +137,8 @@ export class EnemyPool extends EntityPool {
     this.burnPerTick[slot] = 0;
     this.burnUntilTick[slot] = 0;
     this.statusDirty[slot] = 0;
+    this.groundSlow[slot] = 1;
+    this.groundBlocked[slot] = 0;
     this.meta[slot] = null;
 
     const base = slot * STATUS_COUNT;

@@ -120,5 +120,6 @@
   "tower.ranger_lodge.name": "Ranger Lodge",
   "tower.ranger_lodge.desc": "They block, but would rather shoot. Softer, and far more mobile.",
   "tower.ranger_lodge.ability": "Volley",
-  "tower.arbalest_post.perk.fracture": "Every bolt splinters what it strikes."
+  "tower.arbalest_post.perk.fracture": "Every bolt splinters what it strikes.",
+  "interactable.ember_vent.name": "Ember Vent"
 }

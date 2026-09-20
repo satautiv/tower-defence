@@ -339,5 +339,23 @@
   "balance": {
     "minWinRate": 0.95,
     "maxWinRate": 1.0
+  },
+  "interactable": {
+    "id": "ember_vent",
+    "nameKey": "interactable.ember_vent.name",
+    "position": {
+      "x": 14,
+      "y": 8
+    },
+    "cost": 80,
+    "effect": "ignite_vent",
+    "radiusTiles": 2.0,
+    "durationSeconds": 8,
+    "damagePerSecond": 30,
+    "damageType": "pyro",
+    "statusApplied": {
+      "status": "scorch",
+      "stacks": 2
+    }
   }
 }

@@ -3,11 +3,13 @@ import { CommandKind } from '../commands.js';
 import {
   addGold,
   buildCost,
+  canAfford,
   sellValue,
   specialiseCost,
   spendGold,
   upgradeCost,
 } from '../economy.js';
+import { createGroundEffect } from './groundEffects.js';
 import { moveRally } from './soldiers.js';
 import { emitCommandRejected } from '../events.js';
 import {
@@ -54,6 +56,9 @@ export const enum RejectReason {
   PoolFull,
   /** A rally flag was dragged for a tower that keeps no soldiers. */
   NoGarrison,
+  /** The map's lever was pulled twice, or the map has none. */
+  NoInteractable,
+  InteractableSpent,
 }
 
 export function drainCommandQueue(world: World): void {
@@ -95,6 +100,10 @@ export function drainCommandQueue(world: World): void {
 
       case CommandKind.SetRally:
         applySetRally(world, command.a, command.b, command.c);
+        break;
+
+      case CommandKind.UseInteractable:
+        applyInteractable(world);
         break;
 
       default:
@@ -282,6 +291,42 @@ function applySetRally(world: World, towerSlot: number, x: number, y: number): v
   if (!moveRally(world, towerSlot, x, y)) {
     return reject(world, CommandKind.SetRally, RejectReason.NoGarrison);
   }
+}
+
+/**
+ * Pulls the map's one-shot lever.
+ *
+ * One per stage and one use per run, which is what makes it a decision rather
+ * than a rotation (docs/GAME_DESIGN.md §5). Every named effect resolves to a
+ * patch of ground with a payload, so a collapsed bridge, a dropped boulder and
+ * an ignited vent need no code of their own — only different numbers.
+ */
+function applyInteractable(world: World): void {
+  const lever = world.rules.interactable;
+  if (lever === null) {
+    return reject(world, CommandKind.UseInteractable, RejectReason.NoInteractable);
+  }
+  if (world.interactableUsed) {
+    return reject(world, CommandKind.UseInteractable, RejectReason.InteractableSpent);
+  }
+  if (!canAfford(world, lever.cost)) {
+    return reject(world, CommandKind.UseInteractable, RejectReason.Unaffordable);
+  }
+
+  spendGold(world, lever.cost);
+  world.interactableUsed = true;
+
+  createGroundEffect(world, {
+    x: lever.x,
+    y: lever.y,
+    radiusTiles: lever.radiusTiles,
+    seconds: lever.seconds,
+    damagePerSecond: lever.damagePerSecond,
+    damageType: lever.damageType,
+    statusId: lever.statusId,
+    statusStacks: lever.statusStacks,
+    blocks: lever.blocks,
+  });
 }
 
 function applySetSpeed(world: World, speed: number): void {

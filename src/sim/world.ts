@@ -157,6 +157,14 @@ export class World {
   readonly lastBuild: UndoableBuild;
   /** Per-wave spawn progress for everything currently in flight. */
   readonly waveRunner = new ActiveWaves();
+  /**
+   * Whether the map's one-shot lever has been pulled.
+   *
+   * One per stage and one use per run, which is what makes it a decision
+   * rather than a rotation (docs/GAME_DESIGN.md §5). Reset with the world, so
+   * a restart gets it back.
+   */
+  interactableUsed = false;
 
   constructor(config: WorldConfig, rules: Ruleset = EMPTY_RULESET) {
     this.config = config;
@@ -203,6 +211,7 @@ export class World {
     this.resources.lives = this.config.lives;
 
     this.waveRunner.clear();
+    this.interactableUsed = false;
 
     this.wave.index = -1;
     this.wave.active = 0;

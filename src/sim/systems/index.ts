@@ -5,6 +5,7 @@ import { economySystem } from '../economy.js';
 import { damageResolutionSystem } from './damage.js';
 import { firingSystem } from './firing.js';
 import { lifecycleSystem } from './lifecycle.js';
+import { groundEffectSystem } from './groundEffects.js';
 import { projectileSystem } from './projectiles.js';
 import { reactionSystem } from './reactions.js';
 import { soldierSystem } from './soldiers.js';
@@ -91,8 +92,14 @@ export const SYSTEMS: readonly SimSystem[] = [
   /** 9. Advance projectiles, collide, queue on-hit damage. */
   { name: 'projectileSystem', run: projectileSystem },
 
-  /** 10. Lingering pools, fields, lava, burning ground. #31. */
-  { name: 'groundEffectSystem', run: noop },
+  /**
+   * 10. Lingering pools, fields, lava, burning ground.
+   *
+   * After everything has moved and before damage resolves, so an enemy that
+   * walked into a pool this tick burns for it this tick, and one that walked
+   * out stops being slowed immediately.
+   */
+  { name: 'groundEffectSystem', run: groundEffectSystem },
 
   /**
    * 11. Resolve the whole damage queue, then the deaths it caused. #14.

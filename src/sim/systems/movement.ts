@@ -49,7 +49,12 @@ export function speedMultiplier(world: World, slot: number): number {
   }
 
   const cap = (flags & EnemyFlag.Boss) !== 0 ? BOSS_MAX_SLOW : MAX_SLOW;
-  return 1 - (slow > cap ? cap : slow);
+  const fromStatus = 1 - (slow > cap ? cap : slow);
+
+  /* Ground slows multiply with status slows rather than sharing their cap: a
+     Stasis Field is a different kind of thing from being Chilled, and the
+     design sells it as the answer when Chill alone is not enough (#31). */
+  return fromStatus * (enemies.groundSlow[slot] as number);
 }
 
 export function movementSystem(world: World): void {
@@ -63,7 +68,9 @@ export function movementSystem(world: World): void {
        held ones stop advancing but still occupy their position. */
     if ((flags & (EnemyFlag.Leaked | EnemyFlag.Dying)) !== 0) continue;
 
-    if ((flags & EnemyFlag.Blocked) === 0) {
+    /* Standing in something that seals the road, e.g. a Rift Seal. Held like
+       a blocked enemy, but by the ground rather than by a soldier. */
+    if ((enemies.groundBlocked[slot] as number) === 0 && (flags & EnemyFlag.Blocked) === 0) {
       const step = (enemies.speed[slot] as number) * speedMultiplier(world, slot) * TICK_SECONDS;
       enemies.pathDist[slot] = (enemies.pathDist[slot] as number) + step;
     }
