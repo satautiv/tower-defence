@@ -11,9 +11,10 @@
       "params": {
         "radiusTiles": 3,
         "durationSeconds": 4,
-        "slow": 0.75,
+        "intervalSeconds": 0.5,
         "status": "chill",
-        "stacksPerSecond": 2
+        "stacks": 1,
+        "slowMultiplier": 0.25
       }
     }
   ]

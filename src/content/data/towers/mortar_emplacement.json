@@ -84,7 +84,7 @@
             "params": {
               "damage": 140,
               "radiusTiles": 9.0,
-              "shots": 6
+              "charges": 6
             }
           }
         ]
@@ -139,8 +139,8 @@
             "params": {
               "damageType": "pyro",
               "damagePerSecond": 12,
-              "seconds": 10,
-              "radiusTiles": 2.0
+              "radiusTiles": 2.0,
+              "durationSeconds": 10
             }
           }
         ]

@@ -22,7 +22,9 @@ export { statusSystem, applyStatus } from './systems/status.js';
 export { soldierSystem, moveRally, setRallyPoint, release } from './systems/soldiers.js';
 export { groundEffectSystem, createGroundEffect } from './systems/groundEffects.js';
 export type { GroundEffectSpec } from './systems/groundEffects.js';
-export { reactionSystem } from './systems/reactions.js';
+export { reactionSystem, forceReaction } from './systems/reactions.js';
+export { runEffects, resolveEffect, EffectKind, ModifiedStat } from './effects.js';
+export type { ResolvedEffect } from './effects.js';
 export {
   addGold,
   spendGold,

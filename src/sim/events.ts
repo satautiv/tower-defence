@@ -117,6 +117,10 @@ export const emitReactionTriggered = (
   magnitude: number,
 ) => ev.push(SimEventKind.ReactionTriggered, reactionIdx, x, y, magnitude);
 
+/** A Warden Power went off, for its VFX and its sound. */
+export const emitPowerCast = (ev: SimEvents, powerIdx: number, x: number, y: number) =>
+  ev.push(SimEventKind.PowerCast, powerIdx, x, y);
+
 export const emitTowerBuilt = (ev: SimEvents, id: number, typeIdx: number, plotId: number) =>
   ev.push(SimEventKind.TowerBuilt, id, typeIdx, plotId);
 

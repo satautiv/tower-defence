@@ -66,6 +66,33 @@ export function reactionSystem(world: World): void {
   }
 }
 
+/**
+ * Detonates whatever this enemy is carrying, now.
+ *
+ * Aether Siphon's acceptance criterion: *forces every valid reaction in radius
+ * simultaneously, bypassing the per-enemy cooldown*. Routed through the same
+ * `resolve` the ordinary path uses, so a forced Thermal Shock is the same
+ * Thermal Shock — same damage, same consumption, same event — and the only
+ * thing that changes is who asked for it.
+ *
+ * Returns false when there was nothing to detonate, which is what lets a
+ * caller tell "no reaction" from "reaction on cooldown".
+ */
+export function forceReaction(world: World, slot: number, ignoreCooldown: boolean): boolean {
+  if (world.rules.reactions.count === 0) return false;
+  if (!reactable(world, slot)) return false;
+  if (!ignoreCooldown && world.tick < (world.enemies.reactionReadyTick[slot] as number)) {
+    return false;
+  }
+
+  const row = matchingReaction(world, slot);
+  if (row < 0) return false;
+
+  resolve(world, slot, row);
+  world.enemies.statusDirty[slot] = 0;
+  return true;
+}
+
 /** Corpses, leakers and the burrowed do not react. */
 function reactable(world: World, slot: number): boolean {
   const enemies = world.enemies;

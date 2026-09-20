@@ -83,7 +83,7 @@
             "params": {
               "damagePerSecond": 60,
               "radiusTiles": 3.0,
-              "seconds": 3
+              "durationSeconds": 3
             }
           }
         ]
@@ -134,7 +134,7 @@
             "params": {
               "stat": "damage",
               "multiplier": 2,
-              "seconds": 5
+              "durationSeconds": 5
             }
           }
         ]

@@ -223,7 +223,7 @@ describe('a ninth tower needs no code', () => {
       nameKey: 'tower.ninth.ability',
       cost: 20,
       cooldownSeconds: 25,
-      effects: [{ kind: 'damage_in_radius', params: { damage: 50 } }],
+      effects: [{ kind: 'damage_in_radius', params: { radiusTiles: 2, damage: 50 } }],
     });
     const spec = (id: string) => ({
       id,

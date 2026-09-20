@@ -1,0 +1,17 @@
+{
+  "id": "rally_banner",
+  "nameKey": "power.rally_banner.name",
+  "descriptionKey": "power.rally_banner.desc",
+  "cost": 30,
+  "cooldownSeconds": 18,
+  "targeting": "point",
+  "effects": [
+    {
+      "kind": "taunt_in_radius",
+      "params": {
+        "radiusTiles": 4,
+        "durationSeconds": 6
+      }
+    }
+  ]
+}

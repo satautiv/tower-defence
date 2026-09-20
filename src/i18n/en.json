@@ -121,5 +121,9 @@
   "tower.ranger_lodge.desc": "They block, but would rather shoot. Softer, and far more mobile.",
   "tower.ranger_lodge.ability": "Volley",
   "tower.arbalest_post.perk.fracture": "Every bolt splinters what it strikes.",
-  "interactable.ember_vent.name": "Ember Vent"
+  "interactable.ember_vent.name": "Ember Vent",
+  "power.rally_banner.name": "Rally Banner",
+  "power.rally_banner.desc": "Every soldier stands taller, and everything nearby comes to them.",
+  "power.rift_seal.name": "Rift Seal",
+  "power.rift_seal.desc": "The road closes. Whatever was walking it piles up against nothing."
 }

@@ -94,7 +94,7 @@
             "params": {
               "damagePerSecond": 80,
               "radiusTiles": 7.0,
-              "seconds": 5
+              "durationSeconds": 5
             }
           }
         ]
@@ -143,8 +143,8 @@
             "params": {
               "damageType": "volt",
               "damagePerSecond": 105,
-              "seconds": 6,
-              "radiusTiles": 2.0
+              "radiusTiles": 2.0,
+              "durationSeconds": 6
             }
           }
         ]

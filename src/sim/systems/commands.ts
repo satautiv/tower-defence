@@ -6,12 +6,14 @@ import {
   canAfford,
   sellValue,
   specialiseCost,
+  spendAether,
   spendGold,
   upgradeCost,
 } from '../economy.js';
 import { createGroundEffect } from './groundEffects.js';
 import { moveRally } from './soldiers.js';
-import { emitCommandRejected } from '../events.js';
+import { emitCommandRejected, emitPowerCast } from '../events.js';
+import { runEffects } from '../effects.js';
 import {
   placeTower,
   plotOccupant,
@@ -59,6 +61,9 @@ export const enum RejectReason {
   /** The map's lever was pulled twice, or the map has none. */
   NoInteractable,
   InteractableSpent,
+  NoSuchPower,
+  PowerOnCooldown,
+  NotEnoughAether,
 }
 
 export function drainCommandQueue(world: World): void {
@@ -104,6 +109,10 @@ export function drainCommandQueue(world: World): void {
 
       case CommandKind.UseInteractable:
         applyInteractable(world);
+        break;
+
+      case CommandKind.CastPower:
+        applyCastPower(world, command.a, command.b, command.c);
         break;
 
       default:
@@ -327,6 +336,31 @@ function applyInteractable(world: World): void {
     statusStacks: lever.statusStacks,
     blocks: lever.blocks,
   });
+}
+
+/**
+ * Casts a Warden Power at a point.
+ *
+ * Aether and the cooldown are both checked before anything happens, so a
+ * refusal costs nothing and leaves no half-cast. The effects themselves are
+ * data — this handler knows what a power costs and when it is ready, and
+ * nothing at all about what any of them do.
+ */
+function applyCastPower(world: World, powerIdx: number, x: number, y: number): void {
+  const powers = world.rules.powers;
+  if (powerIdx < 0 || powerIdx >= powers.count) {
+    return reject(world, CommandKind.CastPower, RejectReason.NoSuchPower);
+  }
+  if (world.tick < (world.powerReadyTick[powerIdx] as number)) {
+    return reject(world, CommandKind.CastPower, RejectReason.PowerOnCooldown);
+  }
+  if (!spendAether(world, powers.cost[powerIdx] as number)) {
+    return reject(world, CommandKind.CastPower, RejectReason.NotEnoughAether);
+  }
+
+  world.powerReadyTick[powerIdx] = world.tick + (powers.cooldownTicks[powerIdx] as number);
+  runEffects(world, powers.effects[powerIdx] ?? [], x, y);
+  emitPowerCast(world.events, powerIdx, x, y);
 }
 
 function applySetSpeed(world: World, speed: number): void {

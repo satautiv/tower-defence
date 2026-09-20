@@ -7,6 +7,8 @@ import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
 import { EnemyFlag } from './flags.js';
 import { DAMAGE_INDEX } from './damage.js';
+import { resolveEffect } from './effects.js';
+import type { ResolvedEffect } from './effects.js';
 import { BakedPath } from './path.js';
 
 /**
@@ -225,6 +227,22 @@ export interface Interactable {
   readonly statusStacks: number;
 }
 
+/**
+ * The Warden Powers, resolved.
+ *
+ * Cooldowns in ticks, effects in numbers. The player equips two of five before
+ * a stage (§6), so the table holds all of them and the loadout is a per-run
+ * choice rather than a content one.
+ */
+export interface PowerTable {
+  readonly count: number;
+  readonly ids: readonly string[];
+  readonly indexOf: ReadonlyMap<string, number>;
+  readonly cost: Int32Array;
+  readonly cooldownTicks: Int32Array;
+  readonly effects: ReadonlyArray<readonly ResolvedEffect[]>;
+}
+
 export interface Ruleset {
   /** Global combat and economy constants. */
   readonly tuning: TuningDefinition;
@@ -232,6 +250,7 @@ export interface Ruleset {
   readonly enemies: EnemyTable;
   readonly statuses: StatusTable;
   readonly reactions: ReactionTable;
+  readonly powers: PowerTable;
   readonly waves: WaveTable;
   readonly paths: readonly BakedPath[];
   readonly pathById: ReadonlyMap<number, BakedPath>;
@@ -526,6 +545,39 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
   return table;
 }
 
+function buildPowerTable(registry: ContentRegistry, enemies: EnemyTable): PowerTable {
+  const ids = [...registry.powers.keys()].sort();
+  const count = ids.length;
+
+  const cost = new Int32Array(count);
+  const cooldownTicks = new Int32Array(count);
+  const effects: Array<readonly ResolvedEffect[]> = [];
+
+  ids.forEach((id, i) => {
+    const power = registry.powers.get(id);
+    if (power === undefined) {
+      effects.push([]);
+      return;
+    }
+    cost[i] = power.cost;
+    cooldownTicks[i] = Math.round(power.cooldownSeconds * TICK_HZ);
+    effects.push(
+      power.effects.map((effect) =>
+        resolveEffect(effect, (enemyId) => enemies.indexOf.get(enemyId) ?? -1),
+      ),
+    );
+  });
+
+  return {
+    count,
+    ids,
+    indexOf: new Map(ids.map((id, index) => [id, index])),
+    cost,
+    cooldownTicks,
+    effects,
+  };
+}
+
 function buildWaveTable(stage: StageDefinition, enemies: EnemyTable): WaveTable {
   const count = stage.waves.length;
   const slots = count * MAX_GROUPS_PER_WAVE;
@@ -588,6 +640,7 @@ export function buildRuleset(registry: ContentRegistry, stage: StageDefinition):
     enemies,
     statuses: buildStatusTable(registry),
     reactions: buildReactionTable(registry),
+    powers: buildPowerTable(registry, enemies),
     waves: buildWaveTable(stage, enemies),
     paths,
     pathById: new Map(paths.map((path) => [path.id, path])),
@@ -753,6 +806,14 @@ export const EMPTY_RULESET: Ruleset = {
     statusStacks: new Uint8Array(0),
     bonusStacks: new Uint8Array(0),
     durationMultiplier: new Float32Array(0),
+  },
+  powers: {
+    count: 0,
+    ids: [],
+    indexOf: new Map(),
+    cost: new Int32Array(0),
+    cooldownTicks: new Int32Array(0),
+    effects: [],
   },
   paths: [],
   pathById: new Map(),

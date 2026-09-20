@@ -1,0 +1,17 @@
+{
+  "id": "rift_seal",
+  "nameKey": "power.rift_seal.name",
+  "descriptionKey": "power.rift_seal.desc",
+  "cost": 60,
+  "cooldownSeconds": 40,
+  "targeting": "point",
+  "effects": [
+    {
+      "kind": "block_path",
+      "params": {
+        "radiusTiles": 2,
+        "durationSeconds": 5
+      }
+    }
+  ]
+}

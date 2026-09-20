@@ -165,6 +165,13 @@ export class World {
    * a restart gets it back.
    */
   interactableUsed = false;
+  /**
+   * Tick each Warden Power is next castable on, indexed by power.
+   *
+   * Sized from the roster rather than the loadout, so equipping a different
+   * pair between stages does not shuffle which cooldown belongs to what.
+   */
+  readonly powerReadyTick: Int32Array;
 
   constructor(config: WorldConfig, rules: Ruleset = EMPTY_RULESET) {
     this.config = config;
@@ -177,6 +184,7 @@ export class World {
     this.groundIndex = new SpatialHash(SPATIAL_CELL_SIZE, worldWidth, worldHeight, MAX_ENEMIES);
     this.airIndex = new SpatialHash(SPATIAL_CELL_SIZE, worldWidth, worldHeight, MAX_ENEMIES);
 
+    this.powerReadyTick = new Int32Array(rules.powers.count);
     this.resources = { gold: config.startingGold, aether: 0, lives: config.lives };
     this.wave = { index: -1, active: 0, autoStartIn: this.firstWaveDelay(), cleared: 0 };
     this.stats = freshStats();
@@ -212,6 +220,7 @@ export class World {
 
     this.waveRunner.clear();
     this.interactableUsed = false;
+    this.powerReadyTick.fill(0);
 
     this.wave.index = -1;
     this.wave.active = 0;

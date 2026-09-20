@@ -144,8 +144,8 @@
             "kind": "modify_stat",
             "params": {
               "stat": "goldPerKill",
-              "bonus": 15,
-              "kills": 25
+              "flat": 15,
+              "charges": 25
             }
           }
         ]

@@ -126,7 +126,7 @@
             "kind": "taunt_in_radius",
             "params": {
               "radiusTiles": 4.0,
-              "seconds": 5
+              "durationSeconds": 5
             }
           }
         ]
@@ -199,7 +199,7 @@
             "params": {
               "damage": 20,
               "radiusTiles": 4.0,
-              "seconds": 6
+              "durationSeconds": 6
             }
           }
         ]
