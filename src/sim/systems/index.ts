@@ -6,6 +6,7 @@ import { damageResolutionSystem } from './damage.js';
 import { firingSystem } from './firing.js';
 import { lifecycleSystem } from './lifecycle.js';
 import { groundEffectSystem } from './groundEffects.js';
+import { heroSystem } from './hero.js';
 import { projectileSystem } from './projectiles.js';
 import { reactionSystem } from './reactions.js';
 import { soldierSystem } from './soldiers.js';
@@ -74,8 +75,14 @@ export const SYSTEMS: readonly SimSystem[] = [
    */
   { name: 'soldierSystem', run: soldierSystem },
 
-  /** 6. Hero movement, auto-attack and ability cooldowns. #25. */
-  { name: 'heroSystem', run: noop },
+  /**
+   * 6. Hero movement, auto-attack and ability cooldowns.
+   *
+   * After the soldiers, because the hero shares their pool and their blocking
+   * code: it has to see the engagement the soldier system just resolved for it
+   * before deciding whether it is free to march.
+   */
+  { name: 'heroSystem', run: heroSystem },
 
   /**
    * 7. Towers pick targets. #13.

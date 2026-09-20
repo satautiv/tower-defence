@@ -77,6 +77,12 @@ function foldWorld(hash: number, world: World): number {
   h = foldNumber(h, world.wave.cleared);
   h = foldNumber(h, world.interactableUsed ? 1 : 0);
   h = foldView(h, world.powerReadyTick);
+  h = foldNumber(h, world.heroSlot);
+  h = foldNumber(h, world.heroRespawnIn);
+  h = foldNumber(h, world.heroOrderX);
+  h = foldNumber(h, world.heroOrderY);
+  h = foldNumber(h, world.heroOrdered ? 1 : 0);
+  h = foldView(h, world.heroAbilityReadyTick);
 
   for (const value of Object.values(world.stats)) h = foldNumber(h, value);
   for (const value of Object.values(world.lastBuild)) h = foldNumber(h, value);

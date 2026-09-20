@@ -5,7 +5,7 @@ import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
 import { ActiveWaves } from './waves.js';
 import { EMPTY_RULESET, buildRuleset } from './ruleset.js';
-import type { Ruleset } from './ruleset.js';
+import type { Ruleset, RulesetOptions } from './ruleset.js';
 import { MAX_ENEMIES, MAX_QUERY_RESULTS } from './capacity.js';
 import { CommandQueue } from './commands.js';
 import { DamageQueue, DeathList } from './damage.js';
@@ -173,6 +173,23 @@ export class World {
    */
   readonly powerReadyTick: Int32Array;
 
+  /**
+   * The hero's slot in the soldier pool, or -1 before it is deployed.
+   *
+   * In the soldier pool on purpose: the hero blocks, engages and dies through
+   * exactly the soldier code path, with better numbers and a flag. Blocking is
+   * far too subtle to have two implementations (docs/TECH_DESIGN.md §7.7).
+   */
+  heroSlot = -1;
+  /** Ticks until it returns to the Core, or 0 when it is standing. */
+  heroRespawnIn = 0;
+  /** Tick each of its three abilities is next castable on. */
+  readonly heroAbilityReadyTick = new Int32Array(3);
+  /** Where the player last sent it, and whether they have sent it anywhere. */
+  heroOrderX = 0;
+  heroOrderY = 0;
+  heroOrdered = false;
+
   constructor(config: WorldConfig, rules: Ruleset = EMPTY_RULESET) {
     this.config = config;
     this.rules = rules;
@@ -222,6 +239,13 @@ export class World {
     this.interactableUsed = false;
     this.powerReadyTick.fill(0);
 
+    this.heroSlot = -1;
+    this.heroRespawnIn = 0;
+    this.heroAbilityReadyTick.fill(0);
+    this.heroOrderX = 0;
+    this.heroOrderY = 0;
+    this.heroOrdered = false;
+
     this.wave.index = -1;
     this.wave.active = 0;
     this.wave.autoStartIn = this.firstWaveDelay();
@@ -253,6 +277,7 @@ export function createWorldForStage(
   registry: ContentRegistry,
   stage: StageDefinition,
   seed: number,
+  options: RulesetOptions = {},
 ): World {
   return new World(
     {
@@ -263,6 +288,6 @@ export function createWorldForStage(
       lives: stage.lives,
       totalWaves: stage.waves.length,
     },
-    buildRuleset(registry, stage),
+    buildRuleset(registry, stage, options),
   );
 }

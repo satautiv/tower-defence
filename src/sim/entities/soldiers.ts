@@ -17,6 +17,14 @@ export class SoldierPool extends EntityPool {
   readonly armour = new Float32Array(this.capacity);
 
   readonly damage = new Float32Array(this.capacity);
+  /**
+   * What this one's blows are made of.
+   *
+   * Per soldier rather than assumed kinetic: a Ranger Lodge fights with Toxic
+   * and the hero with whatever its content says, and a shared assumption would
+   * quietly give both of them steel.
+   */
+  readonly damageType = new Uint8Array(this.capacity);
   readonly attackInterval = new Float32Array(this.capacity);
   readonly cooldown = new Float32Array(this.capacity);
   readonly attackRange = new Float32Array(this.capacity);
@@ -53,6 +61,7 @@ export class SoldierPool extends EntityPool {
     this.maxHp[slot] = 0;
     this.armour[slot] = 0;
     this.damage[slot] = 0;
+    this.damageType[slot] = 0;
     this.attackInterval[slot] = 0;
     this.cooldown[slot] = 0;
     this.attackRange[slot] = 0;

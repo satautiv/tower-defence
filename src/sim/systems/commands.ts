@@ -11,6 +11,7 @@ import {
   upgradeCost,
 } from '../economy.js';
 import { createGroundEffect } from './groundEffects.js';
+import { HeroCastResult, castHeroAbilityAt, orderHero } from './hero.js';
 import { moveRally } from './soldiers.js';
 import { emitCommandRejected, emitPowerCast } from '../events.js';
 import { runEffects } from '../effects.js';
@@ -64,6 +65,9 @@ export const enum RejectReason {
   NoSuchPower,
   PowerOnCooldown,
   NotEnoughAether,
+  NoHero,
+  HeroDown,
+  AbilityOnCooldown,
 }
 
 export function drainCommandQueue(world: World): void {
@@ -113,6 +117,14 @@ export function drainCommandQueue(world: World): void {
 
       case CommandKind.CastPower:
         applyCastPower(world, command.a, command.b, command.c);
+        break;
+
+      case CommandKind.MoveHero:
+        applyMoveHero(world, command.a, command.b);
+        break;
+
+      case CommandKind.CastHeroAbility:
+        applyHeroAbility(world, command.a, command.b, command.c);
         break;
 
       default:
@@ -361,6 +373,26 @@ function applyCastPower(world: World, powerIdx: number, x: number, y: number): v
   world.powerReadyTick[powerIdx] = world.tick + (powers.cooldownTicks[powerIdx] as number);
   runEffects(world, powers.effects[powerIdx] ?? [], x, y);
   emitPowerCast(world.events, powerIdx, x, y);
+}
+
+function applyMoveHero(world: World, x: number, y: number): void {
+  if (!orderHero(world, x, y)) reject(world, CommandKind.MoveHero, RejectReason.NoHero);
+}
+
+function applyHeroAbility(world: World, abilityIdx: number, x: number, y: number): void {
+  switch (castHeroAbilityAt(world, abilityIdx, x, y)) {
+    case HeroCastResult.Cast:
+      break;
+    case HeroCastResult.OnCooldown:
+      reject(world, CommandKind.CastHeroAbility, RejectReason.AbilityOnCooldown);
+      break;
+    case HeroCastResult.Dead:
+      reject(world, CommandKind.CastHeroAbility, RejectReason.HeroDown);
+      break;
+    default:
+      reject(world, CommandKind.CastHeroAbility, RejectReason.NoHero);
+      break;
+  }
 }
 
 function applySetSpeed(world: World, speed: number): void {

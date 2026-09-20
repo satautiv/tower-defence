@@ -181,6 +181,7 @@ export interface TowerTable {
   readonly soldierDamage: Float32Array;
   readonly soldierIntervalTicks: Float32Array;
   readonly soldierArmour: Float32Array;
+  readonly soldierDamageType: Uint8Array;
   readonly soldierRespawnTicks: Float32Array;
   /** World pixels. */
   readonly rallyRange: Float32Array;
@@ -243,6 +244,29 @@ export interface PowerTable {
   readonly effects: ReadonlyArray<readonly ResolvedEffect[]>;
 }
 
+/**
+ * The hero, resolved.
+ *
+ * One hero per run, chosen before the stage, so this is the one the world was
+ * built with rather than a table of all of them. Per-level growth is folded in
+ * at load, because a hero's level does not change during a stage — it changes
+ * between them (docs/GAME_DESIGN.md §11).
+ */
+export interface HeroRules {
+  readonly id: string;
+  readonly level: number;
+  readonly hp: number;
+  readonly damage: number;
+  readonly damageType: number;
+  readonly attackIntervalTicks: number;
+  readonly attackRange: number;
+  readonly armour: number;
+  readonly respawnTicks: number;
+  readonly abilityIds: readonly string[];
+  readonly abilityCooldownTicks: Int32Array;
+  readonly abilityEffects: ReadonlyArray<readonly ResolvedEffect[]>;
+}
+
 export interface Ruleset {
   /** Global combat and economy constants. */
   readonly tuning: TuningDefinition;
@@ -251,6 +275,8 @@ export interface Ruleset {
   readonly statuses: StatusTable;
   readonly reactions: ReactionTable;
   readonly powers: PowerTable;
+  /** The hero taken into this stage, or null when none is deployed. */
+  readonly hero: HeroRules | null;
   readonly waves: WaveTable;
   readonly paths: readonly BakedPath[];
   readonly pathById: ReadonlyMap<number, BakedPath>;
@@ -482,6 +508,7 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
     soldierDamage: new Float32Array(slots),
     soldierIntervalTicks: new Float32Array(slots),
     soldierArmour: new Float32Array(slots),
+    soldierDamageType: new Uint8Array(slots),
     soldierRespawnTicks: new Float32Array(slots),
     rallyRange: new Float32Array(slots),
     soldierAttackRange: new Float32Array(slots),
@@ -530,6 +557,7 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
         table.soldierDamage[i] = garrison.damage;
         table.soldierIntervalTicks[i] = garrison.attackIntervalSeconds * TICK_HZ;
         table.soldierArmour[i] = garrison.armour;
+        table.soldierDamageType[i] = DAMAGE_INDEX[garrison.damageType];
         table.soldierRespawnTicks[i] = garrison.respawnSeconds * TICK_HZ;
         table.rallyRange[i] = garrison.rallyRangeTiles * TILE_SIZE;
         table.soldierAttackRange[i] = garrison.attackRangeTiles * TILE_SIZE;
@@ -577,6 +605,49 @@ function buildPowerTable(registry: ContentRegistry, enemies: EnemyTable): PowerT
     effects,
   };
 }
+
+/**
+ * A hero at a level, with its growth already applied.
+ *
+ * Levels come from stage completions rather than from anything inside a run
+ * (§11), so this resolves once and never changes while the stage is playing.
+ */
+export function buildHeroRules(
+  registry: ContentRegistry,
+  enemies: EnemyTable,
+  heroId: string,
+  level: number,
+): HeroRules | null {
+  const hero = registry.heroes.get(heroId);
+  if (hero === undefined) return null;
+
+  /* Level one is the authored stat line; each level after adds its increment. */
+  const steps = Math.max(0, Math.min(level, MAX_HERO_LEVEL) - 1);
+
+  return {
+    id: hero.id,
+    level: Math.max(1, Math.min(level, MAX_HERO_LEVEL)),
+    hp: hero.hp + hero.hpPerLevel * steps,
+    damage: hero.damage + hero.damagePerLevel * steps,
+    damageType: DAMAGE_INDEX[hero.damageType],
+    attackIntervalTicks: TICK_HZ / hero.attacksPerSecond,
+    attackRange: hero.attackRangeTiles * TILE_SIZE,
+    armour: hero.armour,
+    respawnTicks: Math.round(hero.respawnSeconds * TICK_HZ),
+    abilityIds: hero.abilities.map((ability) => ability.id),
+    abilityCooldownTicks: Int32Array.from(
+      hero.abilities.map((ability) => Math.round(ability.cooldownSeconds * TICK_HZ)),
+    ),
+    abilityEffects: hero.abilities.map((ability) =>
+      ability.effects.map((effect) =>
+        resolveEffect(effect, (enemyId) => enemies.indexOf.get(enemyId) ?? -1),
+      ),
+    ),
+  };
+}
+
+/** Levels one to ten across the campaign (§11). */
+export const MAX_HERO_LEVEL = 10;
 
 function buildWaveTable(stage: StageDefinition, enemies: EnemyTable): WaveTable {
   const count = stage.waves.length;
@@ -630,11 +701,25 @@ function buildWaveTable(stage: StageDefinition, enemies: EnemyTable): WaveTable 
   return table;
 }
 
-export function buildRuleset(registry: ContentRegistry, stage: StageDefinition): Ruleset {
+export interface RulesetOptions {
+  /** Hero to take in, and the level the profile has it at. */
+  heroId?: string;
+  heroLevel?: number;
+}
+
+export function buildRuleset(
+  registry: ContentRegistry,
+  stage: StageDefinition,
+  options: RulesetOptions = {},
+): Ruleset {
   const paths = stage.paths.map((path) => new BakedPath(path));
   const enemies = buildEnemyTable(registry);
 
   return {
+    hero:
+      options.heroId === undefined
+        ? null
+        : buildHeroRules(registry, enemies, options.heroId, options.heroLevel ?? 1),
     tuning: registry.tuning,
     towers: buildTowerTable(registry),
     enemies,
@@ -730,6 +815,7 @@ const EMPTY_TOWERS: TowerTable = {
   soldierDamage: new Float32Array(0),
   soldierIntervalTicks: new Float32Array(0),
   soldierArmour: new Float32Array(0),
+  soldierDamageType: new Uint8Array(0),
   soldierRespawnTicks: new Float32Array(0),
   rallyRange: new Float32Array(0),
   soldierAttackRange: new Float32Array(0),
@@ -823,4 +909,5 @@ export const EMPTY_RULESET: Ruleset = {
   core: { x: 0, y: 0 },
   laneWidth: TILE_SIZE * 0.6,
   interactable: null,
+  hero: null,
 };

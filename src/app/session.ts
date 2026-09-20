@@ -4,6 +4,40 @@ import type { StageDefinition } from '@content/schema/stage';
 import { createWorldForStage, tick } from '@sim/index';
 import type { CommandQueue, StageResult, StagePhase, World } from '@sim/index';
 import { stageResult } from '@sim/index';
+import type { RulesetOptions } from '@sim/index';
+import { useSettings } from '@ui/settings';
+
+/**
+ * The hero this stage may take, if any.
+ *
+ * Gated by the stage it unlocks at (§11: "unlocked at stage 1-5, after
+ * fundamentals are taught"). Compared as region and index rather than as a
+ * string, so "1-10" comes after "1-5" instead of before it — which string
+ * comparison would get exactly wrong.
+ *
+ * Kaelen carries no gate yet, so it deploys from the first stage. That is not
+ * an oversight: content ids are generated into union types, so authoring
+ * `unlockedByStage: "1-5"` is a compile error until #36 creates stage 1-5 —
+ * the codegen refusing a reference to a stage that does not exist. It becomes
+ * one line of content the moment it does, and this function already honours it.
+ */
+export function unlockedHero(stageId: string): string | undefined {
+  for (const hero of loadContent().heroes.values()) {
+    if (hero.unlockedByStage === undefined) return hero.id;
+    if (stageAtLeast(stageId, hero.unlockedByStage)) return hero.id;
+  }
+  return undefined;
+}
+
+export function stageAtLeast(stageId: string, minimum: string): boolean {
+  const at = stageId.split('-').map(Number);
+  const need = minimum.split('-').map(Number);
+  const [atRegion = 0, atIndex = 0] = at;
+  const [needRegion = 0, needIndex = 0] = need;
+
+  if (atRegion !== needRegion) return atRegion > needRegion;
+  return atIndex >= needIndex;
+}
 
 /**
  * Drives one stage.
@@ -20,13 +54,19 @@ export class GameSession {
   private readonly loop = new FixedStepLoop();
   private paused = false;
 
-  constructor(stage: StageDefinition, seed: number) {
-    this.world = createWorldForStage(loadContent(), stage, seed);
+  constructor(stage: StageDefinition, seed: number, options: RulesetOptions = {}) {
+    this.world = createWorldForStage(loadContent(), stage, seed, options);
   }
 
   static forStage(stageId: string, seed = Date.now() & 0x7fffffff): GameSession | null {
     const stage = loadContent().stages.get(stageId);
-    return stage === undefined ? null : new GameSession(stage, seed);
+    if (stage === undefined) return null;
+
+    const heroId = unlockedHero(stageId);
+    return new GameSession(stage, seed, {
+      ...(heroId === undefined ? {} : { heroId }),
+      heroLevel: useSettings.getState().heroLevel,
+    });
   }
 
   /** Anchors the clock. Called once the first frame's timestamp is known. */

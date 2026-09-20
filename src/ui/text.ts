@@ -30,6 +30,18 @@ export function powerName(powerId: string): string {
   return key === undefined ? powerId : text(key);
 }
 
+export function heroName(heroId: string): string {
+  const key = loadContent().heroes.get(heroId)?.nameKey;
+  return key === undefined ? heroId : text(key);
+}
+
+export function heroAbilityName(heroId: string, abilityId: string): string {
+  const ability = loadContent()
+    .heroes.get(heroId)
+    ?.abilities.find((candidate) => candidate.id === abilityId);
+  return ability === undefined ? abilityId : text(ability.nameKey);
+}
+
 export function reactionName(reactionId: string): string {
   const key = loadContent().reactions.get(reactionId)?.nameKey;
   return key === undefined ? reactionId : text(key);

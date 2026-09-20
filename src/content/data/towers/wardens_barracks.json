@@ -159,7 +159,8 @@
             "hp": 180,
             "damage": 20,
             "armour": 5,
-            "regenPerSecond": 4
+            "regenPerSecond": 4,
+            "damageType": "toxic"
           }
         },
         {
@@ -184,7 +185,8 @@
             "hp": 240,
             "damage": 28,
             "armour": 8,
-            "regenPerSecond": 6
+            "regenPerSecond": 6,
+            "damageType": "toxic"
           }
         }
       ],

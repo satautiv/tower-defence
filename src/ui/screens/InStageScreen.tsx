@@ -13,7 +13,9 @@ import {
   prospectiveRange,
   sellTower,
   setRally,
+  castHeroAbility,
   castPower,
+  heroInfo,
   powerOptions,
   setSpeed,
   specialiseTower,
@@ -22,7 +24,14 @@ import {
   undoSecondsRemaining,
   upgradeTower,
 } from '@sim/index';
-import type { BuildOption, EnemyInfo, PowerOption, StageResult, TowerInfo } from '@sim/index';
+import type {
+  BuildOption,
+  EnemyInfo,
+  HeroInfo,
+  PowerOption,
+  StageResult,
+  TowerInfo,
+} from '@sim/index';
 import { GameSession } from '@app/session';
 import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
@@ -45,6 +54,7 @@ import { BuildMenu } from '../stage/BuildMenu.js';
 import { Diagnostics } from '../stage/Diagnostics.js';
 import { EnemyPanel } from '../stage/EnemyPanel.js';
 import { StageResults } from '../stage/StageResults.js';
+import { HeroBar } from '../stage/HeroBar.js';
 import { PowerBar } from '../stage/PowerBar.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
 import { WavePreview } from '../stage/WavePreview.js';
@@ -52,7 +62,14 @@ import { useUiStore } from '../store.js';
 import { focusOf, keyAction, nextSpeed } from '../keys.js';
 import type { KeyAction } from '../keys.js';
 import { useSettings } from '../settings.js';
-import { enemyName, powerName, reactionName, statusName } from '../text.js';
+import {
+  enemyName,
+  heroAbilityName,
+  heroName,
+  powerName,
+  reactionName,
+  statusName,
+} from '../text.js';
 
 /**
  * The only screen that mounts the renderer, and the one that runs a stage.
@@ -135,6 +152,18 @@ export function InStageScreen(): ReactElement {
   const armedPowerRef = useRef(-1);
   armedPowerRef.current = armedPower;
   const [powers, setPowers] = useState<PowerOption[]>([]);
+  const [hero, setHero] = useState<HeroInfo | null>(null);
+
+  /**
+   * Hero ability awaiting a target tap, or -1.
+   *
+   * A third thing that can be waiting for the same click, so arming any one of
+   * them clears the other two — the board must never have to guess which of a
+   * power, a rally flag and an ability a tap was meant for.
+   */
+  const [armedAbility, setArmedAbility] = useState(-1);
+  const armedAbilityRef = useRef(-1);
+  armedAbilityRef.current = armedAbility;
   const viewRef = useRef<GameView | null>(null);
   /* Measured on the device rather than inferred; see Diagnostics. */
   const metricsRef = useRef(new FrameMetrics());
@@ -176,6 +205,7 @@ export function InStageScreen(): ReactElement {
   const clearSelection = useCallback(() => {
     setRallyFor(-1);
     setArmedPower(-1);
+    setArmedAbility(-1);
     setSelection(NOTHING);
     setTower(null);
     setOptions([]);
@@ -198,6 +228,15 @@ export function InStageScreen(): ReactElement {
       /* The browser will only start audio from inside a real gesture, and this
          is the first one every player makes. Cheap and idempotent after that. */
       audioRef.current?.unlock();
+
+      /* Armed from the hero bar: this tap is where the ability lands. */
+      const ability = armedAbilityRef.current;
+      if (ability >= 0) {
+        const target = view.camera.screenToWorld(logicalX, logicalY);
+        session.dispatch((queue) => castHeroAbility(queue, ability, target.x, target.y));
+        setArmedAbility(-1);
+        return;
+      }
 
       /* Armed from the power bar: this tap is where the power lands. Checked
          before the rally, because a player who armed a power last meant that. */
@@ -397,6 +436,7 @@ export function InStageScreen(): ReactElement {
       /* Aether and cooldowns both move continuously, so the bar is polled with
          everything else rather than pushed at. */
       setPowers(powerOptions(session.world));
+      setHero(heroInfo(session.world));
 
       /* Kept in the stage rather than routed to a screen of its own: leaving
          would tear the renderer down, and Retry would have to build it again. */
@@ -591,15 +631,31 @@ export function InStageScreen(): ReactElement {
       ) : (
         <>
           {result === null && (
+            <HeroBar
+              hero={hero}
+              armed={armedAbility}
+              locked={paused}
+              name={heroName}
+              abilityName={heroAbilityName}
+              onArm={(index) => {
+                setRallyFor(-1);
+                setArmedPower(-1);
+                setArmedAbility((current) => (current === index ? -1 : index));
+              }}
+            />
+          )}
+
+          {result === null && (
             <PowerBar
               powers={powers}
               armed={armedPower}
               locked={paused}
               name={powerName}
               onArm={(index) => {
-                /* Arming a power drops any other pending tap, so two things
-                   are never waiting for the same click. */
+                /* Arming a power drops any other pending tap, so nothing is
+                   ever waiting for the same click as something else. */
                 setRallyFor(-1);
+                setArmedAbility(-1);
                 setArmedPower((current) => (current === index ? -1 : index));
               }}
             />

@@ -5,7 +5,16 @@ export { SYSTEMS, SYSTEM_ORDER } from './systems/index.js';
 export type { SimSystem } from './systems/index.js';
 export { hashWorld } from './hash.js';
 export { buildRuleset, EMPTY_RULESET } from './ruleset.js';
-export type { Ruleset, EnemyTable, StatusTable, ReactionTable, SpawnPoint } from './ruleset.js';
+export type {
+  Ruleset,
+  RulesetOptions,
+  EnemyTable,
+  StatusTable,
+  ReactionTable,
+  HeroRules,
+  SpawnPoint,
+} from './ruleset.js';
+export { MAX_HERO_LEVEL, buildHeroRules } from './ruleset.js';
 export { BakedPath, chooseBranch, laneOffsetFor } from './path.js';
 export type { PathSample, PathBranch } from './path.js';
 export { spawnEnemy, enemyIndex } from './spawn.js';
@@ -21,6 +30,7 @@ export { damageResolutionSystem, effectiveDefence } from './systems/damage.js';
 export { statusSystem, applyStatus } from './systems/status.js';
 export { soldierSystem, moveRally, setRallyPoint, release } from './systems/soldiers.js';
 export { groundEffectSystem, createGroundEffect } from './systems/groundEffects.js';
+export { heroSystem, orderHero, castHeroAbilityAt, HeroCastResult } from './systems/hero.js';
 export type { GroundEffectSpec } from './systems/groundEffects.js';
 export { reactionSystem, forceReaction } from './systems/reactions.js';
 export { runEffects, resolveEffect, EffectKind, ModifiedStat } from './effects.js';
@@ -48,6 +58,7 @@ export {
   towerInfo,
   buildOptions,
   powerOptions,
+  heroInfo,
   plotInfo,
   rangeOf,
   prospectiveRange,
@@ -68,6 +79,8 @@ export type {
   TowerInfo,
   BuildOption,
   PowerOption,
+  HeroInfo,
+  HeroAbilityInfo,
   PlotInfo,
   TierStats,
   UpgradeOption,

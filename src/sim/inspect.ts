@@ -90,6 +90,26 @@ export interface PowerOption {
   radius: number;
 }
 
+export interface HeroAbilityInfo {
+  index: number;
+  id: string;
+  ready: boolean;
+  /** Whole seconds until it can be cast again, or 0. */
+  cooldownRemaining: number;
+}
+
+export interface HeroInfo {
+  id: string;
+  level: number;
+  hp: number;
+  maxHp: number;
+  /** True while it is dead and counting down. */
+  down: boolean;
+  /** Whole seconds until it returns to the Core, or 0. */
+  respawnIn: number;
+  abilities: HeroAbilityInfo[];
+}
+
 export interface BuildOption {
   typeIdx: number;
   id: string;
@@ -265,6 +285,40 @@ export function powerOptions(world: World): PowerOption[] {
       radius,
     };
   });
+}
+
+/**
+ * The hero, as its HUD reads it. Null when no hero is deployed.
+ *
+ * The respawn countdown is here rather than inferred, because §11 asks for a
+ * visible timer: a player whose hero has died needs to know how long they are
+ * without it, and guessing is the difference between holding a line and
+ * abandoning it.
+ */
+export function heroInfo(world: World): HeroInfo | null {
+  const hero = world.rules.hero;
+  if (hero === null || world.heroSlot < 0) return null;
+
+  const slot = world.heroSlot;
+  const down = ((world.soldiers.flags[slot] as number) & SoldierFlag.Respawning) !== 0;
+
+  return {
+    id: hero.id,
+    level: hero.level,
+    hp: Math.max(0, world.soldiers.hp[slot] as number),
+    maxHp: world.soldiers.maxHp[slot] as number,
+    down,
+    respawnIn: down ? Math.ceil(world.heroRespawnIn / TICK_HZ) : 0,
+    abilities: hero.abilityIds.map((id, index) => {
+      const remaining = Math.max(0, (world.heroAbilityReadyTick[index] as number) - world.tick);
+      return {
+        index,
+        id,
+        ready: !down && remaining === 0,
+        cooldownRemaining: Math.ceil(remaining / TICK_HZ),
+      };
+    }),
+  };
 }
 
 export function plotInfo(world: World): PlotInfo[] {

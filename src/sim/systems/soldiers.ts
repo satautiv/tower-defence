@@ -1,6 +1,7 @@
 import { TICK_SECONDS } from '@core/constants';
-import { DAMAGE_INDEX, DamageFlag } from '../damage.js';
+import { DamageFlag } from '../damage.js';
 import { EnemyFlag, SoldierFlag, TowerFlag } from '../flags.js';
+import { beginHeroRespawn } from './hero.js';
 import { statIndexOf } from '../towers.js';
 import type { World } from '../world.js';
 
@@ -23,8 +24,6 @@ import type { World } from '../world.js';
  * implementation, two consumers — blocking is far too subtle to have two.
  */
 
-const KINETIC = DAMAGE_INDEX.kinetic;
-
 /**
  * How far along the path a soldier's reach extends, in world pixels.
  *
@@ -44,8 +43,10 @@ export function soldierSystem(world: World): void {
   for (let slot = 0; slot < soldiers.watermark; slot++) {
     if (!soldiers.isAlive(slot)) continue;
 
+    /* The hero's own respawn is the hero system's, since it returns to the
+       Core rather than to a barracks. */
     if ((soldiers.flags[slot] as number) & SoldierFlag.Respawning) {
-      tickRespawn(world, slot);
+      if (((soldiers.flags[slot] as number) & SoldierFlag.Hero) === 0) tickRespawn(world, slot);
       continue;
     }
 
@@ -108,6 +109,7 @@ function raise(world: World, tower: number, garrisonSlot: number, stats: number)
   soldiers.maxHp[slot] = table.soldierHp[stats] as number;
   soldiers.hp[slot] = soldiers.maxHp[slot] as number;
   soldiers.armour[slot] = table.soldierArmour[stats] as number;
+  soldiers.damageType[slot] = table.soldierDamageType[stats] as number;
   soldiers.damage[slot] = table.soldierDamage[stats] as number;
   soldiers.attackInterval[slot] = table.soldierIntervalTicks[stats] as number;
   soldiers.attackRange[slot] = table.soldierAttackRange[stats] as number;
@@ -381,7 +383,15 @@ function swingAtEnemy(world: World, slot: number, enemy: number): void {
   const statusId = stats >= 0 ? (world.rules.towers.soldierStatusId[stats] as number) : 255;
   const statusStacks = stats >= 0 ? (world.rules.towers.soldierStatusStacks[stats] as number) : 0;
 
-  world.damage.push(enemy, damage, KINETIC, -1, DamageFlag.None, statusId, statusStacks);
+  world.damage.push(
+    enemy,
+    damage,
+    soldiers.damageType[slot] as number,
+    -1,
+    DamageFlag.None,
+    statusId,
+    statusStacks,
+  );
 }
 
 /**
@@ -417,8 +427,17 @@ function fall(world: World, slot: number): void {
   const tower = soldiers.sourceTower[slot] as number;
   const stats = tower >= 0 && world.towers.isAlive(tower) ? statIndexOf(world, tower) : -1;
 
-  /* Ownerless — the hero, or a soldier whose barracks was sold. Nothing brings
-     it back, so the slot is returned. */
+  /* The hero comes back at the Core on its own timer, which the hero system
+     owns; it keeps its slot so nothing else has to rediscover which one it is. */
+  if (((soldiers.flags[slot] as number) & SoldierFlag.Hero) !== 0) {
+    soldiers.hp[slot] = 0;
+    soldiers.flags[slot] = SoldierFlag.Alive | SoldierFlag.Hero | SoldierFlag.Respawning;
+    beginHeroRespawn(world);
+    return;
+  }
+
+  /* Ownerless and not the hero — a soldier whose barracks was sold. Nothing
+     brings it back, so the slot is returned. */
   if (stats < 0) {
     soldiers.free(slot);
     return;

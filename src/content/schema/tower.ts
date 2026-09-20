@@ -37,6 +37,7 @@ export const GarrisonSchema = z.object({
   /** Seconds between swings. */
   attackIntervalSeconds: Positive,
   armour: NonNegative.default(0),
+  damageType: DamageTypeSchema.default('kinetic'),
   /** Seconds before a fallen soldier returns. Counted per slot. */
   respawnSeconds: Positive,
   /** How far the rally flag may be dragged from the tower. */

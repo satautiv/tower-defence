@@ -192,6 +192,65 @@
   white-space: nowrap;
 }
 
+/* ---- the hero ---- */
+
+.ui-hero {
+  position: absolute;
+  left: calc(var(--s-4) + var(--safe-area-left));
+  bottom: calc(var(--s-4) + var(--safe-area-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-2);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--c-surface) 85%, transparent);
+  min-width: 168px;
+}
+.ui-hero__who {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-2);
+  font: 600 var(--t-xs) / 1 var(--f-ui);
+}
+.ui-hero__level {
+  color: var(--c-text-dim);
+  font-family: var(--f-numeric);
+}
+.ui-hero__health {
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--c-border-strong) 60%, transparent);
+  overflow: hidden;
+}
+.ui-hero__health-fill {
+  display: block;
+  height: 100%;
+  background: var(--c-ley, #5ce1e6);
+}
+.ui-hero__health-fill--low {
+  background: var(--c-danger, #d1495b);
+}
+.ui-hero__down {
+  font: 600 var(--t-xs) / 1.4 var(--f-ui);
+  color: var(--c-text-dim);
+}
+.ui-hero__abilities {
+  display: flex;
+  gap: var(--s-1);
+}
+.ui-hero__ability {
+  flex: 1;
+  padding: var(--s-1) var(--s-2);
+}
+.ui-hero__ability-name {
+  font: 600 10px / 1.1 var(--f-ui);
+  text-transform: capitalize;
+}
+.ui-hero__ability-cool {
+  font: 600 var(--t-xs) / 1 var(--f-numeric);
+  color: var(--c-text-dim);
+}
+
 /* ---- warden powers ---- */
 
 .ui-powers {
