@@ -26,9 +26,28 @@ because the slice has no reactions.
 `src/sim/` holds the `World`, five structure-of-arrays entity pools, the command queue, event
 buffer, damage queue and the fifteen-step tick pipeline, plus paths and movement (#11), the wave
 spawner (#12), targeting, firing and projectiles (#13), damage resolution (#14), economy (#15),
-lives and win/lose (#16). Two of the pipeline's fifteen steps are still `noop`: `heroSystem`
-(#25) and `groundEffectSystem` (#31). `flushEvents` is deliberately empty, because the consumer
-drains and clears.
+lives and win/lose (#16). One of the pipeline's fifteen steps is still `noop`: `heroSystem`
+(#25). `flushEvents` is deliberately empty, because the consumer drains and clears.
+
+**Ground effects (#31) are live.** `src/sim/systems/groundEffects.ts` runs pools, fields, lava
+and the map's one-shot lever through one pool, because they differ only in payload. **Effects
+query enemies, never the reverse** — thirty fields asking the spatial hash once is thirty
+queries; three hundred enemies asking what they are standing in grows with the wrong number.
+Slows take the strongest rather than multiplying, so layering fields can never stand a wave
+still, but ground slows *do* compound with status slows, because a Stasis Field is a different
+kind of thing from being Chilled. Ground state is recomputed from nothing each tick rather than
+accumulated, so an enemy that walks out stops being slowed the moment it does.
+
+**Abilities are data (#26).** `src/sim/effects.ts` holds eight primitives, and the rule that
+keeps them honest is: when something cannot be expressed, add a primitive rather than a special
+case anywhere else. All five Warden Powers, every tower capstone and every hero ability compose
+from them, and `tests/sim/powers.test.ts` checks that claim rather than asserting it. Effects
+are a **discriminated union** in the schema, not a parameter bag — tightening it immediately
+found that the abilities authored so far disagreed with each other about `seconds` versus
+`durationSeconds`, `bonus` versus `flat`, and whether `slow` meant the multiplier or how much
+slower. `forceReaction` answers Aether Siphon's own criterion: every valid reaction in radius at
+once, with the per-enemy lockout set aside, routed through the same `resolve` the ordinary path
+uses so a forced reaction is the same reaction.
 
 **Soldiers and blocking (#24) are live.** `src/sim/systems/soldiers.ts` is the whole of it, and
 the hero (#25) is meant to run the same code with better stats — blocking is far too subtle to
