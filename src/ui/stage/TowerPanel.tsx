@@ -11,6 +11,10 @@ export interface TowerPanelProps {
   onSell: () => void;
   onUndo: () => void;
   onClose: () => void;
+  /** Offered only for a tower with soldiers. Arms tap-to-place for the flag. */
+  onRally?: () => void;
+  /** True while the next tap on the board will move this tower's rally flag. */
+  rallyArmed?: boolean;
   /** Paused: everything reads, nothing changes the tower. */
   locked?: boolean;
 }
@@ -90,6 +94,8 @@ export function TowerPanel({
   onSell,
   onUndo,
   onClose,
+  onRally,
+  rallyArmed = false,
   locked = false,
 }: TowerPanelProps): ReactElement {
   /* Locked controls stay visible, so the player can still see what an upgrade
@@ -107,6 +113,29 @@ export function TowerPanel({
   return (
     <Panel className="ui-tower-panel" title={tower.id.replace(/_/g, ' ')}>
       <Stats stats={tower.current} />
+
+      {/* A garrison's strength is the thing a player checks before deciding
+          whether it can hold, so it sits above the upgrade rather than below
+          it. Towers that shoot never show this at all. */}
+      {tower.soldierCount > 0 && (
+        <div className="ui-tower-panel__section">
+          <div className="ui-stat">
+            <span className="ui-stat__label">Soldiers</span>
+            <span className="ui-stat__value">
+              {tower.soldiersAlive} / {tower.soldierCount}
+            </span>
+          </div>
+          {onRally !== undefined && (
+            <Button
+              variant={rallyArmed ? 'primary' : 'secondary'}
+              onClick={guard(onRally)}
+              {...lock}
+            >
+              {rallyArmed ? 'Tap the board' : 'Move rally'}
+            </Button>
+          )}
+        </div>
+      )}
 
       {tower.upgrade !== null && (
         <div className="ui-tower-panel__section">

@@ -80,6 +80,11 @@ const SPRITES: SpriteSpec[] = [
   { name: 'tower_alchemists_still', size: 64, colour: PALETTE.toxic, shape: 'block' },
   { name: 'tower_wardens_barracks', size: 64, colour: PALETTE.plot, shape: 'block' },
 
+  /* Soldiers are discs like the things they fight, in the plot colour so they
+     read as yours rather than theirs. */
+  { name: 'soldier', size: 32, colour: PALETTE.plot, shape: 'disc', scale: 0.34 },
+  { name: 'rally_flag', size: 32, colour: PALETTE.plot, shape: 'diamond' },
+
   { name: 'projectile_bolt', size: 16, colour: PALETTE.kinetic, shape: 'disc', scale: 0.4 },
   { name: 'projectile_ember', size: 16, colour: PALETTE.pyro, shape: 'disc', scale: 0.4 },
   { name: 'projectile_shard', size: 16, colour: PALETTE.cryo, shape: 'disc', scale: 0.4 },

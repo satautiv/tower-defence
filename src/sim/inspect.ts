@@ -1,7 +1,7 @@
 import { TICK_HZ } from '@core/constants';
 import { DAMAGE_BY_INDEX } from './damage.js';
 import { canAfford, sellValue, specialiseCost, upgradeCost } from './economy.js';
-import { EnemyFlag } from './flags.js';
+import { EnemyFlag, SoldierFlag } from './flags.js';
 import { FiringMode, TIER_SLOTS } from './ruleset.js';
 import { STATUS_BY_INDEX, STATUS_COUNT } from './status.js';
 import { effectiveDefence } from './systems/damage.js';
@@ -66,6 +66,15 @@ export interface TowerInfo {
   specialisations: SpecialisationOption[];
   /** Whether the last build can still be taken back. */
   undoable: boolean;
+  /**
+   * How far this tower's rally flag may be moved, in tiles. Zero for every
+   * tower that has no soldiers, which is how the interface knows not to offer
+   * a rally control at all.
+   */
+  rallyRangeTiles: number;
+  /** Soldiers standing, and how many the tier fields. */
+  soldiersAlive: number;
+  soldierCount: number;
 }
 
 export interface BuildOption {
@@ -162,7 +171,23 @@ export function towerInfo(world: World, slot: number): TowerInfo | null {
     upgrade,
     specialisations,
     undoable: canUndo(world, slot),
+    rallyRangeTiles: (world.rules.towers.rallyRange[statIndexOf(world, slot)] as number) / TILE,
+    soldiersAlive: countSoldiers(world, slot),
+    soldierCount: world.rules.towers.soldierCount[statIndexOf(world, slot)] as number,
   };
+}
+
+/** Soldiers of this tower that are standing, not counting down to respawn. */
+function countSoldiers(world: World, tower: number): number {
+  const soldiers = world.soldiers;
+  let standing = 0;
+  for (let slot = 0; slot < soldiers.watermark; slot++) {
+    if (!soldiers.isAlive(slot)) continue;
+    if ((soldiers.sourceTower[slot] as number) !== tower) continue;
+    if (((soldiers.flags[slot] as number) & SoldierFlag.Respawning) !== 0) continue;
+    standing++;
+  }
+  return standing;
 }
 
 /** Whether this tower is still the one the undo window is holding open. */

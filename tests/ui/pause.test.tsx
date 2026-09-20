@@ -208,6 +208,9 @@ describe('actions locked by the pause', () => {
       upgrade: { cost: 80, affordable: true, before: STATS, after: { ...STATS, dps: 14 } },
       specialisations: [],
       undoable: false,
+      rallyRangeTiles: 0,
+      soldiersAlive: 0,
+      soldierCount: 0,
     };
     render(
       <TowerPanel
@@ -360,5 +363,79 @@ describe('the build arc stays on screen', () => {
       );
       expect(y).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+/**
+ * The rally control, offered only to towers that have soldiers.
+ *
+ * A player looking at an Arbalest Post should not be told it has a rally
+ * flag — it has nothing to rally.
+ */
+describe('the rally control', () => {
+  const garrisoned = (over: Partial<TowerInfo> = {}): TowerInfo => ({
+    slot: 0,
+    id: 'wardens_barracks',
+    tier: 0,
+    specialisation: -1,
+    current: STATS,
+    invested: 100,
+    sellValue: 70,
+    targetMode: 0,
+    upgrade: null,
+    specialisations: [],
+    undoable: false,
+    rallyRangeTiles: 8,
+    soldiersAlive: 3,
+    soldierCount: 3,
+    ...over,
+  });
+
+  const panel = (tower: TowerInfo, props: Record<string, unknown> = {}) =>
+    render(
+      <TowerPanel
+        tower={tower}
+        undoSeconds={0}
+        onUpgrade={vi.fn()}
+        onSpecialise={vi.fn()}
+        onSell={vi.fn()}
+        onUndo={vi.fn()}
+        onClose={vi.fn()}
+        {...props}
+      />,
+    );
+
+  it('shows how much of the garrison is standing', () => {
+    panel(garrisoned({ soldiersAlive: 2 }));
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+  });
+
+  it('offers the flag for a tower with soldiers', () => {
+    const onRally = vi.fn();
+    panel(garrisoned(), { onRally });
+
+    fireEvent.click(screen.getByRole('button', { name: /move rally/i }));
+    expect(onRally).toHaveBeenCalled();
+  });
+
+  it('says the tap is armed once it has been pressed', () => {
+    panel(garrisoned(), { onRally: vi.fn(), rallyArmed: true });
+    expect(screen.getByRole('button', { name: /tap the board/i })).toBeInTheDocument();
+  });
+
+  /* A tower that shoots has nothing to rally, and should not be told it does. */
+  it('offers nothing for a tower without soldiers', () => {
+    panel(garrisoned({ soldierCount: 0, soldiersAlive: 0, rallyRangeTiles: 0 }), {
+      onRally: vi.fn(),
+    });
+    expect(screen.queryByRole('button', { name: /move rally/i })).toBeNull();
+  });
+
+  it('will not move the flag while paused', () => {
+    const onRally = vi.fn();
+    panel(garrisoned(), { onRally, locked: true });
+
+    fireEvent.click(screen.getByRole('button', { name: /move rally/i }));
+    expect(onRally).not.toHaveBeenCalled();
   });
 });

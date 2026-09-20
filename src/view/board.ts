@@ -1,6 +1,6 @@
 import { Graphics } from 'pixi.js';
 import { TILE_SIZE } from '@core/constants';
-import { plotInfo, rangeOf } from '@sim/index';
+import { plotInfo, rangeOf, statIndexOf } from '@sim/index';
 import type { PlotInfo, World } from '@sim/index';
 import type { Layers } from './layers.js';
 
@@ -14,6 +14,22 @@ import type { Layers } from './layers.js';
  * redrawing is cheaper than the bookkeeping a diff would need — and cannot
  * drift out of sync with the simulation.
  */
+/** Teal, matching the ley marking rather than the gold of a build plot. */
+const RALLY_COLOUR = 0x5ce1e6;
+const FLAG_HEIGHT = 18;
+
+/** A pennant on a pole, so the flag reads as a flag at a glance. */
+function drawFlag(g: Graphics, x: number, y: number): void {
+  g.moveTo(x, y)
+    .lineTo(x, y - FLAG_HEIGHT)
+    .stroke({ width: 2, color: RALLY_COLOUR, alpha: 0.95 });
+  g.moveTo(x, y - FLAG_HEIGHT)
+    .lineTo(x + 12, y - FLAG_HEIGHT + 5)
+    .lineTo(x, y - FLAG_HEIGHT + 10)
+    .closePath()
+    .fill({ color: RALLY_COLOUR, alpha: 0.9 });
+}
+
 export class BoardView {
   private readonly plots = new Graphics();
   private readonly range = new Graphics();
@@ -38,6 +54,42 @@ export class BoardView {
     this.plotCache = plotInfo(world);
     this.drawPlots(selectedPlot);
     this.drawRange(world, selectedPlot, previewRadius, selectedTower);
+    this.drawRally(world, selectedTower);
+  }
+
+  /**
+   * The rally flag of the selected barracks, and the ground it may be moved to.
+   *
+   * Only while that tower is selected. A board with four barracks on it would
+   * otherwise carry four flags and four rings the player is not currently
+   * thinking about, and blocking is confusing enough without them.
+   */
+  private drawRally(world: World, selectedTower: number): void {
+    const g = this.range;
+    if (selectedTower < 0 || !world.towers.isAlive(selectedTower)) return;
+
+    const stats = statIndexOf(world, selectedTower);
+    const range = world.rules.towers.rallyRange[stats] as number;
+    if (range <= 0) return;
+
+    const towerX = world.towers.x[selectedTower] as number;
+    const towerY = world.towers.y[selectedTower] as number;
+
+    /* Where the flag may go, distinct from the firing range ring above it. */
+    g.circle(towerX, towerY, range).stroke({ width: 2, color: RALLY_COLOUR, alpha: 0.35 });
+
+    const flagX = world.towers.rallyX[selectedTower] as number;
+    const flagY = world.towers.rallyY[selectedTower] as number;
+    /* Untouched flags sit at the origin; the garrison has taken the road
+       instead, and there is no flag to draw until the player places one. */
+    if (flagX === 0 && flagY === 0) return;
+
+    g.moveTo(towerX, towerY).lineTo(flagX, flagY).stroke({
+      width: 1,
+      color: RALLY_COLOUR,
+      alpha: 0.4,
+    });
+    drawFlag(g, flagX, flagY);
   }
 
   private drawPlots(selected: number): void {

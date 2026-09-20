@@ -12,6 +12,7 @@ import {
   plotInfo,
   prospectiveRange,
   sellTower,
+  setRally,
   setSpeed,
   specialiseTower,
   towerInfo,
@@ -109,6 +110,16 @@ export function InStageScreen(): ReactElement {
   const audioRef = useRef<AudioDirector | null>(null);
   /* Subscribed rather than read once: the toggle has to re-render its label. */
   const muted = useSettings((state) => state.muted);
+  /**
+   * Tower whose rally flag the next board tap will move, or -1.
+   *
+   * Tap-to-place rather than a true drag: the flag is a world position and the
+   * board already turns a tap into one, so a drag would be a second input path
+   * doing the same job — and on a phone a drag across the board is a pan.
+   */
+  const [rallyFor, setRallyFor] = useState(-1);
+  const rallyForRef = useRef(-1);
+  rallyForRef.current = rallyFor;
   const viewRef = useRef<GameView | null>(null);
   /* Measured on the device rather than inferred; see Diagnostics. */
   const metricsRef = useRef(new FrameMetrics());
@@ -148,6 +159,7 @@ export function InStageScreen(): ReactElement {
   }, []);
 
   const clearSelection = useCallback(() => {
+    setRallyFor(-1);
     setSelection(NOTHING);
     setTower(null);
     setOptions([]);
@@ -170,6 +182,16 @@ export function InStageScreen(): ReactElement {
       /* The browser will only start audio from inside a real gesture, and this
          is the first one every player makes. Cheap and idempotent after that. */
       audioRef.current?.unlock();
+
+      /* Armed by the tower panel: this tap is the flag's new home, not a
+         selection. The simulation clamps it to the tower's rally range. */
+      const armed = rallyForRef.current;
+      if (armed >= 0) {
+        const target = view.camera.screenToWorld(logicalX, logicalY);
+        session.dispatch((queue) => setRally(queue, armed, target.x, target.y));
+        setRallyFor(-1);
+        return;
+      }
 
       const world = view.camera.screenToWorld(logicalX, logicalY);
 
@@ -590,6 +612,12 @@ export function InStageScreen(): ReactElement {
 
           {tower !== null && (
             <TowerPanel
+              onRally={
+                tower !== null && tower.rallyRangeTiles > 0
+                  ? () => setRallyFor((armed) => (armed === tower.slot ? -1 : tower.slot))
+                  : undefined
+              }
+              rallyArmed={tower !== null && rallyFor === tower.slot}
               tower={tower}
               undoSeconds={undoLeft}
               onUpgrade={() => dispatch((q) => upgradeTower(q, tower.slot))}
