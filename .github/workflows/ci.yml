@@ -94,13 +94,37 @@ jobs:
   balance:
     name: balance
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      # Placeholder. Becomes a real gate in #35: runs the headless simulator
-      # over every stage and difficulty, comments the win-rate delta on the PR,
-      # and fails if any stage moves more than ±10%. Until then this only
-      # proves the wiring.
-      - run: echo "balance — simulator not implemented yet (#35)."
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Every stage and strategy against its authored win-rate band. Fails the
+      # build when a stage falls outside the band its content declares, which
+      # is what stops a quiet tuning edit from making stage four unwinnable
+      # three months before anyone plays it.
+      #
+      # 200 runs per strategy rather than the 2,000 a local sweep uses: enough
+      # to catch a stage that has genuinely moved, few enough to stay inside a
+      # PR's patience. Seeds are fixed, so two runs of this job compare.
+      - name: Balance
+        run: npm run balance -- --runs 200 --json balance-report.json
+
+      # Kept whatever the outcome — the report is most wanted on the run that
+      # failed, and #59's live-balancing loop will read the same file.
+      - name: Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance-report
+          path: balance-report.json
+          if-no-files-found: warn
 
   e2e:
     name: e2e

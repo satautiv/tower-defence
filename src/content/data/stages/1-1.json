@@ -335,5 +335,9 @@
       ],
       "clearBonus": 39
     }
-  ]
+  ],
+  "balance": {
+    "minWinRate": 0.95,
+    "maxWinRate": 1.0
+  }
 }

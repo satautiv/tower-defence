@@ -72,6 +72,24 @@ export const InteractableSchema = z.object({
   effect: z.enum(['collapse_bridge', 'drop_boulder', 'ignite_vent']),
 });
 
+/**
+ * The win rate this stage is authored for, as fractions of runs won.
+ *
+ * The balance simulator (#35) reports every stage against its own band rather
+ * than against one global number, because a tutorial stage and a region finale
+ * are not supposed to be equally survivable. CI fails a change that moves a
+ * stage out of its band, which is what stops a quiet tuning edit from making
+ * stage four unwinnable three months before anyone plays it.
+ */
+export const BalanceTargetSchema = z
+  .object({
+    minWinRate: z.number().min(0).max(1).default(0.5),
+    maxWinRate: z.number().min(0).max(1).default(1),
+  })
+  .refine((band) => band.minWinRate <= band.maxWinRate, {
+    message: 'minWinRate must not exceed maxWinRate',
+  });
+
 export const StageSchema = z.object({
   id: StageIdSchema,
   nameKey: LocaleKeySchema,
@@ -89,7 +107,10 @@ export const StageSchema = z.object({
   interactable: InteractableSchema.optional(),
   /** Minimum spacing between plots, in tiles. Enforced by content-lint. */
   minPlotSpacingTiles: NonNegative.default(1),
+  /** Win-rate band the balance simulator holds this stage to. */
+  balance: BalanceTargetSchema.default({ minWinRate: 0.5, maxWinRate: 1 }),
 });
 
 export type StageDefinition = z.infer<typeof StageSchema>;
+export type BalanceTarget = z.infer<typeof BalanceTargetSchema>;
 export type WaveDefinition = z.infer<typeof WaveSchema>;

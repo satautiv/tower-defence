@@ -23,7 +23,7 @@
     "test:unit": "NODE_OPTIONS=--expose-gc vitest run",
     "test:determinism": "NODE_OPTIONS=--expose-gc vitest run tests/determinism",
     "content:lint": "tsx tools/content-lint/index.ts",
-    "balance": "node tools/balance-sim/index.js",
+    "balance": "tsx tools/balance-sim/index.ts",
     "bundle:check": "node tools/bundle-budget/index.js",
     "changelog": "node tools/changelog/index.js",
     "test:coverage": "NODE_OPTIONS=--expose-gc vitest run --coverage",

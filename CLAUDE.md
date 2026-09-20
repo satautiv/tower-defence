@@ -86,13 +86,27 @@ under 1%. Scorch reaches its cap of 5 stacks and burns for its full authored 30 
 enemies die to projectile damage so quickly that the burn barely gets to work. It is a real
 buff to the tower that was already dominant, and a small one.
 
-**A fourth, and the one #62 should be pointed at.** With reactions live, the naive
-cost-descending board on stage 1-1 triggers **zero** reactions across every seed, because it
-builds nothing but Flame Vents and one damage type cannot react with itself. A board that
-alternates towers instead triggers 82, deals 25% more damage (10,489 against 8,384) and clears
-22 ticks sooner. So the signature mechanic works and it pays — but on 1-1 the *lazy* line
-ignores it entirely, which is a stage-design and roster problem (#36, #23, #50) rather than a
-code one. Worth handing to #62's playtesters deliberately rather than hoping they find it.
+**A fourth, and the one #62 should be pointed at.** With reactions live, the naive board on
+stage 1-1 triggers **zero** reactions across every seed. The signature mechanic works and it
+pays — but on 1-1 the lazy line ignores it entirely, which is a stage-design and roster problem
+(#36, #23, #50) rather than a code one. Worth handing to #62's playtesters deliberately rather
+than hoping they find it.
+
+**The balance simulator sharpened that considerably** (200 runs per strategy, every seed):
+
+| | |
+|---|---|
+| Every strategy, including every single-tower board | wins **100%** with **20/20 lives** |
+| `greedy` — most expensive affordable | builds **all three types** and still triggers **0 reactions in 200/200 runs** |
+| `balanced` — round-robin | median **1** reaction. Pick rates span **4.5:1**, past the limit |
+| Peak unspent gold | **~500**, on a stage whose towers cost 100–150 |
+
+Two things that were not obvious before. **Any one tower clears 1-1 alone with full lives**,
+which is pillar P1 failing outright rather than drifting. And **building different towers is not
+sufficient to produce a reaction** — greedy puts all three damage types down and gets nothing,
+because a reaction needs *overlapping coverage* and which tower lands on which plot decides it.
+That is the thing to fix in 1-1 (#36): the plot layout has to make overlap the natural build,
+not a lucky one.
 
 `src/platform/` isolates every platform difference behind an interface: `SaveAdapter` (localStorage
 for the profile, IndexedDB for snapshots, memory as a fallback), `Lifecycle`, `Haptics`,
@@ -160,8 +174,20 @@ Single test: `npx vitest run tests/smoke.test.ts`, or `npx vitest -t "test name"
 `npm run test:determinism` is a real gate with its own CI step now — when it fails, something
 broke replays, bug reproduction and the balance simulator all at once.
 
+`npm run balance` is real now (#35). It runs stages headlessly across seeds and reports win
+rate against each stage's authored band, tower pick rates, reaction counts, loss-wave
+percentiles and peak unspent gold. With no `--strategy` it runs all of them plus one per tower,
+which is usually what you want — the interesting number is rarely one strategy's win rate, it is
+the gap between two. Runs spread across every core; `--workers 1` runs in-process when a stack
+trace matters. **It is a CI gate**: a stage outside its band fails the build.
+
+```
+npm run balance -- --stage 1-1 --runs 2000 --strategy greedy
+npm run balance -- --runs 200 --csv out.csv --json out.json
+```
+
 **Placeholders**, named now so the naming is settled, implemented later:
-`balance` (#35). `android:dev` / `android:build` arrive with #54. The balance sim will take
+`android:dev` / `android:build` arrive with #54. The balance sim will take
 arguments:
 `npm run balance -- --stage 1-8 --difficulty veteran --runs 2000 --strategy greedy`
 
