@@ -47,6 +47,7 @@ export type { StageStats, UndoableBuild } from './world.js';
 export {
   towerInfo,
   buildOptions,
+  powerOptions,
   plotInfo,
   rangeOf,
   prospectiveRange,
@@ -66,6 +67,7 @@ export type {
   ThreatTag,
   TowerInfo,
   BuildOption,
+  PowerOption,
   PlotInfo,
   TierStats,
   UpgradeOption,

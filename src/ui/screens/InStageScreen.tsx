@@ -13,6 +13,8 @@ import {
   prospectiveRange,
   sellTower,
   setRally,
+  castPower,
+  powerOptions,
   setSpeed,
   specialiseTower,
   towerInfo,
@@ -20,7 +22,7 @@ import {
   undoSecondsRemaining,
   upgradeTower,
 } from '@sim/index';
-import type { BuildOption, EnemyInfo, StageResult, TowerInfo } from '@sim/index';
+import type { BuildOption, EnemyInfo, PowerOption, StageResult, TowerInfo } from '@sim/index';
 import { GameSession } from '@app/session';
 import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
@@ -43,13 +45,14 @@ import { BuildMenu } from '../stage/BuildMenu.js';
 import { Diagnostics } from '../stage/Diagnostics.js';
 import { EnemyPanel } from '../stage/EnemyPanel.js';
 import { StageResults } from '../stage/StageResults.js';
+import { PowerBar } from '../stage/PowerBar.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
 import { WavePreview } from '../stage/WavePreview.js';
 import { useUiStore } from '../store.js';
 import { focusOf, keyAction, nextSpeed } from '../keys.js';
 import type { KeyAction } from '../keys.js';
 import { useSettings } from '../settings.js';
-import { enemyName, reactionName, statusName } from '../text.js';
+import { enemyName, powerName, reactionName, statusName } from '../text.js';
 
 /**
  * The only screen that mounts the renderer, and the one that runs a stage.
@@ -120,6 +123,18 @@ export function InStageScreen(): ReactElement {
   const [rallyFor, setRallyFor] = useState(-1);
   const rallyForRef = useRef(-1);
   rallyForRef.current = rallyFor;
+
+  /**
+   * Power awaiting a target tap, or -1.
+   *
+   * Armed from the bar and cast by the next tap on the board, the same shape
+   * the rally flag uses — a power is a point, and the board already turns a
+   * tap into one.
+   */
+  const [armedPower, setArmedPower] = useState(-1);
+  const armedPowerRef = useRef(-1);
+  armedPowerRef.current = armedPower;
+  const [powers, setPowers] = useState<PowerOption[]>([]);
   const viewRef = useRef<GameView | null>(null);
   /* Measured on the device rather than inferred; see Diagnostics. */
   const metricsRef = useRef(new FrameMetrics());
@@ -160,6 +175,7 @@ export function InStageScreen(): ReactElement {
 
   const clearSelection = useCallback(() => {
     setRallyFor(-1);
+    setArmedPower(-1);
     setSelection(NOTHING);
     setTower(null);
     setOptions([]);
@@ -182,6 +198,16 @@ export function InStageScreen(): ReactElement {
       /* The browser will only start audio from inside a real gesture, and this
          is the first one every player makes. Cheap and idempotent after that. */
       audioRef.current?.unlock();
+
+      /* Armed from the power bar: this tap is where the power lands. Checked
+         before the rally, because a player who armed a power last meant that. */
+      const power = armedPowerRef.current;
+      if (power >= 0) {
+        const target = view.camera.screenToWorld(logicalX, logicalY);
+        session.dispatch((queue) => castPower(queue, power, target.x, target.y));
+        setArmedPower(-1);
+        return;
+      }
 
       /* Armed by the tower panel: this tap is the flag's new home, not a
          selection. The simulation clamps it to the tower's rally range. */
@@ -367,6 +393,10 @@ export function InStageScreen(): ReactElement {
         if (info === null) enemyPickRef.current = null;
         setEnemy(info);
       }
+
+      /* Aether and cooldowns both move continuously, so the bar is polled with
+         everything else rather than pushed at. */
+      setPowers(powerOptions(session.world));
 
       /* Kept in the stage rather than routed to a screen of its own: leaving
          would tear the renderer down, and Retry would have to build it again. */
@@ -560,6 +590,21 @@ export function InStageScreen(): ReactElement {
         </Panel>
       ) : (
         <>
+          {result === null && (
+            <PowerBar
+              powers={powers}
+              armed={armedPower}
+              locked={paused}
+              name={powerName}
+              onArm={(index) => {
+                /* Arming a power drops any other pending tap, so two things
+                   are never waiting for the same click. */
+                setRallyFor(-1);
+                setArmedPower((current) => (current === index ? -1 : index));
+              }}
+            />
+          )}
+
           <Hud
             source={hudSource}
             onSpeed={changeSpeed}

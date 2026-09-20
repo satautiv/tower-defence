@@ -192,6 +192,36 @@
   white-space: nowrap;
 }
 
+/* ---- warden powers ---- */
+
+.ui-powers {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--s-4) + var(--safe-area-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--s-2);
+}
+.ui-powers__slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+  min-width: var(--hit-min);
+  padding: var(--s-2) var(--s-3);
+}
+.ui-powers__name {
+  font: 600 var(--t-xs) / 1 var(--f-ui);
+  text-transform: capitalize;
+}
+.ui-powers__cost {
+  font: 600 var(--t-xs) / 1 var(--f-numeric);
+  color: var(--c-aether, #b892ff);
+}
+.ui-powers__cost--cooling {
+  color: var(--c-text-dim);
+}
+
 .ui-tower-panel {
   position: absolute;
   right: calc(var(--s-4) + var(--safe-area-right));

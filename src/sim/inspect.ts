@@ -77,6 +77,19 @@ export interface TowerInfo {
   soldierCount: number;
 }
 
+export interface PowerOption {
+  index: number;
+  id: string;
+  cost: number;
+  /** True when there is enough Aether and the cooldown has run. */
+  ready: boolean;
+  affordable: boolean;
+  /** Whole seconds until it can be cast again, or 0. */
+  cooldownRemaining: number;
+  /** World pixels the reticle should preview, or 0 for a power with no area. */
+  radius: number;
+}
+
 export interface BuildOption {
   typeIdx: number;
   id: string;
@@ -217,6 +230,39 @@ export function buildOptions(world: World): BuildOption[] {
       cost,
       affordable: canAfford(world, cost),
       stats: statsAt(world, statIndex),
+    };
+  });
+}
+
+/**
+ * The Warden Powers, as the ability bar reads them.
+ *
+ * The widest radius any of a power's effects covers, so the targeting reticle
+ * shows the area that will actually be touched rather than a nominal one. A
+ * preview that disagreed with the cast would be worse than none — the same
+ * rule the tower range ring follows.
+ */
+export function powerOptions(world: World): PowerOption[] {
+  const powers = world.rules.powers;
+
+  return powers.ids.map((id, index) => {
+    const cost = powers.cost[index] as number;
+    const remaining = Math.max(0, (world.powerReadyTick[index] as number) - world.tick);
+    const affordable = world.resources.aether >= cost;
+
+    let radius = 0;
+    for (const effect of powers.effects[index] ?? []) {
+      if (effect.radius > radius) radius = effect.radius;
+    }
+
+    return {
+      index,
+      id,
+      cost,
+      ready: affordable && remaining === 0,
+      affordable,
+      cooldownRemaining: Math.ceil(remaining / TICK_HZ),
+      radius,
     };
   });
 }

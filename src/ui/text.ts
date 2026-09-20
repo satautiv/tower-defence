@@ -25,6 +25,11 @@ export function statusName(statusId: string): string {
   return key === undefined ? statusId : text(key);
 }
 
+export function powerName(powerId: string): string {
+  const key = loadContent().powers.get(powerId)?.nameKey;
+  return key === undefined ? powerId : text(key);
+}
+
 export function reactionName(reactionId: string): string {
   const key = loadContent().reactions.get(reactionId)?.nameKey;
   return key === undefined ? reactionId : text(key);
