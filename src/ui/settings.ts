@@ -30,6 +30,12 @@ const SpeedSchema = z.literal(GAME_SPEEDS);
 export const SettingsSchema = z.object({
   /** Carried from stage to stage (docs/GAME_DESIGN.md §15.3). */
   speed: SpeedSchema.default(1),
+  /**
+   * Effects volume, 0 to 1. One slider for now: #44 splits it into music,
+   * effects and voice when there is more than one of them to balance.
+   */
+  volume: z.number().min(0).max(1).default(0.7),
+  muted: z.boolean().default(false),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;
@@ -94,6 +100,8 @@ interface SettingsState extends Settings {
   /** False until the saved settings have been read, or found missing. */
   loaded: boolean;
   setSpeed: (speed: GameSpeed) => void;
+  setVolume: (volume: number) => void;
+  setMuted: (muted: boolean) => void;
 }
 
 /** The adapter settings are read from and written to. Replaced in tests. */
@@ -120,6 +128,19 @@ export const useSettings = create<SettingsState>((set, get) => ({
     set({ speed });
     /* The whole file, not just the field that changed: parsing the store's
        state through the schema keeps every setting and drops the actions. */
+    persist(SettingsSchema.parse(get()));
+  },
+
+  setVolume: (volume) => {
+    const clamped = Math.min(1, Math.max(0, volume));
+    if (get().volume === clamped) return;
+    set({ volume: clamped });
+    persist(SettingsSchema.parse(get()));
+  },
+
+  setMuted: (muted) => {
+    if (get().muted === muted) return;
+    set({ muted });
     persist(SettingsSchema.parse(get()));
   },
 }));

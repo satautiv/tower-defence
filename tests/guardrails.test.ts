@@ -117,4 +117,32 @@ describe('presentation layers stay downstream', () => {
     );
     expect(rules).toEqual([]);
   });
+
+  /* audio/ arrived with the reaction stingers and sits alongside view/ and
+     ui/: downstream of sim/, upstream of nothing. */
+  it('blocks audio/ from importing the app layer', async () => {
+    const rules = await rulesTriggeredBy(
+      `import { boot } from '@app/mount';\nexport const b = boot;\n`,
+      'src/audio/probe.ts',
+    );
+    expect(rules).toContain('no-restricted-imports');
+  });
+
+  it('lets audio/ read sim events', async () => {
+    const rules = await rulesTriggeredBy(
+      `import { SimEventKind } from '@sim/index';\nexport const k = SimEventKind;\n`,
+      'src/audio/probe.ts',
+    );
+    expect(rules).toEqual([]);
+  });
+
+  /* The reverse of the rule that matters most: an audio library must never
+     reach sim/, or the simulation stops running headless under Node. */
+  it('keeps an audio library out of sim/', async () => {
+    const rules = await rulesTriggeredBy(
+      `import { Howl } from 'howler';\nexport const h = Howl;\n`,
+      'src/sim/probe.ts',
+    );
+    expect(rules).toContain('no-restricted-imports');
+  });
 });

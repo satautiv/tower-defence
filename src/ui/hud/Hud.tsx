@@ -28,6 +28,9 @@ export interface HudProps {
   /** Offered while paused. Omitted, the button is not shown. */
   onRestart?: () => void;
   onQuit?: () => void;
+  /** Offered while paused. Omitted, the sound toggle is not shown. */
+  onMute?: (muted: boolean) => void;
+  muted?: boolean;
 }
 
 /**
@@ -51,6 +54,8 @@ export function Hud({
   onSpeed,
   onRestart,
   onQuit,
+  onMute,
+  muted = false,
 }: HudProps): ReactElement {
   const model = useThrottledValue(source, undefined, shallowEqual);
   /* Read from the store rather than the polled model, so the button answers
@@ -92,6 +97,16 @@ export function Hud({
           {onRestart !== undefined && (
             <Button variant="ghost" onClick={onRestart} shortcut={BINDINGS.restart}>
               Restart
+            </Button>
+          )}
+          {onMute !== undefined && (
+            <Button
+              variant="ghost"
+              onClick={() => onMute(!muted)}
+              aria-pressed={muted}
+              aria-label={muted ? 'Unmute sound' : 'Mute sound'}
+            >
+              {muted ? 'Sound off' : 'Sound on'}
             </Button>
           )}
           {onQuit !== undefined && (

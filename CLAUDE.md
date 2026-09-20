@@ -60,8 +60,13 @@ reaction cannot be run against an effect nobody rendered. `ReactionFeed` holds a
 knows nothing about a renderer, so it is unit-tested; `ReactionsView` is the thin part that
 touches Pixi. Each reaction gets its own shape as well as its own colour — every reaction deals
 Arcane, so colouring by damage type would render all five identical, which is exactly risk T3.
-This is the readability slice #62 needs, not the VFX pass (#43); **there is still no sound**,
-which arrives with #44.
+`src/audio/` is the slice of #44 the gate could not run without: a unique stinger per reaction,
+so a player watching their gold still learns that something happened. **Synthesised, not
+sampled** — the same bargain `art:placeholder` makes for sprites, and it means **Howler is still
+not installed**; the Web Audio API the browser already ships was enough, and #44 can bring the
+mixer when it brings adaptive music and sampled assets. `stingers.ts` holds the recipes and the
+rate limiter and is pure; `director.ts` owns the context and the autoplay unlock. Audio only
+starts inside a real user gesture, so it is unlocked on the first tap on the board.
 
 `src/sim/ruleset.ts` resolves authored content into flat numeric tables once per stage — towers,
 enemies, statuses, waves, paths. **No system reads a JSON object or a string id during a tick**,
@@ -111,6 +116,7 @@ Planning artefacts:
 |---|---|
 | `docs/GAME_DESIGN.md` | The design source of truth — mechanics, towers, enemies, campaign, progression, scope |
 | `docs/PLAYTEST-REACTIONS.md` | How to run #62, the reaction gate — the next thing blocking M2 |
+| `docs/adr/0004-reaction-readability.md` | What the first gate session found, and what was changed because of it |
 | `docs/TECH_DESIGN.md` | The technical spec — stack, architecture, per-system design, tooling, roadmap |
 
 The implementation roadmap lives entirely in **GitHub issues #3–#60** (`gh issue list`), grouped under milestones M0–M7. Issues #1 and #2 are the closed planning issues and hold the same content as the two docs.

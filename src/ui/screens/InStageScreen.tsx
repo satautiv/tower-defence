@@ -25,6 +25,7 @@ import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
 import { EffectsView } from '@view/effects';
 import { ReactionsView } from '@view/reactions';
+import { AudioDirector } from '@audio/index';
 import { EntityView } from '@view/entities';
 import { indexAtlas, initAssets, loadBundle } from '@view/assets';
 import type { AtlasIndex } from '@view/assets';
@@ -105,6 +106,9 @@ export function InStageScreen(): ReactElement {
   const entityRef = useRef<EntityView | null>(null);
   const effectsRef = useRef<EffectsView | null>(null);
   const reactionsRef = useRef<ReactionsView | null>(null);
+  const audioRef = useRef<AudioDirector | null>(null);
+  /* Subscribed rather than read once: the toggle has to re-render its label. */
+  const muted = useSettings((state) => state.muted);
   const viewRef = useRef<GameView | null>(null);
   /* Measured on the device rather than inferred; see Diagnostics. */
   const metricsRef = useRef(new FrameMetrics());
@@ -162,6 +166,10 @@ export function InStageScreen(): ReactElement {
       const session = sessionRef.current;
       const view = viewRef.current;
       if (session === null || view === null) return;
+
+      /* The browser will only start audio from inside a real gesture, and this
+         is the first one every player makes. Cheap and idempotent after that. */
+      audioRef.current?.unlock();
 
       const world = view.camera.screenToWorld(logicalX, logicalY);
 
@@ -232,6 +240,15 @@ export function InStageScreen(): ReactElement {
       const reactions = new ReactionsView(view.layers);
       reactionsRef.current = reactions;
 
+      /* Created here, but silent until a gesture unlocks it: every mobile
+         browser refuses to start audio otherwise, and a context opened too
+         early is born suspended and stays that way. */
+      const audio = audioRef.current ?? new AudioDirector();
+      audioRef.current = audio;
+      const settings = useSettings.getState();
+      audio.setVolume(settings.volume);
+      audio.setMuted(settings.muted);
+
       /* Atlas first, so entities never appear as blank textures that pop in
          a frame later. */
       void (async () => {
@@ -274,6 +291,7 @@ export function InStageScreen(): ReactElement {
         entities.sync(session.world);
         effects.consume(session.world);
         reactions.consume(session.world, reactionName);
+        audio.consume(session.world, now);
         /* Every consumer has read the buffer, so it can be dropped. */
         session.clearEvents();
 
@@ -388,6 +406,7 @@ export function InStageScreen(): ReactElement {
     /* Including the record of which reactions have been named: for the player
        the restarted run's first Thermal Shock is a first Thermal Shock. */
     reactionsRef.current?.reset();
+    audioRef.current?.reset();
     closePanel();
     clearSelection();
     setResult(null);
@@ -489,6 +508,16 @@ export function InStageScreen(): ReactElement {
     };
   }, [perform]);
 
+  /* Closes the audio context when the stage screen goes away. Left open, a
+     suspended context survives the navigation and the next stage opens a
+     second one — browsers cap how many a page may hold. */
+  useEffect(() => {
+    return () => {
+      audioRef.current?.destroy();
+      audioRef.current = null;
+    };
+  }, []);
+
   return (
     <div
       className={`ui-screen ui-screen--stage${paused ? ' ui-screen--paused' : ''}`}
@@ -514,6 +543,14 @@ export function InStageScreen(): ReactElement {
             onSpeed={changeSpeed}
             onRestart={restart}
             onQuit={() => navigate('stageSelect')}
+            muted={muted}
+            onMute={(next) => {
+              useSettings.getState().setMuted(next);
+              audioRef.current?.setMuted(next);
+              /* A player who unmutes from the pause menu has just made a
+                 gesture, which is the browser's price of admission. */
+              if (!next) audioRef.current?.unlock();
+            }}
           />
 
           {/* Nothing is coming once the stage is over; "final wave" would be

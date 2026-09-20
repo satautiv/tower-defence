@@ -32,11 +32,13 @@ const quietly = (): void => void vi.spyOn(console, 'warn').mockImplementation(()
 
 describe('the settings file', () => {
   it('round-trips', () => {
-    expect(parseSettings(serializeSettings({ speed: 3 }))).toEqual({ speed: 3 });
+    const settings = { ...DEFAULT_SETTINGS, speed: 3 as const };
+    expect(parseSettings(serializeSettings(settings))).toEqual(settings);
   });
 
   it('carries its version beside the data', () => {
-    expect(JSON.parse(serializeSettings({ speed: 2 }))).toEqual({ version: 1, data: { speed: 2 } });
+    const settings = { ...DEFAULT_SETTINGS, speed: 2 as const };
+    expect(JSON.parse(serializeSettings(settings))).toEqual({ version: 1, data: settings });
   });
 
   /* A field added in a later build must not make an older file unreadable. */
@@ -50,7 +52,8 @@ describe('the settings file', () => {
       2: (data: unknown) => ({ speed: (data as { gameSpeed: number }).gameSpeed }),
     };
     const old = JSON.stringify({ version: 1, data: { gameSpeed: 3 } });
-    expect(parseSettings(old, migrations, 3)).toEqual({ speed: 3 });
+    /* Fields the old file predates come back at their defaults. */
+    expect(parseSettings(old, migrations, 3)).toEqual({ ...DEFAULT_SETTINGS, speed: 3 });
   });
 
   it.each([
@@ -75,7 +78,7 @@ describe('loading', () => {
   });
 
   it('restores the saved speed', async () => {
-    await adapter.set(SETTINGS_KEY, serializeSettings({ speed: 3 }));
+    await adapter.set(SETTINGS_KEY, serializeSettings({ ...DEFAULT_SETTINGS, speed: 3 }));
     await loadSettings();
     expect(useSettings.getState()).toMatchObject({ speed: 3, loaded: true });
   });
@@ -109,7 +112,10 @@ describe('saving', () => {
   it('writes a new speed straight away, and a later visit reads it back', async () => {
     useSettings.getState().setSpeed(2);
     await Promise.resolve();
-    expect(parseSettings((await adapter.get(SETTINGS_KEY)) ?? '')).toEqual({ speed: 2 });
+    expect(parseSettings((await adapter.get(SETTINGS_KEY)) ?? '')).toEqual({
+      ...DEFAULT_SETTINGS,
+      speed: 2,
+    });
 
     useSettings.setState({ ...DEFAULT_SETTINGS, loaded: false });
     await loadSettings();

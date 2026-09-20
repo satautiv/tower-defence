@@ -42,11 +42,20 @@ the design.
 | **Statuses** | Scorch burns, Chill slows and freezes at 5 stacks, Corrode eats armour |
 | **Reactions** | All five in the matrix, though only **Thermal Shock** is reachable with these three towers |
 | **Reaction visuals** | A distinct shape and colour per reaction, drawn at the blast's real radius |
-| **Reaction labels** | The name floats up the first time each reaction happens in a stage |
+| **Reaction labels** | The name floats up for the first **three** of each reaction in a stage |
+| **Reaction damage** | The number floats where it happened |
+| **Reaction sound** | A distinct stinger per reaction — synthesised placeholder audio |
 
-**Not yet in:** sound. Audio is [#44](https://github.com/satautiv/tower-defence/issues/44) and Howler is not installed. If the session turns on
-whether a reaction is noticeable, weigh that: one of the two channels the design calls for
-is missing, and the visual is carrying the whole load.
+The second session onwards runs with all of the above. The first ran without the damage
+numbers, without the sound, and with the name shown only once — see
+[`adr/0004-reaction-readability.md`](adr/0004-reaction-readability.md) for what that cost.
+
+**Sound needs a gesture.** Browsers refuse to start audio until the player has tapped
+something, so the first tap on the board unlocks it and anything before that is silent.
+That is normal. There is a **Sound on / Sound off** toggle in the pause menu.
+
+**Still not in:** adaptive music, damage-type sounds, UI sounds and voice — all of #44
+proper. Only the reaction stingers exist.
 
 ---
 
