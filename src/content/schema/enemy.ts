@@ -85,6 +85,15 @@ export const EnemySchema = z.object({
   /** Melee retaliation against blocking soldiers. */
   meleeDamage: NonNegative.default(0),
   meleeIntervalSeconds: Positive.default(1),
+  /**
+   * Longest a soldier may hold this enemy before it shoulders past, in seconds.
+   *
+   * The release valve that stops a stall-lock. Without it two soldiers and a
+   * rally flag can hold a boss forever, which is not a strategy the design
+   * wants to exist — bosses get a short window, ordinary enemies a long one
+   * (docs/TECH_DESIGN.md §7.7).
+   */
+  maxBlockSeconds: Positive.default(12),
   /** Status this enemy applies when it attacks, if any. */
   statusApplied: StatusApplicationSchema.optional(),
 });

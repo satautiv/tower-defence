@@ -30,6 +30,13 @@ export class SoldierPool extends EntityPool {
 
   /** Barracks that owns it, or -1 for the hero. */
   readonly sourceTower = new Int32Array(this.capacity);
+  /**
+   * Which of the owner's garrison slots this is, 0 to count-1.
+   *
+   * Respawn is per slot, so a barracks that has lost two soldiers brings them
+   * back on two independent timers rather than one shared one.
+   */
+  readonly garrisonSlot = new Uint8Array(this.capacity);
   /** Enemy slot it is holding, or -1. */
   readonly engagedWith = new Int32Array(this.capacity);
   /** Ticks until it returns after dying. */
@@ -54,6 +61,7 @@ export class SoldierPool extends EntityPool {
     this.pathId[slot] = 0;
     this.pathDist[slot] = 0;
     this.sourceTower[slot] = -1;
+    this.garrisonSlot[slot] = 0;
     this.engagedWith[slot] = -1;
     this.respawnIn[slot] = 0;
   }

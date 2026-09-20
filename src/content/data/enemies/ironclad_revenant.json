@@ -6,5 +6,6 @@
   "armour": 40,
   "bounty": 14,
   "meleeDamage": 14,
-  "meleeIntervalSeconds": 1.2
+  "meleeIntervalSeconds": 1.2,
+  "maxBlockSeconds": 6
 }

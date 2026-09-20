@@ -23,6 +23,32 @@ import { EffectSchema } from './common.js';
 export const FIRING_MODES = ['projectile', 'ballistic', 'beam', 'chain', 'aura', 'cone'] as const;
 export const FiringModeSchema = z.enum(FIRING_MODES);
 
+/**
+ * The garrison a tower fields, for towers that fight through soldiers.
+ *
+ * A separate block rather than more loose fields on the tier, because these
+ * only mean anything together: a tower either keeps soldiers or it does not,
+ * and half a garrison is not a thing. Absent means the tower has none.
+ */
+export const GarrisonSchema = z.object({
+  count: z.number().int().positive(),
+  hp: Positive,
+  damage: NonNegative,
+  /** Seconds between swings. */
+  attackIntervalSeconds: Positive,
+  armour: NonNegative.default(0),
+  /** Seconds before a fallen soldier returns. Counted per slot. */
+  respawnSeconds: Positive,
+  /** How far the rally flag may be dragged from the tower. */
+  rallyRangeTiles: Positive,
+  /** Melee is about half a tile; a ranger fights from further out. */
+  attackRangeTiles: Positive.default(0.6),
+  /** Health recovered per second while not engaged. */
+  regenPerSecond: NonNegative.default(0),
+  /** Status a soldier applies on hit, if any. */
+  statusApplied: StatusApplicationSchema.optional(),
+});
+
 /** One rung of a tower's upgrade path. */
 export const TowerTierSchema = z.object({
   cost: z.number().int().positive(),
@@ -49,6 +75,8 @@ export const TowerTierSchema = z.object({
   /** Extra gold per kill, for economy towers. */
   bonusGoldPerKill: NonNegative.default(0),
   perkKeys: z.array(LocaleKeySchema).default([]),
+  /** Soldiers this tier fields. Absent for every tower that shoots. */
+  garrison: GarrisonSchema.optional(),
 });
 
 /** A tier-5 capstone ability, paid for with Aether Charge. */
@@ -86,3 +114,4 @@ export const TowerSchema = z.object({
 
 export type TowerDefinition = z.infer<typeof TowerSchema>;
 export type TowerTier = z.infer<typeof TowerTierSchema>;
+export type Garrison = z.infer<typeof GarrisonSchema>;

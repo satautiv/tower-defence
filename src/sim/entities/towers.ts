@@ -22,6 +22,15 @@ export class TowerPool extends EntityPool {
 
   /** Slot of the current target, or -1. Re-picked only when it lapses. */
   readonly target = new Int32Array(this.capacity);
+  /**
+   * Where this tower's soldiers gather, in world pixels.
+   *
+   * Zero means untouched, and the garrison then forms at the tower itself — a
+   * barracks the player has never dragged a flag for still defends its own
+   * doorstep. Clamped to the tier's rally range whenever it is set.
+   */
+  readonly rallyX = new Float32Array(this.capacity);
+  readonly rallyY = new Float32Array(this.capacity);
   /** First / Last / Strongest / Weakest / Closest, persisted per tower. */
   readonly targetMode = new Uint8Array(this.capacity);
 
@@ -47,6 +56,8 @@ export class TowerPool extends EntityPool {
     this.fireInterval[slot] = 0;
     this.cooldown[slot] = 0;
     this.target[slot] = -1;
+    this.rallyX[slot] = 0;
+    this.rallyY[slot] = 0;
     this.targetMode[slot] = 0;
     this.plotId[slot] = 0;
     this.invested[slot] = 0;

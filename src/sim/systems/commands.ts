@@ -8,6 +8,7 @@ import {
   spendGold,
   upgradeCost,
 } from '../economy.js';
+import { moveRally } from './soldiers.js';
 import { emitCommandRejected } from '../events.js';
 import {
   placeTower,
@@ -51,6 +52,8 @@ export const enum RejectReason {
   MustSpecialise,
   NotReadyToSpecialise,
   PoolFull,
+  /** A rally flag was dragged for a tower that keeps no soldiers. */
+  NoGarrison,
 }
 
 export function drainCommandQueue(world: World): void {
@@ -88,6 +91,10 @@ export function drainCommandQueue(world: World): void {
 
       case CommandKind.SetTargetMode:
         applyTargetMode(world, command.a, command.b);
+        break;
+
+      case CommandKind.SetRally:
+        applySetRally(world, command.a, command.b, command.c);
         break;
 
       default:
@@ -259,6 +266,22 @@ function applyTargetMode(world: World, towerSlot: number, mode: number): void {
   world.towers.targetMode[towerSlot] = mode;
   /* Re-picked next tick under the new rule. */
   world.towers.target[towerSlot] = -1;
+}
+
+/**
+ * Moves a barracks' rally flag.
+ *
+ * Adjustable mid-wave by design (docs/TECH_DESIGN.md §7.7) — it is how a
+ * player redirects a block when a wave goes wrong, and refusing it while
+ * enemies are on the board would remove the only reason it is draggable.
+ */
+function applySetRally(world: World, towerSlot: number, x: number, y: number): void {
+  if (!world.towers.isAlive(towerSlot)) {
+    return reject(world, CommandKind.SetRally, RejectReason.NoSuchTower);
+  }
+  if (!moveRally(world, towerSlot, x, y)) {
+    return reject(world, CommandKind.SetRally, RejectReason.NoGarrison);
+  }
 }
 
 function applySetSpeed(world: World, speed: number): void {

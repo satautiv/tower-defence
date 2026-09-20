@@ -42,6 +42,26 @@ export class EnemyPool extends EntityPool {
 
   /** Slot of the soldier holding this enemy, or -1. */
   readonly blockedBy = new Int32Array(this.capacity);
+  /**
+   * Tick at which this enemy shoulders past whoever is holding it.
+   *
+   * The release valve on blocking. Two soldiers and a rally flag would
+   * otherwise hold a boss forever, which is not a strategy the design wants to
+   * exist (docs/TECH_DESIGN.md §7.7). Set when the block starts, not
+   * refreshed, so the window is the whole engagement rather than per swing.
+   */
+  readonly blockUntilTick = new Int32Array(this.capacity);
+  /** Tick the enemy may next swing at whoever is holding it. */
+  readonly meleeReadyTick = new Int32Array(this.capacity);
+  /**
+   * Path distance this enemy must pass before anything may block it again.
+   *
+   * Without it the release valve does not work at all: a soldier releases an
+   * enemy whose window has lapsed and then re-engages it on the same tick,
+   * resetting the timer, and the stall-lock the valve exists to prevent is
+   * exactly what happens. An enemy that shoulders past keeps going.
+   */
+  readonly blockReadyDist = new Float32Array(this.capacity);
   /** Tick before which no reaction may trigger, enforcing the per-enemy lockout. */
   readonly reactionReadyTick = new Int32Array(this.capacity);
   /**
@@ -95,6 +115,9 @@ export class EnemyPool extends EntityPool {
     this.spawnPoint[slot] = 0;
     this.waveIndex[slot] = -1;
     this.blockedBy[slot] = -1;
+    this.blockUntilTick[slot] = 0;
+    this.meleeReadyTick[slot] = 0;
+    this.blockReadyDist[slot] = 0;
     this.reactionReadyTick[slot] = 0;
     this.defenceMultiplier[slot] = 1;
     this.defenceMultiplierUntil[slot] = 0;

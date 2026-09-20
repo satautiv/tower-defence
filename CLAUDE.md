@@ -26,9 +26,26 @@ because the slice has no reactions.
 `src/sim/` holds the `World`, five structure-of-arrays entity pools, the command queue, event
 buffer, damage queue and the fifteen-step tick pipeline, plus paths and movement (#11), the wave
 spawner (#12), targeting, firing and projectiles (#13), damage resolution (#14), economy (#15),
-lives and win/lose (#16). Three of the pipeline's fifteen steps are still `noop`:
-`soldierSystem` (#24), `heroSystem` (#25) and `groundEffectSystem` (#31). `flushEvents` is
-deliberately empty, because the consumer drains and clears.
+lives and win/lose (#16). Two of the pipeline's fifteen steps are still `noop`: `heroSystem`
+(#25) and `groundEffectSystem` (#31). `flushEvents` is deliberately empty, because the consumer
+drains and clears.
+
+**Soldiers and blocking (#24) are live.** `src/sim/systems/soldiers.ts` is the whole of it, and
+the hero (#25) is meant to run the same code with better stats — blocking is far too subtle to
+have two implementations. The rule everything turns on is the **blocking window**: a soldier
+blocks only enemies whose distance *along the path* is near its own, never enemies that are
+merely close in pixels. Stage 1-1's route doubles back twice, so two points a tile apart can be
+a hundred tiles apart in the only sense the simulation cares about.
+
+Two traps worth knowing, both found by running the game rather than the tests:
+
+- **A garrison defaults to the road, not the tower.** Plots sit two or three tiles off the path
+  and a soldier's reach is pixels, so a barracks whose soldiers stood on it watched every enemy
+  walk by just out of arm's length — zero blocks in a real stage, while every unit test passed
+  because they all placed the barracks *on* the path.
+- **The release valve needs a grace distance.** When an enemy's block window lapses, the soldier
+  releases it and then re-engages it on the same tick, resetting the timer. `blockReadyDist`
+  gives an enemy that shoulders past a stretch of road nothing may block on.
 
 **Statuses (#21) are live.** `src/sim/systems/status.ts` owns the whole substrate, and
 `applyStatus` is the *only* supported way to put one on an enemy — every source funnels through

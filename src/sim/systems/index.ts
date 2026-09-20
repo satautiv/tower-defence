@@ -7,6 +7,7 @@ import { firingSystem } from './firing.js';
 import { lifecycleSystem } from './lifecycle.js';
 import { projectileSystem } from './projectiles.js';
 import { reactionSystem } from './reactions.js';
+import { soldierSystem } from './soldiers.js';
 import { statusSystem } from './status.js';
 import { targetingSystem } from './targeting.js';
 import { waveSpawnerSystem } from './waves.js';
@@ -62,8 +63,15 @@ export const SYSTEMS: readonly SimSystem[] = [
   /** 4. Advance path distance, fly straight, apply slows. */
   { name: 'movementSystem', run: movementSystem },
 
-  /** 5. Engage, block, fight, respawn, walk to rally. #24. */
-  { name: 'soldierSystem', run: noop },
+  /**
+   * 5. Engage, block, fight, respawn, walk to rally.
+   *
+   * After movement, so a soldier decides what to block against where enemies
+   * are *now* rather than where they were last tick — the blocking window is
+   * tight enough that a tick of staleness would let enemies slip through it at
+   * three times speed.
+   */
+  { name: 'soldierSystem', run: soldierSystem },
 
   /** 6. Hero movement, auto-attack and ability cooldowns. #25. */
   { name: 'heroSystem', run: noop },

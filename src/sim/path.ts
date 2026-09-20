@@ -37,6 +37,8 @@ export interface PathBranch {
 
 type PathContent = z.infer<typeof PathSchema>;
 
+const clamp01 = (value: number): number => (value < 0 ? 0 : value > 1 ? 1 : value);
+
 export class BakedPath {
   readonly id: number;
   /** Interleaved x,y in world pixels. */
@@ -94,6 +96,44 @@ export class BakedPath {
    * the core sits on the core, and one spawned at a negative offset starts at
    * the spawn point. Writes into `out` so sampling allocates nothing.
    */
+  /**
+   * Path distance of the point on this route closest to (x, y), in pixels.
+   *
+   * What gives a soldier a position *along the path* rather than merely a
+   * position on the map, which is the whole basis of the blocking window: a
+   * soldier standing beside a bend must not block an enemy on the other leg of
+   * it, even though the two are a few pixels apart (docs/TECH_DESIGN.md §7.7).
+   *
+   * Walks every segment. Called when a rally point moves, never in a tick.
+   */
+  nearestDistance(x: number, y: number): number {
+    let best = 0;
+    let bestSq = Number.POSITIVE_INFINITY;
+
+    for (let i = 0; i + 1 < this.cumulative.length; i++) {
+      const ax = this.points[i * 2] as number;
+      const ay = this.points[i * 2 + 1] as number;
+      const bx = this.points[i * 2 + 2] as number;
+      const by = this.points[i * 2 + 3] as number;
+
+      const dx = bx - ax;
+      const dy = by - ay;
+      const lengthSq = dx * dx + dy * dy;
+      /* A zero-length segment contributes its own endpoint and nothing else. */
+      const t = lengthSq === 0 ? 0 : clamp01(((x - ax) * dx + (y - ay) * dy) / lengthSq);
+
+      const px = ax + dx * t;
+      const py = ay + dy * t;
+      const distanceSq = (x - px) * (x - px) + (y - py) * (y - py);
+
+      if (distanceSq < bestSq) {
+        bestSq = distanceSq;
+        best = (this.cumulative[i] as number) + Math.sqrt(lengthSq) * t;
+      }
+    }
+    return best;
+  }
+
   sample(distance: number, out: PathSample): PathSample {
     const last = this.pointCount - 1;
 

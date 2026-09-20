@@ -12,7 +12,17 @@
       "rangeTiles": 8.0,
       "targets": "ground",
       "firingMode": "aura",
-      "splashRadiusTiles": 0
+      "splashRadiusTiles": 0,
+      "garrison": {
+        "count": 3,
+        "attackIntervalSeconds": 0.8,
+        "respawnSeconds": 12,
+        "rallyRangeTiles": 8.0,
+        "attackRangeTiles": 0.6,
+        "hp": 120,
+        "damage": 8,
+        "armour": 5
+      }
     },
     {
       "cost": 160,
@@ -22,7 +32,17 @@
       "rangeTiles": 8.0,
       "targets": "ground",
       "firingMode": "aura",
-      "splashRadiusTiles": 0
+      "splashRadiusTiles": 0,
+      "garrison": {
+        "count": 3,
+        "attackIntervalSeconds": 0.8,
+        "respawnSeconds": 12,
+        "rallyRangeTiles": 8.0,
+        "attackRangeTiles": 0.6,
+        "hp": 180,
+        "damage": 10,
+        "armour": 5
+      }
     },
     {
       "cost": 260,
@@ -33,7 +53,18 @@
       "targets": "ground",
       "firingMode": "aura",
       "splashRadiusTiles": 0,
-      "perkKeys": ["tower.wardens_barracks.perk.regen"]
+      "perkKeys": ["tower.wardens_barracks.perk.regen"],
+      "garrison": {
+        "count": 3,
+        "attackIntervalSeconds": 0.8,
+        "respawnSeconds": 12,
+        "rallyRangeTiles": 8.0,
+        "attackRangeTiles": 0.6,
+        "hp": 240,
+        "damage": 12,
+        "armour": 5,
+        "regenPerSecond": 4
+      }
     }
   ],
   "specialisations": [
@@ -50,7 +81,18 @@
           "rangeTiles": 8.0,
           "targets": "ground",
           "firingMode": "aura",
-          "splashRadiusTiles": 0
+          "splashRadiusTiles": 0,
+          "garrison": {
+            "count": 3,
+            "attackIntervalSeconds": 0.8,
+            "respawnSeconds": 12,
+            "rallyRangeTiles": 8.0,
+            "attackRangeTiles": 0.6,
+            "hp": 340,
+            "damage": 12,
+            "armour": 25,
+            "regenPerSecond": 4
+          }
         },
         {
           "cost": 800,
@@ -60,7 +102,18 @@
           "rangeTiles": 8.0,
           "targets": "ground",
           "firingMode": "aura",
-          "splashRadiusTiles": 0
+          "splashRadiusTiles": 0,
+          "garrison": {
+            "count": 3,
+            "attackIntervalSeconds": 0.8,
+            "respawnSeconds": 12,
+            "rallyRangeTiles": 8.0,
+            "attackRangeTiles": 0.6,
+            "hp": 460,
+            "damage": 16,
+            "armour": 30,
+            "regenPerSecond": 6
+          }
         }
       ],
       "ability": {
@@ -92,7 +145,22 @@
           "rangeTiles": 8.0,
           "targets": "ground",
           "firingMode": "aura",
-          "splashRadiusTiles": 0
+          "splashRadiusTiles": 0,
+          "garrison": {
+            "count": 3,
+            "attackIntervalSeconds": 1.0,
+            "respawnSeconds": 12,
+            "rallyRangeTiles": 8.0,
+            "attackRangeTiles": 4.0,
+            "statusApplied": {
+              "status": "corrode",
+              "stacks": 1
+            },
+            "hp": 180,
+            "damage": 20,
+            "armour": 5,
+            "regenPerSecond": 4
+          }
         },
         {
           "cost": 800,
@@ -102,7 +170,22 @@
           "rangeTiles": 8.0,
           "targets": "ground",
           "firingMode": "aura",
-          "splashRadiusTiles": 0
+          "splashRadiusTiles": 0,
+          "garrison": {
+            "count": 3,
+            "attackIntervalSeconds": 1.0,
+            "respawnSeconds": 12,
+            "rallyRangeTiles": 8.0,
+            "attackRangeTiles": 4.0,
+            "statusApplied": {
+              "status": "corrode",
+              "stacks": 1
+            },
+            "hp": 240,
+            "damage": 28,
+            "armour": 8,
+            "regenPerSecond": 6
+          }
         }
       ],
       "ability": {

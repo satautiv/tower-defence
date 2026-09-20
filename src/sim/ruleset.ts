@@ -36,6 +36,8 @@ export interface EnemyTable {
   readonly livesCost: Int32Array;
   readonly meleeDamage: Float32Array;
   readonly meleeIntervalTicks: Float32Array;
+  /** Ticks a soldier may hold this enemy before it shoulders past. */
+  readonly maxBlockTicks: Float32Array;
   /** Chance in [0,1] to ignore a projectile entirely. */
   readonly evasion: Float32Array;
   /** Enemy index this splits into on death, or -1, and how many. */
@@ -170,6 +172,20 @@ export interface TowerTable {
   /** 255 when the tier applies no status. */
   readonly statusId: Uint8Array;
   readonly statusStacks: Uint8Array;
+
+  /** Soldiers this tier fields. Zero for every tower that shoots. */
+  readonly soldierCount: Uint8Array;
+  readonly soldierHp: Float32Array;
+  readonly soldierDamage: Float32Array;
+  readonly soldierIntervalTicks: Float32Array;
+  readonly soldierArmour: Float32Array;
+  readonly soldierRespawnTicks: Float32Array;
+  /** World pixels. */
+  readonly rallyRange: Float32Array;
+  readonly soldierAttackRange: Float32Array;
+  readonly soldierRegenPerTick: Float32Array;
+  readonly soldierStatusId: Uint8Array;
+  readonly soldierStatusStacks: Uint8Array;
 }
 
 export interface SpawnPoint {
@@ -239,6 +255,7 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
     livesCost: new Int32Array(count),
     meleeDamage: new Float32Array(count),
     meleeIntervalTicks: new Float32Array(count),
+    maxBlockTicks: new Float32Array(count),
     evasion: new Float32Array(count),
     splitsInto: new Int16Array(count).fill(-1),
     splitCount: new Uint8Array(count),
@@ -259,6 +276,7 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
     table.livesCost[i] = enemy.livesCost;
     table.meleeDamage[i] = enemy.meleeDamage;
     table.meleeIntervalTicks[i] = enemy.meleeIntervalSeconds * TICK_HZ;
+    table.maxBlockTicks[i] = enemy.maxBlockSeconds * TICK_HZ;
     table.evasion[i] = enemy.traitConfig.evasionChance ?? 0;
     table.splitCount[i] = enemy.traitConfig.splitCount ?? 0;
     table.flags[i] = flagsForTraits(enemy.traits);
@@ -415,6 +433,17 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
     bonusGoldPerKill: new Float32Array(slots),
     statusId: new Uint8Array(slots).fill(255),
     statusStacks: new Uint8Array(slots),
+    soldierCount: new Uint8Array(slots),
+    soldierHp: new Float32Array(slots),
+    soldierDamage: new Float32Array(slots),
+    soldierIntervalTicks: new Float32Array(slots),
+    soldierArmour: new Float32Array(slots),
+    soldierRespawnTicks: new Float32Array(slots),
+    rallyRange: new Float32Array(slots),
+    soldierAttackRange: new Float32Array(slots),
+    soldierRegenPerTick: new Float32Array(slots),
+    soldierStatusId: new Uint8Array(slots).fill(255),
+    soldierStatusStacks: new Uint8Array(slots),
   };
 
   ids.forEach((id, towerIdx) => {
@@ -448,6 +477,23 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
       if (tier.statusApplied !== undefined) {
         table.statusId[i] = STATUS_INDEX[tier.statusApplied.status];
         table.statusStacks[i] = tier.statusApplied.stacks;
+      }
+
+      const garrison = tier.garrison;
+      if (garrison !== undefined) {
+        table.soldierCount[i] = garrison.count;
+        table.soldierHp[i] = garrison.hp;
+        table.soldierDamage[i] = garrison.damage;
+        table.soldierIntervalTicks[i] = garrison.attackIntervalSeconds * TICK_HZ;
+        table.soldierArmour[i] = garrison.armour;
+        table.soldierRespawnTicks[i] = garrison.respawnSeconds * TICK_HZ;
+        table.rallyRange[i] = garrison.rallyRangeTiles * TILE_SIZE;
+        table.soldierAttackRange[i] = garrison.attackRangeTiles * TILE_SIZE;
+        table.soldierRegenPerTick[i] = garrison.regenPerSecond / TICK_HZ;
+        if (garrison.statusApplied !== undefined) {
+          table.soldierStatusId[i] = STATUS_INDEX[garrison.statusApplied.status];
+          table.soldierStatusStacks[i] = garrison.statusApplied.stacks;
+        }
       }
     });
   });
@@ -578,6 +624,17 @@ const EMPTY_TOWERS: TowerTable = {
   bonusGoldPerKill: new Float32Array(0),
   statusId: new Uint8Array(0),
   statusStacks: new Uint8Array(0),
+  soldierCount: new Uint8Array(0),
+  soldierHp: new Float32Array(0),
+  soldierDamage: new Float32Array(0),
+  soldierIntervalTicks: new Float32Array(0),
+  soldierArmour: new Float32Array(0),
+  soldierRespawnTicks: new Float32Array(0),
+  rallyRange: new Float32Array(0),
+  soldierAttackRange: new Float32Array(0),
+  soldierRegenPerTick: new Float32Array(0),
+  soldierStatusId: new Uint8Array(0),
+  soldierStatusStacks: new Uint8Array(0),
 };
 
 export const EMPTY_RULESET: Ruleset = {
@@ -610,6 +667,7 @@ export const EMPTY_RULESET: Ruleset = {
     livesCost: new Int32Array(0),
     meleeDamage: new Float32Array(0),
     meleeIntervalTicks: new Float32Array(0),
+    maxBlockTicks: new Float32Array(0),
     evasion: new Float32Array(0),
     splitsInto: new Int16Array(0),
     splitCount: new Uint8Array(0),
