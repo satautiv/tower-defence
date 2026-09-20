@@ -68,13 +68,24 @@ const SPRITES: SpriteSpec[] = [
   { name: 'enemy_chitin_mother', size: 64, colour: PALETTE.toxic, shape: 'disc', scale: 0.44 },
   { name: 'enemy_broodling', size: 48, colour: PALETTE.toxic, shape: 'disc', scale: 0.3 },
 
+  /* One per tower, coloured by the damage type it deals, so a board reads as a
+     spread of elements before any real art exists. The barracks deals none, so
+     it takes the plot colour — it is a building, not a gun. */
   { name: 'tower_arbalest_post', size: 64, colour: PALETTE.kinetic, shape: 'block' },
+  { name: 'tower_mortar_emplacement', size: 64, colour: PALETTE.kinetic, shape: 'block' },
   { name: 'tower_flame_vent', size: 64, colour: PALETTE.pyro, shape: 'block' },
+  { name: 'tower_arcane_spire', size: 64, colour: PALETTE.arcane, shape: 'block' },
+  { name: 'tower_tesla_coil', size: 64, colour: PALETTE.volt, shape: 'block' },
   { name: 'tower_frost_cairn', size: 64, colour: PALETTE.cryo, shape: 'block' },
+  { name: 'tower_alchemists_still', size: 64, colour: PALETTE.toxic, shape: 'block' },
+  { name: 'tower_wardens_barracks', size: 64, colour: PALETTE.plot, shape: 'block' },
 
   { name: 'projectile_bolt', size: 16, colour: PALETTE.kinetic, shape: 'disc', scale: 0.4 },
   { name: 'projectile_ember', size: 16, colour: PALETTE.pyro, shape: 'disc', scale: 0.4 },
   { name: 'projectile_shard', size: 16, colour: PALETTE.cryo, shape: 'disc', scale: 0.4 },
+  { name: 'projectile_rune', size: 16, colour: PALETTE.arcane, shape: 'disc', scale: 0.4 },
+  { name: 'projectile_spark', size: 16, colour: PALETTE.volt, shape: 'disc', scale: 0.4 },
+  { name: 'projectile_flask', size: 16, colour: PALETTE.toxic, shape: 'disc', scale: 0.4 },
 
   { name: 'plot_empty', size: 64, colour: PALETTE.plot, shape: 'diamond' },
   { name: 'plot_ley', size: 64, colour: PALETTE.ley, shape: 'diamond' },

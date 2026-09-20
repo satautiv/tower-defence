@@ -1,0 +1,151 @@
+{
+  "id": "mortar_emplacement",
+  "nameKey": "tower.mortar_emplacement.name",
+  "descriptionKey": "tower.mortar_emplacement.desc",
+  "family": "ordnance",
+  "tiers": [
+    {
+      "cost": 120,
+      "damage": 45,
+      "damageType": "kinetic",
+      "fireRate": 0.4,
+      "rangeTiles": 9.0,
+      "minRangeTiles": 2.5,
+      "splashRadiusTiles": 1.5,
+      "targets": "ground",
+      "firingMode": "ballistic",
+      "projectileSpeedTiles": 10
+    },
+    {
+      "cost": 192,
+      "damage": 68,
+      "damageType": "kinetic",
+      "fireRate": 0.4,
+      "rangeTiles": 9.0,
+      "minRangeTiles": 2.5,
+      "splashRadiusTiles": 1.5,
+      "targets": "ground",
+      "firingMode": "ballistic",
+      "projectileSpeedTiles": 10
+    },
+    {
+      "cost": 312,
+      "damage": 100,
+      "damageType": "kinetic",
+      "fireRate": 0.4,
+      "rangeTiles": 9.0,
+      "minRangeTiles": 2.5,
+      "splashRadiusTiles": 1.5,
+      "targets": "ground",
+      "firingMode": "ballistic",
+      "projectileSpeedTiles": 10,
+      "perkKeys": ["tower.mortar_emplacement.perk.blast_slow"]
+    }
+  ],
+  "specialisations": [
+    {
+      "id": "siege_howitzer",
+      "nameKey": "tower.siege_howitzer.name",
+      "descriptionKey": "tower.siege_howitzer.desc",
+      "tiers": [
+        {
+          "cost": 540,
+          "damage": 140,
+          "damageType": "kinetic",
+          "fireRate": 0.35,
+          "rangeTiles": 9.0,
+          "minRangeTiles": 2.5,
+          "splashRadiusTiles": 2.2,
+          "targets": "ground",
+          "firingMode": "ballistic",
+          "projectileSpeedTiles": 10
+        },
+        {
+          "cost": 960,
+          "damage": 200,
+          "damageType": "kinetic",
+          "fireRate": 0.35,
+          "rangeTiles": 9.5,
+          "minRangeTiles": 2.5,
+          "splashRadiusTiles": 2.5,
+          "targets": "ground",
+          "firingMode": "ballistic",
+          "projectileSpeedTiles": 10
+        }
+      ],
+      "ability": {
+        "id": "barrage",
+        "nameKey": "tower.siege_howitzer.ability",
+        "cost": 30,
+        "cooldownSeconds": 30,
+        "effects": [
+          {
+            "kind": "damage_in_radius",
+            "params": {
+              "damage": 140,
+              "radiusTiles": 9.0,
+              "shots": 6
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "firestorm_cannon",
+      "nameKey": "tower.firestorm_cannon.name",
+      "descriptionKey": "tower.firestorm_cannon.desc",
+      "tiers": [
+        {
+          "cost": 540,
+          "damage": 90,
+          "damageType": "pyro",
+          "fireRate": 0.5,
+          "rangeTiles": 9.0,
+          "minRangeTiles": 2.5,
+          "splashRadiusTiles": 2.0,
+          "targets": "ground",
+          "firingMode": "ballistic",
+          "projectileSpeedTiles": 10,
+          "statusApplied": {
+            "status": "scorch",
+            "stacks": 3
+          }
+        },
+        {
+          "cost": 960,
+          "damage": 130,
+          "damageType": "pyro",
+          "fireRate": 0.5,
+          "rangeTiles": 9.5,
+          "minRangeTiles": 2.5,
+          "splashRadiusTiles": 2.2,
+          "targets": "ground",
+          "firingMode": "ballistic",
+          "projectileSpeedTiles": 10,
+          "statusApplied": {
+            "status": "scorch",
+            "stacks": 3
+          }
+        }
+      ],
+      "ability": {
+        "id": "immolation_field",
+        "nameKey": "tower.firestorm_cannon.ability",
+        "cost": 30,
+        "cooldownSeconds": 35,
+        "effects": [
+          {
+            "kind": "create_ground_effect",
+            "params": {
+              "damageType": "pyro",
+              "damagePerSecond": 12,
+              "seconds": 10,
+              "radiusTiles": 2.0
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "sellRefund": 0.7
+}

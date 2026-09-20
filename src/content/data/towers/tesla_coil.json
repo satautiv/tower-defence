@@ -1,0 +1,155 @@
+{
+  "id": "tesla_coil",
+  "nameKey": "tower.tesla_coil.name",
+  "descriptionKey": "tower.tesla_coil.desc",
+  "family": "arcane",
+  "tiers": [
+    {
+      "cost": 130,
+      "damage": 16,
+      "damageType": "volt",
+      "fireRate": 0.7,
+      "rangeTiles": 5.5,
+      "firingMode": "chain",
+      "chainTargets": 2,
+      "chainFalloff": 0.75,
+      "statusApplied": {
+        "status": "charge",
+        "stacks": 1
+      }
+    },
+    {
+      "cost": 208,
+      "damage": 24,
+      "damageType": "volt",
+      "fireRate": 0.7,
+      "rangeTiles": 5.5,
+      "firingMode": "chain",
+      "chainTargets": 2,
+      "chainFalloff": 0.75,
+      "statusApplied": {
+        "status": "charge",
+        "stacks": 1
+      }
+    },
+    {
+      "cost": 338,
+      "damage": 34,
+      "damageType": "volt",
+      "fireRate": 0.7,
+      "rangeTiles": 6.5,
+      "firingMode": "chain",
+      "chainTargets": 2,
+      "chainFalloff": 0.75,
+      "statusApplied": {
+        "status": "charge",
+        "stacks": 1
+      },
+      "perkKeys": ["tower.tesla_coil.perk.chain_reach"]
+    }
+  ],
+  "specialisations": [
+    {
+      "id": "storm_pylon",
+      "nameKey": "tower.storm_pylon.name",
+      "descriptionKey": "tower.storm_pylon.desc",
+      "tiers": [
+        {
+          "cost": 585,
+          "damage": 45,
+          "damageType": "volt",
+          "fireRate": 0.8,
+          "rangeTiles": 6.5,
+          "firingMode": "chain",
+          "chainTargets": 6,
+          "chainFalloff": 0.8,
+          "statusApplied": {
+            "status": "charge",
+            "stacks": 1
+          }
+        },
+        {
+          "cost": 1040,
+          "damage": 65,
+          "damageType": "volt",
+          "fireRate": 0.8,
+          "rangeTiles": 7.0,
+          "firingMode": "chain",
+          "chainTargets": 7,
+          "chainFalloff": 0.85,
+          "statusApplied": {
+            "status": "charge",
+            "stacks": 2
+          }
+        }
+      ],
+      "ability": {
+        "id": "tempest",
+        "nameKey": "tower.storm_pylon.ability",
+        "cost": 30,
+        "cooldownSeconds": 35,
+        "effects": [
+          {
+            "kind": "damage_in_radius",
+            "params": {
+              "damagePerSecond": 80,
+              "radiusTiles": 7.0,
+              "seconds": 5
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "arc_net",
+      "nameKey": "tower.arc_net.name",
+      "descriptionKey": "tower.arc_net.desc",
+      "tiers": [
+        {
+          "cost": 585,
+          "damage": 35,
+          "damageType": "volt",
+          "fireRate": 1.0,
+          "rangeTiles": 6.0,
+          "firingMode": "aura",
+          "splashRadiusTiles": 6.0,
+          "statusApplied": {
+            "status": "charge",
+            "stacks": 1
+          }
+        },
+        {
+          "cost": 1040,
+          "damage": 50,
+          "damageType": "volt",
+          "fireRate": 1.0,
+          "rangeTiles": 6.5,
+          "firingMode": "aura",
+          "splashRadiusTiles": 6.5,
+          "statusApplied": {
+            "status": "charge",
+            "stacks": 1
+          }
+        }
+      ],
+      "ability": {
+        "id": "overload_grid",
+        "nameKey": "tower.arc_net.ability",
+        "cost": 25,
+        "cooldownSeconds": 30,
+        "effects": [
+          {
+            "kind": "create_ground_effect",
+            "params": {
+              "damageType": "volt",
+              "damagePerSecond": 105,
+              "seconds": 6,
+              "radiusTiles": 2.0
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "sellRefund": 0.7
+}

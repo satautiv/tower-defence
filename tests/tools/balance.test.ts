@@ -15,7 +15,7 @@ import {
 } from '../../tools/balance-sim/strategies.js';
 import {
   MAX_PICK_SPREAD,
-  MIN_PICK_RATE,
+  MIN_PICK_SHARE,
   findings,
   formatCsv,
   hasFailure,
@@ -327,8 +327,32 @@ describe('the report names design problems', () => {
     expect(summary.picks.map((p) => p.rate)).toEqual([0.25, 0.25, 0.5]);
   });
 
-  it('keeps the floor where the criterion puts it', () => {
-    expect(MIN_PICK_RATE).toBe(0.2);
+  /**
+   * The floor scales with the roster instead of being a flat number. #35 asks
+   * for "any tower below 20%", which does not survive its own eight-tower
+   * roster: an even split is 12.5% each, so a flat 20% would flag every tower
+   * in a perfectly balanced game.
+   */
+  it('measures the floor against an even share, not a flat number', () => {
+    expect(MIN_PICK_SHARE).toBe(0.5);
+
+    /* Eight towers: an even share is 12.5%, so the floor is 6.25%. */
+    const eight = Array.from({ length: 8 }, (_, i) => `t${i}`);
+    const builds = new Array<number>(8).fill(10);
+    builds[0] = 4; /* 4 of 74 is 5.4%, under the floor */
+
+    const summary = summarise('1-1', 'greedy', eight, target, [run({ buildsByTower: builds })]);
+    const unpicked = findings(summary).filter((f) => f.code === 'tower-unpicked');
+    expect(unpicked).toHaveLength(1);
+    expect(unpicked[0]?.message).toContain('t0');
+  });
+
+  it('accepts an even split across a large roster', () => {
+    const eight = Array.from({ length: 8 }, (_, i) => `t${i}`);
+    const summary = summarise('1-1', 'greedy', eight, target, [
+      run({ buildsByTower: new Array<number>(8).fill(10) }),
+    ]);
+    expect(findings(summary).some((f) => f.code === 'tower-unpicked')).toBe(false);
   });
 
   /* Losses only: a loss-wave percentile that counted wins would describe runs

@@ -1,0 +1,145 @@
+{
+  "id": "arcane_spire",
+  "nameKey": "tower.arcane_spire.name",
+  "descriptionKey": "tower.arcane_spire.desc",
+  "family": "arcane",
+  "tiers": [
+    {
+      "cost": 110,
+      "damage": 22,
+      "damageType": "arcane",
+      "fireRate": 0.8,
+      "rangeTiles": 6.5,
+      "statusApplied": {
+        "status": "unravel",
+        "stacks": 1
+      }
+    },
+    {
+      "cost": 176,
+      "damage": 33,
+      "damageType": "arcane",
+      "fireRate": 0.8,
+      "rangeTiles": 6.5,
+      "statusApplied": {
+        "status": "unravel",
+        "stacks": 1
+      }
+    },
+    {
+      "cost": 286,
+      "damage": 48,
+      "damageType": "arcane",
+      "fireRate": 0.8,
+      "rangeTiles": 7.0,
+      "statusApplied": {
+        "status": "unravel",
+        "stacks": 2
+      },
+      "perkKeys": ["tower.arcane_spire.perk.deep_unravel"]
+    }
+  ],
+  "specialisations": [
+    {
+      "id": "void_obelisk",
+      "nameKey": "tower.void_obelisk.name",
+      "descriptionKey": "tower.void_obelisk.desc",
+      "tiers": [
+        {
+          "cost": 495,
+          "damage": 70,
+          "damageType": "arcane",
+          "fireRate": 0.6,
+          "rangeTiles": 6.5,
+          "splashRadiusTiles": 2.0,
+          "firingMode": "aura",
+          "statusApplied": {
+            "status": "unravel",
+            "stacks": 1
+          }
+        },
+        {
+          "cost": 880,
+          "damage": 100,
+          "damageType": "arcane",
+          "fireRate": 0.6,
+          "rangeTiles": 7.0,
+          "splashRadiusTiles": 2.4,
+          "firingMode": "aura",
+          "statusApplied": {
+            "status": "unravel",
+            "stacks": 2
+          }
+        }
+      ],
+      "ability": {
+        "id": "singularity",
+        "nameKey": "tower.void_obelisk.ability",
+        "cost": 35,
+        "cooldownSeconds": 40,
+        "effects": [
+          {
+            "kind": "damage_in_radius",
+            "params": {
+              "damagePerSecond": 60,
+              "radiusTiles": 3.0,
+              "seconds": 3
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "prism_tower",
+      "nameKey": "tower.prism_tower.name",
+      "descriptionKey": "tower.prism_tower.desc",
+      "tiers": [
+        {
+          "cost": 495,
+          "damage": 40,
+          "damageType": "arcane",
+          "fireRate": 1.0,
+          "rangeTiles": 7.0,
+          "firingMode": "beam",
+          "chainTargets": 2,
+          "chainFalloff": 1.0,
+          "statusApplied": {
+            "status": "unravel",
+            "stacks": 1
+          }
+        },
+        {
+          "cost": 880,
+          "damage": 60,
+          "damageType": "arcane",
+          "fireRate": 1.0,
+          "rangeTiles": 7.5,
+          "firingMode": "beam",
+          "chainTargets": 2,
+          "chainFalloff": 1.0,
+          "statusApplied": {
+            "status": "unravel",
+            "stacks": 2
+          }
+        }
+      ],
+      "ability": {
+        "id": "spectrum_burst",
+        "nameKey": "tower.prism_tower.ability",
+        "cost": 30,
+        "cooldownSeconds": 35,
+        "effects": [
+          {
+            "kind": "modify_stat",
+            "params": {
+              "stat": "damage",
+              "multiplier": 2,
+              "seconds": 5
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "sellRefund": 0.7
+}

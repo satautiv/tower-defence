@@ -30,7 +30,8 @@
         "status": "fracture",
         "stacks": 1
       },
-      "firingMode": "projectile"
+      "firingMode": "projectile",
+      "perkKeys": ["tower.arbalest_post.perk.fracture"]
     }
   ],
   "specialisations": [

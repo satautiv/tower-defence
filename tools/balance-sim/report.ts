@@ -49,8 +49,21 @@ export interface Finding {
   message: string;
 }
 
-/** Below this share of builds, a tower is not really in the game. */
-export const MIN_PICK_RATE = 0.2;
+/**
+ * Least share of an *even* split a tower must reach to count as picked.
+ *
+ * Relative, not absolute. #35 asks for "any tower below a 20% pick rate", which
+ * was written loosely and does not survive the roster it was written for: with
+ * the eight towers of §8.1 an even split is 12.5% each, so a flat 20% floor
+ * flags every tower in a perfectly balanced game and says nothing. Half of an
+ * even share is the same question asked in a way that scales — 6.3% at eight
+ * towers, 16.7% at three, and it still rejects the three-tower distribution
+ * that prompted the criterion.
+ *
+ * Widened deliberately and once, with the reason written down. Nudging it again
+ * because a warning is inconvenient is precisely what this tool exists to stop.
+ */
+export const MIN_PICK_SHARE = 0.5;
 /**
  * Widest acceptable ratio between the most and least picked tower.
  *
@@ -190,14 +203,17 @@ export function findings(summary: Summary): Finding[] {
   /* Only meaningful for a strategy that was free to choose. A single-type run
      has a 100% pick rate by construction and says nothing about the roster. */
   if (summary.strategy === 'greedy' || summary.strategy === 'balanced') {
+    const evenShare = summary.picks.length > 0 ? 1 / summary.picks.length : 0;
+    const floor = evenShare * MIN_PICK_SHARE;
+
     for (const pick of summary.picks) {
-      if (pick.rate < MIN_PICK_RATE) {
+      if (pick.rate < floor) {
         out.push({
           severity: 'warn',
           code: 'tower-unpicked',
           message:
-            `${pick.id} is ${pct(pick.rate)} of builds, under the ${pct(MIN_PICK_RATE)} floor ` +
-            '— pillar P1 (no dead towers)',
+            `${pick.id} is ${pct(pick.rate)} of builds, under the ${pct(floor)} floor ` +
+            `(half an even share of ${summary.picks.length}) — pillar P1 (no dead towers)`,
         });
       }
     }

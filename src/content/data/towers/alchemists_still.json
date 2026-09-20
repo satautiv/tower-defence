@@ -1,0 +1,156 @@
+{
+  "id": "alchemists_still",
+  "nameKey": "tower.alchemists_still.name",
+  "descriptionKey": "tower.alchemists_still.desc",
+  "family": "control",
+  "tiers": [
+    {
+      "cost": 100,
+      "damage": 18,
+      "damageType": "toxic",
+      "fireRate": 0.6,
+      "rangeTiles": 6.0,
+      "splashRadiusTiles": 1.2,
+      "targets": "ground",
+      "statusApplied": {
+        "status": "corrode",
+        "stacks": 2
+      },
+      "bonusGoldPerKill": 2
+    },
+    {
+      "cost": 160,
+      "damage": 27,
+      "damageType": "toxic",
+      "fireRate": 0.6,
+      "rangeTiles": 6.0,
+      "splashRadiusTiles": 1.2,
+      "targets": "ground",
+      "statusApplied": {
+        "status": "corrode",
+        "stacks": 2
+      },
+      "bonusGoldPerKill": 2
+    },
+    {
+      "cost": 260,
+      "damage": 38,
+      "damageType": "toxic",
+      "fireRate": 0.6,
+      "rangeTiles": 6.0,
+      "splashRadiusTiles": 1.6,
+      "targets": "ground",
+      "statusApplied": {
+        "status": "corrode",
+        "stacks": 2
+      },
+      "bonusGoldPerKill": 2,
+      "perkKeys": ["tower.alchemists_still.perk.wider_splash"]
+    }
+  ],
+  "specialisations": [
+    {
+      "id": "plague_vat",
+      "nameKey": "tower.plague_vat.name",
+      "descriptionKey": "tower.plague_vat.desc",
+      "tiers": [
+        {
+          "cost": 450,
+          "damage": 45,
+          "damageType": "toxic",
+          "fireRate": 0.6,
+          "rangeTiles": 6.0,
+          "splashRadiusTiles": 2.0,
+          "targets": "ground",
+          "statusApplied": {
+            "status": "corrode",
+            "stacks": 3
+          },
+          "bonusGoldPerKill": 2
+        },
+        {
+          "cost": 800,
+          "damage": 65,
+          "damageType": "toxic",
+          "fireRate": 0.6,
+          "rangeTiles": 6.5,
+          "splashRadiusTiles": 2.2,
+          "targets": "ground",
+          "statusApplied": {
+            "status": "corrode",
+            "stacks": 3
+          },
+          "bonusGoldPerKill": 2
+        }
+      ],
+      "ability": {
+        "id": "virulence",
+        "nameKey": "tower.plague_vat.ability",
+        "cost": 25,
+        "cooldownSeconds": 30,
+        "effects": [
+          {
+            "kind": "apply_status_in_radius",
+            "params": {
+              "status": "corrode",
+              "stacks": 5,
+              "radiusTiles": 6.0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "gilded_alembic",
+      "nameKey": "tower.gilded_alembic.name",
+      "descriptionKey": "tower.gilded_alembic.desc",
+      "tiers": [
+        {
+          "cost": 450,
+          "damage": 30,
+          "damageType": "toxic",
+          "fireRate": 0.6,
+          "rangeTiles": 6.0,
+          "splashRadiusTiles": 1.6,
+          "targets": "ground",
+          "statusApplied": {
+            "status": "corrode",
+            "stacks": 2
+          },
+          "bonusGoldPerKill": 6
+        },
+        {
+          "cost": 800,
+          "damage": 40,
+          "damageType": "toxic",
+          "fireRate": 0.6,
+          "rangeTiles": 6.5,
+          "splashRadiusTiles": 1.8,
+          "targets": "ground",
+          "statusApplied": {
+            "status": "corrode",
+            "stacks": 2
+          },
+          "bonusGoldPerKill": 8
+        }
+      ],
+      "ability": {
+        "id": "transmutation",
+        "nameKey": "tower.gilded_alembic.ability",
+        "cost": 20,
+        "cooldownSeconds": 30,
+        "effects": [
+          {
+            "kind": "modify_stat",
+            "params": {
+              "stat": "goldPerKill",
+              "bonus": 15,
+              "kills": 25
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "sellRefund": 0.7
+}

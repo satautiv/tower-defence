@@ -6,15 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **M0 complete. M1 is code-complete; two criteria need hardware and humans. M2 has started.**
 #10–#18 are done and stage 1-1 plays start to finish in a browser: `npm run dev`, Campaign → 1-1.
-**#21 and #22 are done** — statuses and the Aether Reaction system both run, and reactions are
-drawn (distinct shape and colour each, named on first occurrence). The next thing that matters
-is **#62**, the reaction gate: it is a playtest, so it needs humans, not code. The protocol is
-written and ready in `docs/PLAYTEST-REACTIONS.md`.
+**#21, #22 and #35 are done, and #62 — the project's gate — has PASSED.** Statuses, the Aether
+Reaction system, the headless balance simulator, and two playtest sessions that took the
+reaction system from "a tester triggered it and did not notice" to "all three explain it in
+their own words". `docs/PLAYTEST-REACTIONS.md` holds the protocol; the verdict and what changed
+because of it are on #62.
 
-**#23 is deliberately blocked behind #62** — "do not build the remaining towers on an unproven
-core". #27 depends on #23, so it is blocked too. The M2 systems that are *not* blocked are #24
-(soldiers), #25 (hero), #26 (Warden Powers), #29 (enemy behaviours), #30 (ley lines) and #31
-(ground effects).
+**M2 is unblocked.** #23 has the roster in; what remains open on it are the T3 perks that need
+code rather than data. Next in M2: #24 (soldiers — the Warden's Barracks does nothing until
+then), #25 (hero), #26 (Warden Powers), #27 (targeting modes, now unblocked), #29 (enemy
+behaviours), #30 (ley lines), #31 (ground effects).
 
 **#19 and #20 stay open on purpose.** #19 needs a playtest with three people who have not
 seen the design (protocol in `docs/PLAYTEST-M1.md`); #20 needs the slice run on a physical
@@ -80,6 +81,12 @@ starts inside a real user gesture, so it is unlocked on the first tap on the boa
 `src/sim/ruleset.ts` resolves authored content into flat numeric tables once per stage — towers,
 enemies, statuses, waves, paths. **No system reads a JSON object or a string id during a tick**,
 and it is the single place tiles become world pixels.
+
+That design was paid for and #23 collected: **taking the roster from three towers to eight
+touched no code at all** — five JSON files, their locale keys and their placeholder sprites,
+with `src/sim`, `src/view` and `src/ui` untouched. `tests/content/roster.test.ts` keeps it
+honest by loading a synthetic ninth tower and driving it through a stage; if some system ever
+starts branching on a tower's identity, that is where it surfaces.
 
 `src/app/session.ts` owns the world and the clock; `src/ui/screens/InStageScreen.tsx` turns taps
 into commands and drives the render loop. **The UI never mutates the world** — everything goes
