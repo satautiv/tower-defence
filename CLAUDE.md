@@ -6,8 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **M0 complete. M1 is code-complete; two criteria need hardware and humans. M2 has started.**
 #10–#18 are done and stage 1-1 plays start to finish in a browser: `npm run dev`, Campaign → 1-1.
-**#21 and #22 are done** — statuses and the Aether Reaction system both run. The next thing
-that matters is **#62**, the reaction gate: it is a playtest, so it needs humans, not code.
+**#21 and #22 are done** — statuses and the Aether Reaction system both run, and reactions are
+drawn (distinct shape and colour each, named on first occurrence). The next thing that matters
+is **#62**, the reaction gate: it is a playtest, so it needs humans, not code. The protocol is
+written and ready in `docs/PLAYTEST-REACTIONS.md`.
+
+**#23 is deliberately blocked behind #62** — "do not build the remaining towers on an unproven
+core". #27 depends on #23, so it is blocked too. The M2 systems that are *not* blocked are #24
+(soldiers), #25 (hero), #26 (Warden Powers), #29 (enemy behaviours), #30 (ley lines) and #31
+(ground effects).
 
 **#19 and #20 stay open on purpose.** #19 needs a playtest with three people who have not
 seen the design (protocol in `docs/PLAYTEST-M1.md`); #20 needs the slice run on a physical
@@ -47,6 +54,14 @@ Reactions query the spatial indexes, which are rebuilt at step 7 while reactions
 so blast positions are one tick stale, by a pixel or two against a blast 96px wide, identically
 in every run. A test that places enemies by hand must call `targetingSystem` first or nothing
 will find anything.
+
+`src/view/reactions.ts` draws them, because a gate that asks whether a player can *see* a
+reaction cannot be run against an effect nobody rendered. `ReactionFeed` holds all the logic and
+knows nothing about a renderer, so it is unit-tested; `ReactionsView` is the thin part that
+touches Pixi. Each reaction gets its own shape as well as its own colour — every reaction deals
+Arcane, so colouring by damage type would render all five identical, which is exactly risk T3.
+This is the readability slice #62 needs, not the VFX pass (#43); **there is still no sound**,
+which arrives with #44.
 
 `src/sim/ruleset.ts` resolves authored content into flat numeric tables once per stage — towers,
 enemies, statuses, waves, paths. **No system reads a JSON object or a string id during a tick**,
@@ -95,6 +110,7 @@ Planning artefacts:
 | Path | What it is |
 |---|---|
 | `docs/GAME_DESIGN.md` | The design source of truth — mechanics, towers, enemies, campaign, progression, scope |
+| `docs/PLAYTEST-REACTIONS.md` | How to run #62, the reaction gate — the next thing blocking M2 |
 | `docs/TECH_DESIGN.md` | The technical spec — stack, architecture, per-system design, tooling, roadmap |
 
 The implementation roadmap lives entirely in **GitHub issues #3–#60** (`gh issue list`), grouped under milestones M0–M7. Issues #1 and #2 are the closed planning issues and hold the same content as the two docs.

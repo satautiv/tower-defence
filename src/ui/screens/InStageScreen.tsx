@@ -24,6 +24,7 @@ import { GameSession } from '@app/session';
 import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
 import { EffectsView } from '@view/effects';
+import { ReactionsView } from '@view/reactions';
 import { EntityView } from '@view/entities';
 import { indexAtlas, initAssets, loadBundle } from '@view/assets';
 import type { AtlasIndex } from '@view/assets';
@@ -46,7 +47,7 @@ import { useUiStore } from '../store.js';
 import { focusOf, keyAction, nextSpeed } from '../keys.js';
 import type { KeyAction } from '../keys.js';
 import { useSettings } from '../settings.js';
-import { enemyName, statusName } from '../text.js';
+import { enemyName, reactionName, statusName } from '../text.js';
 
 /**
  * The only screen that mounts the renderer, and the one that runs a stage.
@@ -103,6 +104,7 @@ export function InStageScreen(): ReactElement {
   const boardRef = useRef<BoardView | null>(null);
   const entityRef = useRef<EntityView | null>(null);
   const effectsRef = useRef<EffectsView | null>(null);
+  const reactionsRef = useRef<ReactionsView | null>(null);
   const viewRef = useRef<GameView | null>(null);
   /* Measured on the device rather than inferred; see Diagnostics. */
   const metricsRef = useRef(new FrameMetrics());
@@ -227,6 +229,8 @@ export function InStageScreen(): ReactElement {
       entityRef.current = entities;
       const effects = new EffectsView(view.layers);
       effectsRef.current = effects;
+      const reactions = new ReactionsView(view.layers);
+      reactionsRef.current = reactions;
 
       /* Atlas first, so entities never appear as blank textures that pop in
          a frame later. */
@@ -269,7 +273,8 @@ export function InStageScreen(): ReactElement {
 
         entities.sync(session.world);
         effects.consume(session.world);
-        /* Both consumers have read the buffer, so it can be dropped. */
+        reactions.consume(session.world, reactionName);
+        /* Every consumer has read the buffer, so it can be dropped. */
         session.clearEvents();
 
         routes.render(session.world, boardMs);
@@ -292,8 +297,12 @@ export function InStageScreen(): ReactElement {
             : -1;
         entities.render(session.world, alpha, ringed);
 
-        /* Death puffs count down per frame; skipping them holds them mid-fade. */
-        if (!pausedRef.current) effects.render();
+        /* Death puffs and reaction bursts count down per frame; skipping them
+           holds them mid-fade rather than finishing while nothing moves. */
+        if (!pausedRef.current) {
+          effects.render();
+          reactions.render();
+        }
       });
     },
     [selectedStageId],
@@ -376,6 +385,9 @@ export function InStageScreen(): ReactElement {
        run's, so it comes straight back. */
     if (session !== null) applyPreferredSpeed(session);
     effectsRef.current?.reset();
+    /* Including the record of which reactions have been named: for the player
+       the restarted run's first Thermal Shock is a first Thermal Shock. */
+    reactionsRef.current?.reset();
     closePanel();
     clearSelection();
     setResult(null);

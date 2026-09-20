@@ -19,6 +19,8 @@ now and cheap to fix now.
 **The reaction gate runs after #22**, against the same three-tower slice plus Thermal
 Shock, and it keeps the original stopping rule: if playtesters cannot explain what
 killed an enemy, simplify the matrix before building sixteen towers on top of it.
+#21 and #22 have since landed, so that session is ready to run — its protocol is
+[`PLAYTEST-REACTIONS.md`](PLAYTEST-REACTIONS.md).
 
 ---
 

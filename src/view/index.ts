@@ -15,5 +15,13 @@ export {
   MAX_RESOLUTION,
 } from './viewport.js';
 export type { Viewport, SafeAreaInsets } from './viewport.js';
+export {
+  ReactionFeed,
+  ReactionsView,
+  reactionStyle,
+  polygonPoints,
+  POINT_RADIUS,
+} from './reactions.js';
+export type { Burst, Label, ReactionShape, ReactionStyle } from './reactions.js';
 export { initAssets, loadBundle, unloadBundle } from './assets.js';
 export type { AssetManifest, LoadProgress } from './assets.js';

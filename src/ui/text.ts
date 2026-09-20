@@ -24,3 +24,8 @@ export function statusName(statusId: string): string {
   const key = loadContent().statuses.get(statusId)?.nameKey;
   return key === undefined ? statusId : text(key);
 }
+
+export function reactionName(reactionId: string): string {
+  const key = loadContent().reactions.get(reactionId)?.nameKey;
+  return key === undefined ? reactionId : text(key);
+}
