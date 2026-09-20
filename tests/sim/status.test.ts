@@ -202,23 +202,26 @@ describe('decay and expiry', () => {
     },
   );
 
+  /* Chill lasts 3s and fracture 6s, so there is a window where only one holds.
+     Fracture is the partner precisely because it does not react: Chill beside
+     Scorch would detonate into a Thermal Shock and consume them both. */
   it('expires statuses independently of one another', () => {
-    /* Chill lasts 3s and scorch 4s, so there is a second where only one holds. */
     apply(world, slot, 'chill', 1);
-    apply(world, slot, 'scorch', 1);
+    apply(world, slot, 'fracture', 1);
 
     advanceTo(world, expiryOf(world, slot, 'chill') + 1);
     expect(stacks(world, slot, 'chill')).toBe(0);
-    expect(stacks(world, slot, 'scorch')).toBe(1);
+    expect(stacks(world, slot, 'fracture')).toBe(1);
   });
 
   it('marks the enemy dirty when a status lapses, as an application would', () => {
     apply(world, slot, 'scorch', 1);
-    const deadline = expiryOf(world, slot, 'scorch');
-    advanceTo(world, deadline);
+    advanceTo(world, expiryOf(world, slot, 'scorch'));
 
     world.enemies.statusDirty[slot] = 0;
-    advanceTo(world, deadline + 1);
+    /* Read between step 2 and step 3. The reaction system consumes this flag,
+       so a whole tick would have cleared it again before the test looked. */
+    statusSystem(world);
     expect(world.enemies.statusDirty[slot]).toBe(1);
   });
 });

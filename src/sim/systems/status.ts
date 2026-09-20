@@ -1,4 +1,4 @@
-import { DamageFlag } from '../damage.js';
+import { DAMAGE_INDEX, DamageFlag } from '../damage.js';
 import { emitStatusApplied } from '../events.js';
 import { EnemyFlag } from '../flags.js';
 import { STATUS_COUNT, STATUS_INDEX } from '../status.js';
@@ -29,6 +29,7 @@ import type { World } from '../world.js';
  */
 
 const FREEZE = STATUS_INDEX.freeze;
+const ARCANE = DAMAGE_INDEX.arcane;
 
 /**
  * Step 2 of the tick pipeline: burn, decay, expire.
@@ -45,6 +46,8 @@ export function statusSystem(world: World): void {
     /* Already leaving the board. Burning a corpse would queue damage against a
        slot the death pass is about to recycle. */
     if (((enemies.flags[slot] as number) & (EnemyFlag.Dying | EnemyFlag.Leaked)) !== 0) continue;
+
+    tickReactionBurn(world, slot);
 
     const base = slot * STATUS_COUNT;
     for (let status = 0; status < STATUS_COUNT; status++) {
@@ -82,6 +85,23 @@ function tickDamageOverTime(world: World, slot: number, status: number, stacks: 
     -1,
     DamageFlag.None,
   );
+}
+
+/**
+ * A reaction's lingering damage — Combustion's 80 over three seconds.
+ *
+ * Arcane and flagged as a reaction like the instant part, so it is scaled by
+ * `reactionPower` and reported as a reaction to the view, and so a Warded enemy
+ * resists it exactly as much as it resists the burst.
+ */
+function tickReactionBurn(world: World, slot: number): void {
+  const enemies = world.enemies;
+  if (world.tick >= (enemies.burnUntilTick[slot] as number)) {
+    enemies.burnPerTick[slot] = 0;
+    return;
+  }
+
+  world.damage.push(slot, enemies.burnPerTick[slot] as number, ARCANE, -1, DamageFlag.IsReaction);
 }
 
 /**

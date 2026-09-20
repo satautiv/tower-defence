@@ -6,7 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **M0 complete. M1 is code-complete; two criteria need hardware and humans. M2 has started.**
 #10–#18 are done and stage 1-1 plays start to finish in a browser: `npm run dev`, Campaign → 1-1.
-**#21 is done**: all seven statuses apply, stack, decay and expire, and Scorch and Corrode burn.
+**#21 and #22 are done** — statuses and the Aether Reaction system both run. The next thing
+that matters is **#62**, the reaction gate: it is a playtest, so it needs humans, not code.
 
 **#19 and #20 stay open on purpose.** #19 needs a playtest with three people who have not
 seen the design (protocol in `docs/PLAYTEST-M1.md`); #20 needs the slice run on a physical
@@ -17,9 +18,9 @@ because the slice has no reactions.
 `src/sim/` holds the `World`, five structure-of-arrays entity pools, the command queue, event
 buffer, damage queue and the fifteen-step tick pipeline, plus paths and movement (#11), the wave
 spawner (#12), targeting, firing and projectiles (#13), damage resolution (#14), economy (#15),
-lives and win/lose (#16). Four of the pipeline's fifteen steps are still `noop`:
-`reactionSystem` (#22), `soldierSystem` (#24), `heroSystem` (#25) and `groundEffectSystem` (#31).
-`flushEvents` is deliberately empty, because the consumer drains and clears.
+lives and win/lose (#16). Three of the pipeline's fifteen steps are still `noop`:
+`soldierSystem` (#24), `heroSystem` (#25) and `groundEffectSystem` (#31). `flushEvents` is
+deliberately empty, because the consumer drains and clears.
 
 **Statuses (#21) are live.** `src/sim/systems/status.ts` owns the whole substrate, and
 `applyStatus` is the *only* supported way to put one on an enemy — every source funnels through
@@ -30,6 +31,22 @@ so a kill by fire pays bounty and splits through the same path a projectile's ki
 Two consequences worth knowing: a Frost Cairn can now actually freeze (1 Chill/s against a 3s
 duration means it takes two overlapping Cairns to reach the cap of 5), and Charge finally does
 its one solo job — `chainTargetsPerStack` in `statuses.json` lengthens a chain by +1 per 2 stacks.
+
+**Reactions (#22) are live.** `src/sim/systems/reactions.ts` reads the matrix out of
+`content/data/reactions.json` and carries out a row; it knows nothing about which pairs react.
+Three properties bound it and all three are load-bearing: **one reaction per enemy per tick**
+(authored order is priority order, which is why Amplify is last in the file), a **per-enemy
+cooldown** of 1.2s (4s for Amplify), and **reaction damage re-entering the shared damage queue**
+as `IsReaction | arcane`. That last one is why chains work with no code to support them — a
+Combustion ignites a neighbour, and the neighbour's Scorch meets its Chill on a later tick
+through the ordinary path. Reactions scan only enemies whose `statusDirty` flag is set, and the
+flag is deliberately *left* set when a pair exists but the cooldown blocks it, so the reaction
+fires the tick the lockout lapses instead of waiting for an unrelated status to land.
+
+Reactions query the spatial indexes, which are rebuilt at step 7 while reactions run at step 3 —
+so blast positions are one tick stale, by a pixel or two against a blast 96px wide, identically
+in every run. A test that places enemies by hand must call `targetingSystem` first or nothing
+will find anything.
 
 `src/sim/ruleset.ts` resolves authored content into flat numeric tables once per stage — towers,
 enemies, statuses, waves, paths. **No system reads a JSON object or a string id during a tick**,
@@ -48,6 +65,14 @@ A third, from #21: turning the DoT on shortens the naive 1-1 clear by 142 ticks 
 under 1%. Scorch reaches its cap of 5 stacks and burns for its full authored 30 dmg/s, but
 enemies die to projectile damage so quickly that the burn barely gets to work. It is a real
 buff to the tower that was already dominant, and a small one.
+
+**A fourth, and the one #62 should be pointed at.** With reactions live, the naive
+cost-descending board on stage 1-1 triggers **zero** reactions across every seed, because it
+builds nothing but Flame Vents and one damage type cannot react with itself. A board that
+alternates towers instead triggers 82, deals 25% more damage (10,489 against 8,384) and clears
+22 ticks sooner. So the signature mechanic works and it pays — but on 1-1 the *lazy* line
+ignores it entirely, which is a stage-design and roster problem (#36, #23, #50) rather than a
+code one. Worth handing to #62's playtesters deliberately rather than hoping they find it.
 
 `src/platform/` isolates every platform difference behind an interface: `SaveAdapter` (localStorage
 for the profile, IndexedDB for snapshots, memory as a fallback), `Lifecycle`, `Haptics`,

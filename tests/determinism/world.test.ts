@@ -73,6 +73,23 @@ describe('the hash notices state changing', () => {
         w.enemies.statusDirty[slot] = 1;
       },
     ],
+    /* Combustion's lingering damage and the lockout that bounds every reaction
+       are both state two runs could differ in while every stack agreed (#22). */
+    [
+      'a reaction burn still to land',
+      (w) => {
+        const slot = w.enemies.alloc();
+        w.enemies.burnPerTick[slot] = 0.44;
+        w.enemies.burnUntilTick[slot] = 180;
+      },
+    ],
+    [
+      'a reaction lockout being set',
+      (w) => {
+        const slot = w.enemies.alloc();
+        w.enemies.reactionReadyTick[slot] = 72;
+      },
+    ],
   ])('changes when %s', (_label, mutate) => {
     const world = freshWorld();
     const before = hashWorld(world);

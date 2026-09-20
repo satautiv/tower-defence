@@ -6,6 +6,7 @@ import { damageResolutionSystem } from './damage.js';
 import { firingSystem } from './firing.js';
 import { lifecycleSystem } from './lifecycle.js';
 import { projectileSystem } from './projectiles.js';
+import { reactionSystem } from './reactions.js';
 import { statusSystem } from './status.js';
 import { targetingSystem } from './targeting.js';
 import { waveSpawnerSystem } from './waves.js';
@@ -51,12 +52,12 @@ export const SYSTEMS: readonly SimSystem[] = [
   { name: 'statusSystem', run: statusSystem },
 
   /**
-   * 3. Detect status pairs and resolve reactions. #22.
+   * 3. Detect status pairs and resolve reactions.
    *
    * Before movement and before damage, so a Superconduct strips armour in time
    * for this tick's damage to benefit from it.
    */
-  { name: 'reactionSystem', run: noop },
+  { name: 'reactionSystem', run: reactionSystem },
 
   /** 4. Advance path distance, fly straight, apply slows. */
   { name: 'movementSystem', run: movementSystem },

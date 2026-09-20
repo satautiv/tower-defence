@@ -56,6 +56,17 @@ export class EnemyPool extends EntityPool {
   /** Facing along the path, for directional armour. Radians. */
   readonly facing = new Float32Array(this.capacity);
 
+  /**
+   * Reaction damage still to land, per tick, and the tick it stops.
+   *
+   * Combustion deals its 80 over three seconds rather than at once, and a
+   * status cannot express that — statuses carry stacks, not an arbitrary
+   * amount. Kept here rather than as a ground effect because it follows the
+   * enemy that reacted, which a puddle on the floor would not.
+   */
+  readonly burnPerTick = new Float32Array(this.capacity);
+  readonly burnUntilTick = new Int32Array(this.capacity);
+
   /** Flat `slot * STATUS_COUNT + status`. */
   readonly statusStacks = new Uint8Array(this.capacity * STATUS_COUNT);
   readonly statusExpiry = new Int32Array(this.capacity * STATUS_COUNT);
@@ -88,6 +99,8 @@ export class EnemyPool extends EntityPool {
     this.defenceMultiplier[slot] = 1;
     this.defenceMultiplierUntil[slot] = 0;
     this.facing[slot] = 0;
+    this.burnPerTick[slot] = 0;
+    this.burnUntilTick[slot] = 0;
     this.statusDirty[slot] = 0;
     this.meta[slot] = null;
 

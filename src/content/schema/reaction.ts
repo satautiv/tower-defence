@@ -4,6 +4,7 @@ import {
   LocaleKeySchema,
   NonNegative,
   Seconds,
+  StatusApplicationSchema,
   StatusIdSchema,
   Tiles,
 } from './common.js';
@@ -31,6 +32,20 @@ export const ReactionSchema = z.object({
   radiusTiles: Tiles.default(0),
   /** Chain reactions such as electrolysis jump to this many further enemies. */
   jumps: z.number().int().nonnegative().default(0),
+  /**
+   * Spreads the damage over this many seconds on the enemy that reacted, rather
+   * than dealing it at once. Combustion's 80 over 3s.
+   */
+  damageOverSeconds: Seconds.default(0),
+  /** Multiplies armour and ward in the radius. Superconduct's 0.4 is −60%. */
+  defenceMultiplier: NonNegative.default(1),
+  defenceSeconds: Seconds.default(0),
+  /** Status the effect leaves on whatever it touched — neighbours, or jumps. */
+  appliesStatus: StatusApplicationSchema.optional(),
+  /** Amplify: stacks added to the status it matched against. */
+  bonusStacks: z.number().int().nonnegative().default(0),
+  /** Amplify: multiplies that status's duration. */
+  durationMultiplier: NonNegative.default(1),
 });
 
 export type ReactionDefinition = z.infer<typeof ReactionSchema>;

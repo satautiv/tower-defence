@@ -17,7 +17,9 @@
     "a": "chill",
     "b": "charge",
     "cooldownSeconds": 1.2,
-    "radiusTiles": 2.0
+    "radiusTiles": 2.0,
+    "defenceMultiplier": 0.4,
+    "defenceSeconds": 5
   },
   {
     "id": "electrolysis",
@@ -27,7 +29,11 @@
     "b": "corrode",
     "cooldownSeconds": 1.2,
     "baseDamage": 25,
-    "jumps": 4
+    "jumps": 4,
+    "appliesStatus": {
+      "status": "corrode",
+      "stacks": 1
+    }
   },
   {
     "id": "combustion",
@@ -37,7 +43,12 @@
     "b": "corrode",
     "cooldownSeconds": 1.2,
     "baseDamage": 80,
-    "radiusTiles": 1.5
+    "radiusTiles": 1.5,
+    "damageOverSeconds": 3,
+    "appliesStatus": {
+      "status": "scorch",
+      "stacks": 2
+    }
   },
   {
     "id": "amplify",
@@ -46,6 +57,8 @@
     "a": "unravel",
     "b": "any",
     "consumes": false,
-    "cooldownSeconds": 4.0
+    "cooldownSeconds": 4.0,
+    "bonusStacks": 2,
+    "durationMultiplier": 1.5
   }
 ]

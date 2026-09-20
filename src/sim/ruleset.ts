@@ -64,6 +64,38 @@ export interface StatusTable {
 }
 
 /**
+ * The reaction matrix, flattened (docs/GAME_DESIGN.md §4.3).
+ *
+ * Authored order is priority order: the system takes the first row whose pair
+ * an enemy carries, so a retune that wants Combustion to beat Thermal Shock is
+ * a move in the JSON file and nothing else. Amplify is authored last precisely
+ * because it should never pre-empt a real reaction.
+ */
+export interface ReactionTable {
+  readonly count: number;
+  readonly ids: readonly string[];
+  readonly a: Uint8Array;
+  /** 255 for `any`, which matches any other reactive status. */
+  readonly b: Uint8Array;
+  readonly consumes: Uint8Array;
+  readonly cooldownTicks: Int32Array;
+  readonly baseDamage: Float32Array;
+  readonly damagePerStack: Float32Array;
+  /** World pixels. */
+  readonly radius: Float32Array;
+  readonly jumps: Uint8Array;
+  /** Ticks to spread the damage over, or 0 to deal it at once. */
+  readonly damageOverTicks: Int32Array;
+  readonly defenceMultiplier: Float32Array;
+  readonly defenceTicks: Int32Array;
+  /** 255 when the reaction leaves no status behind. */
+  readonly statusId: Uint8Array;
+  readonly statusStacks: Uint8Array;
+  readonly bonusStacks: Uint8Array;
+  readonly durationMultiplier: Float32Array;
+}
+
+/**
  * Waves, flattened.
  *
  * Group data is laid out `wave * MAX_GROUPS_PER_WAVE + group` so the spawner
@@ -160,6 +192,7 @@ export interface Ruleset {
   readonly towers: TowerTable;
   readonly enemies: EnemyTable;
   readonly statuses: StatusTable;
+  readonly reactions: ReactionTable;
   readonly waves: WaveTable;
   readonly paths: readonly BakedPath[];
   readonly pathById: ReadonlyMap<number, BakedPath>;
@@ -287,6 +320,58 @@ function buildStatusTable(registry: ContentRegistry): StatusTable {
     table.stacksAfterEscalation[i] = status.stacksAfterEscalation;
     table.reactive[i] = status.reactive ? 1 : 0;
   }
+
+  return table;
+}
+
+/** `any` in the b column, which no real status index can collide with. */
+export const REACTION_ANY = 255;
+
+function buildReactionTable(registry: ContentRegistry): ReactionTable {
+  /* Authored order, not sorted: it is the priority order the matrix resolves
+     in, so re-sorting here would silently change which reaction wins. */
+  const definitions = [...registry.reactions.values()];
+  const count = definitions.length;
+
+  const table: ReactionTable = {
+    count,
+    ids: definitions.map((reaction) => reaction.id),
+    a: new Uint8Array(count),
+    b: new Uint8Array(count),
+    consumes: new Uint8Array(count),
+    cooldownTicks: new Int32Array(count),
+    baseDamage: new Float32Array(count),
+    damagePerStack: new Float32Array(count),
+    radius: new Float32Array(count),
+    jumps: new Uint8Array(count),
+    damageOverTicks: new Int32Array(count),
+    defenceMultiplier: new Float32Array(count).fill(1),
+    defenceTicks: new Int32Array(count),
+    statusId: new Uint8Array(count).fill(255),
+    statusStacks: new Uint8Array(count),
+    bonusStacks: new Uint8Array(count),
+    durationMultiplier: new Float32Array(count).fill(1),
+  };
+
+  definitions.forEach((reaction, i) => {
+    table.a[i] = STATUS_INDEX[reaction.a];
+    table.b[i] = reaction.b === 'any' ? REACTION_ANY : STATUS_INDEX[reaction.b];
+    table.consumes[i] = reaction.consumes ? 1 : 0;
+    table.cooldownTicks[i] = Math.round(reaction.cooldownSeconds * TICK_HZ);
+    table.baseDamage[i] = reaction.baseDamage;
+    table.damagePerStack[i] = reaction.damagePerStack;
+    table.radius[i] = reaction.radiusTiles * TILE_SIZE;
+    table.jumps[i] = reaction.jumps;
+    table.damageOverTicks[i] = Math.round(reaction.damageOverSeconds * TICK_HZ);
+    table.defenceMultiplier[i] = reaction.defenceMultiplier;
+    table.defenceTicks[i] = Math.round(reaction.defenceSeconds * TICK_HZ);
+    if (reaction.appliesStatus !== undefined) {
+      table.statusId[i] = STATUS_INDEX[reaction.appliesStatus.status];
+      table.statusStacks[i] = reaction.appliesStatus.stacks;
+    }
+    table.bonusStacks[i] = reaction.bonusStacks;
+    table.durationMultiplier[i] = reaction.durationMultiplier;
+  });
 
   return table;
 }
@@ -431,6 +516,7 @@ export function buildRuleset(registry: ContentRegistry, stage: StageDefinition):
     towers: buildTowerTable(registry),
     enemies,
     statuses: buildStatusTable(registry),
+    reactions: buildReactionTable(registry),
     waves: buildWaveTable(stage, enemies),
     paths,
     pathById: new Map(paths.map((path) => [path.id, path])),
@@ -542,6 +628,25 @@ export const EMPTY_RULESET: Ruleset = {
     escalatesTo: new Int8Array(STATUS_COUNT).fill(-1),
     stacksAfterEscalation: new Uint8Array(STATUS_COUNT),
     reactive: new Uint8Array(STATUS_COUNT),
+  },
+  reactions: {
+    count: 0,
+    ids: [],
+    a: new Uint8Array(0),
+    b: new Uint8Array(0),
+    consumes: new Uint8Array(0),
+    cooldownTicks: new Int32Array(0),
+    baseDamage: new Float32Array(0),
+    damagePerStack: new Float32Array(0),
+    radius: new Float32Array(0),
+    jumps: new Uint8Array(0),
+    damageOverTicks: new Int32Array(0),
+    defenceMultiplier: new Float32Array(0),
+    defenceTicks: new Int32Array(0),
+    statusId: new Uint8Array(0),
+    statusStacks: new Uint8Array(0),
+    bonusStacks: new Uint8Array(0),
+    durationMultiplier: new Float32Array(0),
   },
   paths: [],
   pathById: new Map(),

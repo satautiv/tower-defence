@@ -5,7 +5,7 @@ export { SYSTEMS, SYSTEM_ORDER } from './systems/index.js';
 export type { SimSystem } from './systems/index.js';
 export { hashWorld } from './hash.js';
 export { buildRuleset, EMPTY_RULESET } from './ruleset.js';
-export type { Ruleset, EnemyTable, StatusTable, SpawnPoint } from './ruleset.js';
+export type { Ruleset, EnemyTable, StatusTable, ReactionTable, SpawnPoint } from './ruleset.js';
 export { BakedPath, chooseBranch, laneOffsetFor } from './path.js';
 export type { PathSample, PathBranch } from './path.js';
 export { spawnEnemy, enemyIndex } from './spawn.js';
@@ -19,6 +19,7 @@ export { firingSystem } from './systems/firing.js';
 export { projectileSystem } from './systems/projectiles.js';
 export { damageResolutionSystem, effectiveDefence } from './systems/damage.js';
 export { statusSystem, applyStatus } from './systems/status.js';
+export { reactionSystem } from './systems/reactions.js';
 export {
   addGold,
   spendGold,
@@ -74,7 +75,7 @@ export {
   statIndexOf,
   TargetMode,
 } from './towers.js';
-export { TIER_SLOTS, FiringMode, TargetClass } from './ruleset.js';
+export { TIER_SLOTS, FiringMode, TargetClass, REACTION_ANY } from './ruleset.js';
 export type { TowerTable } from './ruleset.js';
 
 export { CommandQueue, CommandKind } from './commands.js';
