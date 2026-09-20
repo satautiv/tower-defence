@@ -474,10 +474,14 @@ abbr.ui-wave__threat {
   line-height: 1;
 }
 .ui-star {
+  /* Hollow, and dim enough that an unearned star cannot be mistaken for a
+     won one at a glance. Shape carries it; colour only reinforces. */
   color: var(--c-border-strong);
+  opacity: 0.55;
 }
 .ui-star--earned {
   color: var(--c-gold);
+  opacity: 1;
 }
 
 /* ---- device diagnostics (#20, #56; replaced by the dev overlay in #41) ---- */

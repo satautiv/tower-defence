@@ -55,6 +55,15 @@ so blast positions are one tick stale, by a pixel or two against a blast 96px wi
 in every run. A test that places enemies by hand must call `targetingSystem` first or nothing
 will find anything.
 
+`src/view/palette.ts` holds every colour the board uses to say what something is — damage
+types, statuses and reactions together, because they have to be told apart *from each other*
+and that cannot be checked when each lives beside the code that draws it. The rule it enforces:
+**a reaction's colour must be distinguishable from every damage type and every status**, by hue
+rather than by overall distance. The second gate session found why that matters — Thermal Shock
+was drawn in the same pale blue as Chill's own status pip, and a tester could not tell the
+signature mechanic from ordinary frost indication. Four of the five reactions had the same
+fault, each coloured after its own ingredients. `tests/view/palette.test.ts` now fails on it.
+
 `src/view/reactions.ts` draws them, because a gate that asks whether a player can *see* a
 reaction cannot be run against an effect nobody rendered. `ReactionFeed` holds all the logic and
 knows nothing about a renderer, so it is unit-tested; `ReactionsView` is the thin part that

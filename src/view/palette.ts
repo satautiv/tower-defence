@@ -1,0 +1,142 @@
+/**
+ * Every colour the board uses to say what something is.
+ *
+ * In one file because these three sets have to be told apart *from each other*,
+ * and that is impossible to check when each lives beside the code that draws
+ * it. The reaction gate found the failure this file exists to prevent: Thermal
+ * Shock was drawn in `0x9be7ff` while Chill's status pip was `0x7fd4ff`, and a
+ * playtester could not tell the game's signature mechanic from ordinary frost
+ * indication — *"it's possible that blue circle is something I've been looking
+ * at the entire time without realising it meant anything special."*
+ *
+ * Four of the five reactions had the same problem. Each had been coloured after
+ * its own ingredients, which is exactly backwards: it makes the reaction look
+ * like the thing that caused it, at the moment the player most needs to see
+ * that something new has happened.
+ *
+ * The rule, enforced by a test rather than by memory:
+ *
+ * > A reaction's colour must be distinguishable from **every** damage type and
+ * > **every** status colour. A reaction is a different kind of event, and it
+ * > has to look like one.
+ */
+
+/** Damage types, as the design reserves them (docs/GAME_DESIGN.md §4.2). */
+export const DAMAGE_COLOUR: Readonly<Record<string, number>> = {
+  kinetic: 0x9aa4b2,
+  pyro: 0xff7a33,
+  cryo: 0x7fd4ff,
+  volt: 0xc08cff,
+  toxic: 0x7fd45a,
+  arcane: 0xff5ce0,
+  true: 0xe6e9f2,
+};
+
+/** Status pips, matching the damage type that applies each one. */
+export const STATUS_COLOUR: Readonly<Record<string, number>> = {
+  scorch: 0xff7a33,
+  chill: 0x7fd4ff,
+  freeze: 0xbfefff,
+  charge: 0xc08cff,
+  corrode: 0x7fd45a,
+  unravel: 0xff5ce0,
+  fracture: 0x9aa4b2,
+};
+
+/**
+ * Reactions, deliberately off the elemental palette.
+ *
+ * Bright and saturated where the statuses are soft, so a detonation reads as an
+ * event rather than as more of the same. Thermal Shock is gold rather than the
+ * ice-blue of its own Chill; Combustion is a deep red against Scorch's orange;
+ * Amplify is white, because it is not an element at all.
+ */
+export const REACTION_COLOUR: Readonly<Record<string, number>> = {
+  thermal_shock: 0xfff200,
+  superconduct: 0x3344ff,
+  electrolysis: 0x00ffa0,
+  combustion: 0xff1744,
+  amplify: 0xffffff,
+};
+
+/** Hue in degrees, saturation and value, each 0-1 except hue. */
+export function toHsv(colour: number): { hue: number; saturation: number; value: number } {
+  const r = ((colour >> 16) & 0xff) / 255;
+  const g = ((colour >> 8) & 0xff) / 255;
+  const b = (colour & 0xff) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const span = max - min;
+
+  let hue = 0;
+  if (span !== 0) {
+    if (max === r) hue = ((g - b) / span) % 6;
+    else if (max === g) hue = (b - r) / span + 2;
+    else hue = (r - g) / span + 4;
+    hue *= 60;
+    if (hue < 0) hue += 360;
+  }
+  return { hue, saturation: max === 0 ? 0 : span / max, value: max };
+}
+
+/**
+ * Below this saturation a colour has no usable hue.
+ *
+ * Grey and near-white read as "colourless"; asking whether one is 40 degrees
+ * from another is meaningless, so those pairs are compared on tone instead.
+ */
+export const NEUTRAL_SATURATION = 0.35;
+
+/** Degrees of hue two coloured things need between them to read as different. */
+export const MIN_HUE_SEPARATION = 30;
+/** Saturation-and-value distance two near-neutral things need instead. */
+export const MIN_TONE_SEPARATION = 0.25;
+
+export interface Separation {
+  /** Which rule applied: hue for two coloured things, tone when either is not. */
+  kind: 'hue' | 'tone';
+  amount: number;
+  distinguishable: boolean;
+}
+
+/**
+ * Whether two colours read as different things on a moving board.
+ *
+ * Hue, not overall distance. Overall distance is the wrong question here and
+ * measuring it was how the bug shipped: the palette's thirteen reserved colours
+ * are all bright and saturated, so *any* bright colour scores close to
+ * something, and a threshold strict enough to catch a real collision would
+ * reject every colour a burst could usefully be. What actually went wrong was
+ * narrower than that — Thermal Shock and Chill were **the same hue**, both pale
+ * blue, and no amount of brightness would have separated them.
+ */
+export function separation(a: number, b: number): Separation {
+  const first = toHsv(a);
+  const second = toHsv(b);
+
+  if (first.saturation < NEUTRAL_SATURATION || second.saturation < NEUTRAL_SATURATION) {
+    const amount = Math.hypot(first.saturation - second.saturation, first.value - second.value);
+    return { kind: 'tone', amount, distinguishable: amount >= MIN_TONE_SEPARATION };
+  }
+
+  const raw = Math.abs(first.hue - second.hue);
+  const amount = Math.min(raw, 360 - raw);
+  return { kind: 'hue', amount, distinguishable: amount >= MIN_HUE_SEPARATION };
+}
+
+/**
+ * The colours a reaction must not be mistaken for.
+ *
+ * Every status, and every damage type something actually deals. `true` damage
+ * is excluded deliberately: nothing in the game deals it — it is reserved for
+ * tier 5 (#32) — and it applies no status and triggers no reaction, so it can
+ * never share a frame with a reaction meaning something else. **Whoever
+ * implements true damage should put it back and re-check.**
+ */
+export function reservedColours(): Array<[string, number]> {
+  return [
+    ...Object.entries(DAMAGE_COLOUR).filter(([type]) => type !== 'true'),
+    ...Object.entries(STATUS_COLOUR),
+  ];
+}

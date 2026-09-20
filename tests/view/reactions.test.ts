@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { TILE_SIZE } from '@core/constants';
 import { buildRegistry } from '@content/loader';
 import { readContentFromDisk } from '../../tools/content/io.js';
-import { ReactionFeed, POINT_RADIUS, polygonPoints, reactionStyle } from '@view/reactions';
+import {
+  COLUMN_WIDTH,
+  LABEL_ROW,
+  ReactionFeed,
+  POINT_RADIUS,
+  clearOf,
+  polygonPoints,
+  reactionStyle,
+} from '@view/reactions';
 import type { World } from '@sim/index';
 import {
   STATUS_INDEX,
@@ -426,5 +434,73 @@ describe('polygonPoints', () => {
     const out: number[] = [1, 2, 3, 4, 5];
     polygonPoints(0, 0, 10, 4, 0, out);
     expect(out).toHaveLength(8);
+  });
+});
+
+/**
+ * Text that used to pile into a jumble.
+ *
+ * A playtester hit this directly: *"when a few enemies proc it close together,
+ * the text overlaps and turns into a jumble you can't actually read"* — which
+ * is most of why the reaction gate's readability criterion came back qualified
+ * rather than clean.
+ */
+describe('floating text stacks instead of overlapping', () => {
+  it('leaves the first one where it happened', () => {
+    expect(clearOf(100, 200, [], LABEL_ROW)).toBe(200);
+  });
+
+  it('lifts a second one clear of the first', () => {
+    const first = { x: 100, y: 200 };
+    expect(clearOf(100, 200, [first], LABEL_ROW)).toBe(200 - LABEL_ROW);
+  });
+
+  it('keeps lifting as more pile up', () => {
+    const placed: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < 4; i++) {
+      placed.push({ x: 100, y: clearOf(100, 200, placed, LABEL_ROW) });
+    }
+    const ys = placed.map((p) => p.y);
+    expect(ys).toEqual([200, 178, 156, 134]);
+    /* Every one readable on its own line. */
+    expect(new Set(ys).size).toBe(ys.length);
+  });
+
+  it('leaves something far away alone', () => {
+    const distant = { x: 100 + COLUMN_WIDTH, y: 200 };
+    expect(clearOf(100, 200, [distant], LABEL_ROW)).toBe(200);
+  });
+
+  it('shares a line with something vertically clear of it', () => {
+    const above = { x: 100, y: 200 - LABEL_ROW };
+    expect(clearOf(100, 200, [above], LABEL_ROW)).toBe(200);
+  });
+
+  it('stacks the names raised by simultaneous reactions', () => {
+    const world = createWorldForStage(registry, stage, 1);
+    /* Three reactions in nearly the same place, in one frame. */
+    detonate(world, 500);
+    detonate(world, 505);
+    detonate(world, 510);
+
+    const feed = new ReactionFeed();
+    feed.consume(world, name);
+
+    const ys = feed.labels.map((label) => label.y);
+    expect(ys.length).toBeGreaterThan(1);
+    expect(new Set(ys).size, 'two labels landed on the same line').toBe(ys.length);
+  });
+
+  it('stacks the damage numbers too', () => {
+    const world = createWorldForStage(registry, stage, 1);
+    detonate(world, 500);
+    detonate(world, 505);
+
+    const feed = new ReactionFeed();
+    feed.consume(world, name);
+
+    const ys = feed.numbers.map((n) => n.y);
+    expect(ys.length).toBeGreaterThan(1);
+    expect(new Set(ys).size).toBe(ys.length);
   });
 });

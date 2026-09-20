@@ -3,6 +3,7 @@ import { Graphics } from 'pixi.js';
 import { DAMAGE_BY_INDEX, SimEventKind } from '@sim/index';
 import type { World } from '@sim/index';
 import type { Layers } from './layers.js';
+import { DAMAGE_COLOUR } from './palette.js';
 
 /**
  * Transient visuals driven by the event stream.
@@ -16,17 +17,6 @@ import type { Layers } from './layers.js';
  * and that the effect is coloured by what did it, so the player can tell which
  * tower is working.
  */
-
-/** Colour per damage type, matching the reserved gameplay palette. */
-const DAMAGE_COLOUR: Readonly<Record<string, number>> = {
-  kinetic: 0x9aa4b2,
-  pyro: 0xff7a33,
-  cryo: 0x7fd4ff,
-  volt: 0xc08cff,
-  toxic: 0x7fd45a,
-  arcane: 0xff5ce0,
-  true: 0xe6e9f2,
-};
 
 interface Puff {
   x: number;

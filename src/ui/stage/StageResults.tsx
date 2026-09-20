@@ -32,15 +32,24 @@ export function StageResults({ result, onRetry, onLeave }: StageResultsProps): R
         role="dialog"
         aria-label={result.won ? 'Stage cleared' : 'Defeat'}
       >
+        {/* Filled and hollow glyphs, not one glyph in two colours. A
+            playtester read a defeat screen as a three-star clear, because
+            three ★ were drawn and only their colour said otherwise — the same
+            shape-as-well-as-colour rule §4.5 sets for status icons, which had
+            not been applied here. */}
         <div className="ui-results__stars" aria-label={`${result.stars} of 3 stars`}>
-          {[1, 2, 3].map((star) => (
-            <span
-              key={star}
-              className={star <= result.stars ? 'ui-star ui-star--earned' : 'ui-star'}
-            >
-              ★
-            </span>
-          ))}
+          {[1, 2, 3].map((star) => {
+            const earned = star <= result.stars;
+            return (
+              <span
+                key={star}
+                className={earned ? 'ui-star ui-star--earned' : 'ui-star'}
+                aria-hidden="true"
+              >
+                {earned ? '★' : '☆'}
+              </span>
+            );
+          })}
         </div>
 
         <div className="ui-stats">

@@ -1,5 +1,6 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Spritesheet } from 'pixi.js';
+import { STATUS_COLOUR } from './palette.js';
 import { MAX_ENEMIES, MAX_TOWERS } from '@sim/index';
 import { EnemyFlag, STATUS_BY_INDEX, STATUS_COUNT } from '@sim/index';
 import type { World } from '@sim/index';
@@ -39,16 +40,8 @@ const STATUS_DOT = 3;
 /** How far the selection ring sits outside the sprite, so it never hides it. */
 const SELECTION_GAP = 4;
 
-/** Status colours, matching the damage types that apply them. */
-const STATUS_COLOUR: Readonly<Record<string, number>> = {
-  scorch: 0xff7a33,
-  chill: 0x7fd4ff,
-  freeze: 0xbfefff,
-  charge: 0xc08cff,
-  corrode: 0x7fd45a,
-  unravel: 0xff5ce0,
-  fracture: 0x9aa4b2,
-};
+/* Status colours live in the shared palette, where they can be checked against
+   the reaction colours they must not be confused with. */
 
 export class EntityView {
   private readonly enemyLayer: Container;

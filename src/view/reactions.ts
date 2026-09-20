@@ -2,6 +2,7 @@ import { Container, Graphics, Text } from 'pixi.js';
 import { SimEventKind } from '@sim/index';
 import type { World } from '@sim/index';
 import type { Layers } from './layers.js';
+import { REACTION_COLOUR } from './palette.js';
 
 /**
  * Making a reaction visible.
@@ -32,25 +33,31 @@ export interface ReactionStyle {
 }
 
 /**
- * One distinct look per reaction.
+ * One distinct look per reaction: its own shape, and its own colour.
  *
- * Deliberately not the damage-type palette: every reaction deals Arcane, so
- * colouring them by damage type would make all five identical — which is the
- * exact failure mode risk T3 describes (docs/TECH_DESIGN.md §15).
+ * Colours come from the shared palette, where they can be checked against the
+ * damage types and statuses they must not be mistaken for — the failure the
+ * reaction gate caught, when Thermal Shock's ice-blue was indistinguishable
+ * from Chill's. Shape carries the identity just as hard, because a colourblind
+ * player reads shape (§4.5) and because every reaction deals Arcane, so hue
+ * alone could never separate five of them.
  */
-const STYLES: Readonly<Record<string, ReactionStyle>> = {
-  thermal_shock: { colour: 0x9be7ff, shape: 'burst' },
-  superconduct: { colour: 0x7f8cff, shape: 'hex' },
-  electrolysis: { colour: 0xc08cff, shape: 'arc' },
-  combustion: { colour: 0xff8a3d, shape: 'bloom' },
-  amplify: { colour: 0xff5ce0, shape: 'rings' },
+const SHAPES: Readonly<Record<string, ReactionShape>> = {
+  thermal_shock: 'burst',
+  superconduct: 'hex',
+  electrolysis: 'arc',
+  combustion: 'bloom',
+  amplify: 'rings',
 };
 
 const FALLBACK: ReactionStyle = { colour: 0xffffff, shape: 'burst' };
 
 /** A reaction with no authored style still draws, rather than vanishing. */
 export function reactionStyle(id: string): ReactionStyle {
-  return STYLES[id] ?? FALLBACK;
+  const colour = REACTION_COLOUR[id];
+  const shape = SHAPES[id];
+  if (colour === undefined || shape === undefined) return FALLBACK;
+  return { colour, shape };
 }
 
 /** Radius drawn for a reaction that has none of its own, in world pixels. */
@@ -212,12 +219,21 @@ export class ReactionFeed {
 
   private addLabel(x: number, y: number, text: string, colour: number): void {
     if (this.labels.length >= MAX_LABELS) return;
-    this.labels.push({ x, y, text, colour, life: LABEL_FRAMES, maxLife: LABEL_FRAMES });
+    const lifted = clearOf(x, y, this.labels, LABEL_ROW);
+    this.labels.push({ x, y: lifted, text, colour, life: LABEL_FRAMES, maxLife: LABEL_FRAMES });
   }
 
   private addNumber(x: number, y: number, amount: number, colour: number): void {
     if (this.numbers.length >= MAX_NUMBERS) return;
-    this.numbers.push({ x, y, amount, colour, life: NUMBER_FRAMES, maxLife: NUMBER_FRAMES });
+    const lifted = clearOf(x, y, this.numbers, NUMBER_ROW);
+    this.numbers.push({
+      x,
+      y: lifted,
+      amount,
+      colour,
+      life: NUMBER_FRAMES,
+      maxLife: NUMBER_FRAMES,
+    });
   }
 
   /** Ages everything by a frame and retires what has finished. */
@@ -262,6 +278,43 @@ export class ReactionFeed {
     this.named.clear();
     this.dropped = 0;
   }
+}
+
+/** Vertical gap between two stacked labels, and between two numbers. */
+export const LABEL_ROW = 22;
+export const NUMBER_ROW = 20;
+/** How far apart two floaters must be horizontally before they can share a line. */
+export const COLUMN_WIDTH = 90;
+
+/**
+ * A y that does not land on top of something already floating.
+ *
+ * Two reactions a moment apart in the same place used to draw their text over
+ * each other. A playtester hit it directly: *"when a few enemies proc it close
+ * together, the text overlaps and turns into a jumble you can't actually
+ * read"* — which is most of why the reaction gate's readability criterion came
+ * back qualified rather than clean.
+ *
+ * Stacking upward rather than dropping the second one: both reactions really
+ * did happen, and the count is part of what the player is reading.
+ */
+export function clearOf(
+  x: number,
+  y: number,
+  existing: ReadonlyArray<{ x: number; y: number }>,
+  row: number,
+): number {
+  let lifted = y;
+  /* Walks upward until the slot is free. Bounded by the caps on how many can
+     be in flight at once, so it cannot spin. */
+  for (let guard = 0; guard < existing.length + 1; guard++) {
+    const clash = existing.some(
+      (other) => Math.abs(other.x - x) < COLUMN_WIDTH && Math.abs(other.y - lifted) < row,
+    );
+    if (!clash) return lifted;
+    lifted -= row;
+  }
+  return lifted;
 }
 
 /** Points of a regular polygon, written into a caller-supplied buffer. */
