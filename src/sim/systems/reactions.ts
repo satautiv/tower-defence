@@ -5,6 +5,7 @@ import { emitReactionTriggered } from '../events.js';
 import { EnemyFlag } from '../flags.js';
 import { REACTION_ANY } from '../ruleset.js';
 import { STATUS_COUNT } from '../status.js';
+import { leyReactionMultiplier } from '../towers.js';
 import { applyStatus } from './status.js';
 import type { World } from '../world.js';
 
@@ -152,8 +153,14 @@ function resolve(world: World, slot: number, row: number): void {
   /* Read before anything is consumed: Thermal Shock scales on the Scorch it is
      about to eat, so reading after would always score it at zero. */
   const magnitude =
-    (table.baseDamage[row] as number) +
-    (table.damagePerStack[row] as number) * enemies.stacksOf(slot, a);
+    ((table.baseDamage[row] as number) +
+      (table.damagePerStack[row] as number) * enemies.stacksOf(slot, a)) *
+    /* A Surge ley node pays out here rather than at the damage queue, because
+       the bonus belongs to the tower that completed the pair and by the time a
+       blast reaches a neighbour there is no tower left in the entry. Folding it
+       into the magnitude also means the burst, the blast, the arc and the
+       lingering burn are all surged by the one multiplication. */
+    leyReactionMultiplier(world, enemies.statusSource[slot] as number);
 
   if ((table.consumes[row] as number) === 1) {
     clearStatus(world, slot, a);

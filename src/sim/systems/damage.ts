@@ -220,7 +220,16 @@ function applyOnHitStatus(world: World, index: number, slot: number): void {
   if (statusId >= STATUS_COUNT) return;
   if (((queue.flags[index] as number) & DamageFlag.NoStatus) !== 0) return;
 
-  applyStatus(world, slot, statusId, queue.statusStacks[index] as number);
+  /* The firing tower travels with the status, so a reaction this hit completes
+     can be credited to it — which is how a Surge node amplifies its own
+     reactions and nobody else's (#30). */
+  applyStatus(
+    world,
+    slot,
+    statusId,
+    queue.statusStacks[index] as number,
+    queue.source[index] as number,
+  );
 }
 
 /** Seeded, so a dodge is part of the replay rather than a surprise. */

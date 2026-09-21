@@ -111,8 +111,21 @@ function tickReactionBurn(world: World, slot: number): void {
  * Warden Powers (#26), ground effects (#31) — so immunity, the stack cap,
  * refresh and escalation are decided once. A caller that wrote `statusStacks`
  * directly would silently skip all four.
+ *
+ * `source` is the tower whose hit carried the status, or -1 for everything that
+ * is not a tower. It is recorded so a reaction can be credited to whoever
+ * completed the pair, which is the whole of how a Surge ley node knows which
+ * reactions are its own (#30). Defaulting it to -1 rather than requiring it is
+ * deliberate: a caller that has no tower to name should say so by omission, and
+ * every non-tower source genuinely has none.
  */
-export function applyStatus(world: World, slot: number, status: number, stacks: number): void {
+export function applyStatus(
+  world: World,
+  slot: number,
+  status: number,
+  stacks: number,
+  source = -1,
+): void {
   if (stacks <= 0 || status >= STATUS_COUNT) return;
   const enemies = world.enemies;
   if (!enemies.isAlive(slot)) return;
@@ -130,10 +143,14 @@ export function applyStatus(world: World, slot: number, status: number, stacks: 
   /* Tells the reaction system this enemy is worth re-examining (#22). Cleared
      by whoever consumes it, not here. */
   enemies.statusDirty[slot] = 1;
+  /* Overwritten on every application, including by sources with no tower, so
+     credit for a reaction always belongs to the hit that actually completed
+     the pair rather than to whichever tower touched this enemy first. */
+  enemies.statusSource[slot] = source;
 
   emitStatusApplied(world.events, enemies.ids[slot] as number, status, capped);
 
-  if (capped >= max) escalate(world, slot, status);
+  if (capped >= max) escalate(world, slot, status, source);
 }
 
 /**
@@ -146,13 +163,15 @@ export function applyStatus(world: World, slot: number, status: number, stacks: 
  * own 25% cap allows, rather than being rewarded for its immunity with less
  * Chill than an ordinary enemy would have.
  */
-function escalate(world: World, slot: number, status: number): void {
+function escalate(world: World, slot: number, status: number, source: number): void {
   const table = world.rules.statuses;
   const into = table.escalatesTo[status] as number;
   if (into < 0) return;
   if (isImmune(world, slot, into)) return;
 
-  applyStatus(world, slot, into, 1);
+  /* The same hit is still responsible: a Frost Cairn that stacks a target to
+     five froze it, and the Freeze must not lose the tower that caused it. */
+  applyStatus(world, slot, into, 1, source);
 
   const remaining = table.stacksAfterEscalation[status] as number;
   const at = slot * STATUS_COUNT + status;

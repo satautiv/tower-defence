@@ -92,6 +92,15 @@ export class EnemyPool extends EntityPool {
   readonly statusExpiry = new Int32Array(this.capacity * STATUS_COUNT);
   /** Set when a status changed this tick, so reactions scan only what moved. */
   readonly statusDirty = new Uint8Array(this.capacity);
+  /**
+   * Tower slot whose hit applied the most recent status, or -1.
+   *
+   * A reaction is credited to whoever completed the pair, which is what lets a
+   * Surge node amplify *this tower's* reactions and no one else's. Only tower
+   * hits write it: a reaction's own ignition, a Warden Power and a ground field
+   * all clear it back to -1, because none of them is a tower on a plot.
+   */
+  readonly statusSource = new Int32Array(this.capacity);
 
   /**
    * Movement multiplier from the ground the enemy is standing on, 1 for clear.
@@ -137,6 +146,7 @@ export class EnemyPool extends EntityPool {
     this.burnPerTick[slot] = 0;
     this.burnUntilTick[slot] = 0;
     this.statusDirty[slot] = 0;
+    this.statusSource[slot] = -1;
     this.groundSlow[slot] = 1;
     this.groundBlocked[slot] = 0;
     this.meta[slot] = null;

@@ -30,6 +30,16 @@ export function tierSlot(tier: number, specialisation: number): number {
   return 3 + specialisation * 2 + Math.min(tier - 3, 1);
 }
 
+/**
+ * Re-resolves a tower's stats from its tier, and then from the ground it is on.
+ *
+ * The one funnel every rung goes through, which is what makes the ley bonus
+ * hold "at every tier and specialisation" (#30) without a single upgrade path
+ * having to remember it: an upgrade re-stats, and re-statting re-applies the
+ * node. Three of the four bonuses are stats and land here. Surge is not — a
+ * reaction's damage belongs to no tier of the tower that set it off — and is
+ * read at the moment a reaction resolves instead.
+ */
 export function applyTowerStats(world: World, slot: number): void {
   const towers = world.towers;
   const table = world.rules.towers;
@@ -41,6 +51,26 @@ export function applyTowerStats(world: World, slot: number): void {
   towers.range[slot] = table.range[i] as number;
   towers.minRange[slot] = table.minRange[i] as number;
   towers.fireInterval[slot] = table.fireIntervalTicks[i] as number;
+  towers.statusStacks[slot] = table.statusStacks[i] as number;
+
+  const ley = towers.leyNode[slot] as number;
+  if (ley < 0) return;
+
+  const bonus = world.rules.ley;
+  towers.range[slot] *= bonus.range[ley] as number;
+  /* Attack *speed*, so the interval divides. Authoring the bonus as the speed
+     the player is promised keeps the tuning file readable; inverting it here
+     keeps the firing loop counting down ticks. */
+  towers.fireInterval[slot] /= bonus.attackSpeed[ley] as number;
+  towers.statusStacks[slot] += bonus.statusStacks[ley] as number;
+}
+
+/** How much a reaction this tower set off is worth. 1 unless it sits on Surge. */
+export function leyReactionMultiplier(world: World, towerSlot: number): number {
+  if (towerSlot < 0 || !world.towers.isAlive(towerSlot)) return 1;
+  const ley = world.towers.leyNode[towerSlot] as number;
+  if (ley < 0) return 1;
+  return world.rules.ley.reactionDamage[ley] as number;
 }
 
 /** Current stat-table index for a live tower. */
@@ -70,6 +100,10 @@ export function placeTower(
   world.towers.y[slot] = y;
   world.towers.plotId[slot] = plotId;
   world.towers.targetMode[slot] = TargetMode.First;
+  /* Read from the plot rather than passed in, so every route that builds a
+     tower — the command handler, a test, the balance simulator — gets the same
+     node, and none of them can forget to hand it over. */
+  world.towers.leyNode[slot] = world.rules.plotById.get(plotId)?.leyNodeIdx ?? -1;
   applyTowerStats(world, slot);
 
   /* Ready to fire on the tick it is built, rather than idling for a cooldown

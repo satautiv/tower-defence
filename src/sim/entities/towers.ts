@@ -12,11 +12,23 @@ export class TowerPool extends EntityPool {
   /** Which of the two branches was taken at tier 4, or -1. */
   readonly specialisation = new Int8Array(this.capacity);
 
+  /**
+   * The ley node this tower stands on, or -1.
+   *
+   * The plot's property, copied onto the tower at build time: the bonus has to
+   * survive every upgrade and every specialisation, and re-deriving it from the
+   * plot on each re-stat would mean the stat pipeline reaching back into the
+   * ruleset's plot list for something that cannot change while the tower lives.
+   */
+  readonly leyNode = new Int8Array(this.capacity);
+
   /** Resolved stats, so systems never walk back to content during a tick. */
   readonly damage = new Float32Array(this.capacity);
   readonly range = new Float32Array(this.capacity);
   readonly minRange = new Float32Array(this.capacity);
   readonly fireInterval = new Float32Array(this.capacity);
+  /** Stacks this tower's hits apply, after a Resonance node has had its say. */
+  readonly statusStacks = new Uint8Array(this.capacity);
   /** Ticks remaining before the next shot. */
   readonly cooldown = new Float32Array(this.capacity);
 
@@ -60,10 +72,12 @@ export class TowerPool extends EntityPool {
     this.typeIdx[slot] = 0;
     this.tier[slot] = 0;
     this.specialisation[slot] = -1;
+    this.leyNode[slot] = -1;
     this.damage[slot] = 0;
     this.range[slot] = 0;
     this.minRange[slot] = 0;
     this.fireInterval[slot] = 0;
+    this.statusStacks[slot] = 0;
     this.cooldown[slot] = 0;
     this.target[slot] = -1;
     this.rallyX[slot] = 0;

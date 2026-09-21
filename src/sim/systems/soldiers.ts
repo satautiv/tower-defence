@@ -381,7 +381,15 @@ function swingAtEnemy(world: World, slot: number, enemy: number): void {
   const tower = soldiers.sourceTower[slot] as number;
   const stats = tower >= 0 && world.towers.isAlive(tower) ? statIndexOf(world, tower) : -1;
   const statusId = stats >= 0 ? (world.rules.towers.soldierStatusId[stats] as number) : 255;
-  const statusStacks = stats >= 0 ? (world.rules.towers.soldierStatusStacks[stats] as number) : 0;
+  let statusStacks = stats >= 0 ? (world.rules.towers.soldierStatusStacks[stats] as number) : 0;
+
+  /* A Resonance node under a barracks has to reach the soldiers: they are that
+     tower's only way of hitting anything, and a node that granted a garrison
+     nothing would be dead ground for one of the eight towers. */
+  const ley = stats >= 0 ? (world.towers.leyNode[tower] as number) : -1;
+  if (ley >= 0 && statusId < 255) {
+    statusStacks += world.rules.ley.statusStacks[ley] as number;
+  }
 
   world.damage.push(
     enemy,

@@ -122,6 +122,16 @@ export const StageSchema = z.object({
   paths: z.array(PathSchema).min(1),
   spawnPoints: z.array(SpawnPointSchema).min(1),
   plots: z.array(BuildPlotSchema).min(1),
+  /**
+   * The glowing seams ley nodes sit on, as polylines in tiles.
+   *
+   * Purely something to look at — the bonus is the plot's, not the seam's —
+   * but without them a ley plot is an unexplained coloured diamond. The seam is
+   * what says *why* this plot is different, and the fiction the whole mechanic
+   * hangs on (docs/GAME_DESIGN.md §5). Authored rather than derived from the
+   * nodes, because where the Aether runs is a map-design decision.
+   */
+  leySeams: z.array(z.array(PointSchema).min(2)).default([]),
   waves: z.array(WaveSchema).min(1),
   interactable: InteractableSchema.optional(),
   /** Minimum spacing between plots, in tiles. Enforced by content-lint. */
