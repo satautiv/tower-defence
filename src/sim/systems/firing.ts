@@ -55,7 +55,10 @@ export function firingSystem(world: World): void {
         break;
     }
 
-    towers.cooldown[slot] = world.rules.towers.fireIntervalTicks[stats] as number;
+    /* The tower's resolved interval, not the tier's. Damage and range have
+       always been read from the pool; this one line still read the table, so a
+       Flux ley node quoted a faster rate in the panel and fired at the old one. */
+    towers.cooldown[slot] = towers.fireInterval[slot] as number;
   }
 }
 

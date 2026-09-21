@@ -182,6 +182,55 @@ describe('a bonus survives every rung of the tower', () => {
   }
 });
 
+/**
+ * Counted in shots, not read off the stat field.
+ *
+ * The first version of this suite asserted on `towers.fireInterval` and passed
+ * while Flux did nothing at all: the firing loop was still reading the tier
+ * table for its cooldown, so the node shortened a number nobody consumed and
+ * the panel quoted a rate the tower never fired at. A bonus is only real if it
+ * changes what the simulation does.
+ */
+describe('a Flux node actually makes the tower shoot faster', () => {
+  function shotsIn(plotId: number, ley: string | null, ticks: number): number {
+    const world = freshWorld();
+    const tower = build(world, 'frost_cairn', plotId);
+    if (ley !== null) putOnNode(world, tower, ley);
+
+    const slot = spawnEnemy(world, enemyIndex(world, 'husk'), 0);
+    world.enemies.hp[slot] = 10_000_000;
+    world.enemies.maxHp[slot] = 10_000_000;
+    world.enemies.x[slot] = world.towers.x[tower] as number;
+    world.enemies.y[slot] = world.towers.y[tower] as number;
+
+    let shots = 0;
+    for (let i = 0; i < ticks; i++) {
+      const before = world.enemies.hp[slot] as number;
+      targetingSystem(world);
+      firingSystem(world);
+      damageResolutionSystem(world);
+      if ((world.enemies.hp[slot] as number) < before) shots++;
+      /* The cooldown is spent by the firing system, not by `tick`, which this
+         test deliberately does not run — the enemy has to stay put. */
+      world.towers.cooldown[tower] = Math.max(0, (world.towers.cooldown[tower] as number) - 1);
+    }
+    return shots;
+  }
+
+  it('fires more often on a Flux node than on ordinary ground', () => {
+    const ticks = 600;
+    const plain = shotsIn(PLAIN_PLOT, null, ticks);
+    const flux = shotsIn(PLAIN_PLOT, 'flux', ticks);
+
+    expect(plain).toBeGreaterThan(1);
+    const world = freshWorld();
+    const speed = world.rules.ley.attackSpeed[leyIdx('flux')] as number;
+    /* Within a shot either way: the window does not divide evenly by either
+       interval, so the last shot of each can fall outside it. */
+    expect(Math.abs(flux - plain * speed)).toBeLessThanOrEqual(1);
+  });
+});
+
 describe('a Resonance node reaches what the tower actually hits', () => {
   /**
    * Chill landed on an enemy by one shot of a Frost Cairn built on `plotId`.
