@@ -1,10 +1,13 @@
+import { TICK_HZ } from '@core/constants';
 import { MAX_QUERY_RESULTS } from '../capacity.js';
 import { DamageFlag } from '../damage.js';
-import { EnemyFlag, ProjectileFlag } from '../flags.js';
+import { EnemyFlag, ProjectileFlag, TowerPerk } from '../flags.js';
 import { emitProjectileFired } from '../events.js';
 import { FiringMode } from '../ruleset.js';
-import { STATUS_COUNT } from '../status.js';
+import { STATUS_COUNT, STATUS_INDEX } from '../status.js';
 import { statIndexOf } from '../towers.js';
+import { createGroundEffect } from './groundEffects.js';
+import { applyStatus } from './status.js';
 import { canTarget } from './targeting.js';
 import type { World } from '../world.js';
 
@@ -20,6 +23,62 @@ import type { World } from '../world.js';
 const found = new Int32Array(MAX_QUERY_RESULTS);
 /** Enemies a chain has already struck, so it cannot double back. */
 const visited = new Int32Array(64);
+
+const FREEZE = STATUS_INDEX.freeze;
+
+/**
+ * Reused for every patch of ground a tower leaves (#32).
+ *
+ * `createGroundEffect` takes a spec object, and a Firestorm Cannon lays one on
+ * every shell — several a second. Mutating one module-level object keeps that
+ * out of the allocation budget the tick loop is held to.
+ */
+const groundSpec = {
+  x: 0,
+  y: 0,
+  radiusTiles: 0,
+  seconds: 0,
+  damagePerSecond: 0,
+  damageType: 0,
+  statusId: 255,
+  statusStacks: 0,
+  sourceTower: -1,
+};
+
+/**
+ * Lays the patch a `leaves_ground` tower leaves behind, at a given point.
+ *
+ * Firestorm Cannon drops it where the shell lands and Arc Net keeps one under
+ * itself, which is the whole difference between the two: one denies the ground
+ * you aimed at, the other denies the ground it stands on.
+ */
+export function layTowerGround(
+  world: World,
+  towerSlot: number,
+  stats: number,
+  x: number,
+  y: number,
+): void {
+  const table = world.rules.towers;
+  if (((table.perks[stats] as number) & TowerPerk.LeavesGround) === 0) return;
+
+  const seconds = (table.groundTicks[stats] as number) / TICK_HZ;
+  if (seconds <= 0) return;
+
+  groundSpec.x = x;
+  groundSpec.y = y;
+  groundSpec.radiusTiles = table.groundRadiusTiles[stats] as number;
+  groundSpec.seconds = seconds;
+  groundSpec.damagePerSecond = table.groundDamagePerSecond[stats] as number;
+  groundSpec.damageType = table.damageType[stats] as number;
+  /* The same status the tower's own hits carry, so a burning pool scorches and
+     an arc field charges without either needing its own authored payload. */
+  groundSpec.statusId = table.statusId[stats] as number;
+  groundSpec.statusStacks = table.statusStacks[stats] as number;
+  groundSpec.sourceTower = towerSlot;
+
+  createGroundEffect(world, groundSpec);
+}
 
 export function firingSystem(world: World): void {
   const towers = world.towers;
@@ -89,7 +148,123 @@ function queueHit(
 
 /** Resolves this tick. Nothing to dodge, which is what makes beams beat evasion. */
 function fireBeam(world: World, towerSlot: number, stats: number, target: number): void {
-  queueHit(world, stats, target, towerSlot, world.towers.damage[towerSlot] as number);
+  const perks = world.rules.towers.perks[stats] as number;
+  const damage =
+    (world.towers.damage[towerSlot] as number) *
+    ((perks & TowerPerk.Refracts) !== 0 ? refractionBonus(world, towerSlot, stats) : 1);
+
+  if ((perks & TowerPerk.Piercing) === 0) {
+    queueHit(world, stats, target, towerSlot, damage);
+    return;
+  }
+  firePiercingBeam(world, towerSlot, stats, target, damage);
+}
+
+/**
+ * Prism Tower's refraction (#32) — the acceptance criterion the issue names.
+ *
+ * *"Correctly detects distinct damage types from towers within 3 tiles and
+ * adds them to its beams."* Counted as **distinct types**, not as neighbours:
+ * three Flame Vents are one colour of light and must be worth what one is,
+ * while a Flame Vent, a Frost Cairn and a Tesla Coil are three.
+ *
+ * This is the most pillar-P1 tower in the game — its entire value is that a
+ * *mixed* board makes it better, so a player who spams one tower gets a Prism
+ * Tower worth nothing and cannot buy their way out of it. That is why the
+ * count is of types and why its own type does not count: a Prism Tower beside
+ * another Prism Tower has learned nothing.
+ *
+ * Recomputed per shot rather than cached, so selling a neighbour is felt on
+ * the very next beam. At one beam a second against a handful of towers, the
+ * sweep is cheaper than any invalidation scheme would be to keep correct.
+ */
+function refractionBonus(world: World, towerSlot: number, stats: number): number {
+  const table = world.rules.towers;
+  const radius = table.refractRadius[stats] as number;
+  const perType = table.refractBonusPerType[stats] as number;
+  if (radius <= 0 || perType <= 0) return 1;
+
+  const towers = world.towers;
+  const x = towers.x[towerSlot] as number;
+  const y = towers.y[towerSlot] as number;
+  const own = table.damageType[stats] as number;
+  const radiusSq = radius * radius;
+
+  /* A bitmask over damage types: distinctness for free, and no allocation. */
+  let seen = 0;
+  for (let other = 0; other < towers.watermark; other++) {
+    if (other === towerSlot || !towers.isAlive(other)) continue;
+
+    const dx = (towers.x[other] as number) - x;
+    const dy = (towers.y[other] as number) - y;
+    if (dx * dx + dy * dy > radiusSq) continue;
+
+    /* The neighbour's *current* tier, so upgrading a neighbour into a new
+       damage type is felt here without anything being told about it. */
+    const type = table.damageType[statIndexOf(world, other)] as number;
+    if (type === own) continue;
+    seen |= 1 << type;
+  }
+
+  let types = 0;
+  for (let bit = seen; bit !== 0; bit >>= 1) types += bit & 1;
+  return 1 + perType * types;
+}
+
+/**
+ * Plasma Lance: the beam does not stop at what it was aimed at (#32, §8.4).
+ *
+ * Everything within a lane's width of the line from tower to target is struck
+ * for full damage. A line rather than a cone, because the branch's whole
+ * identity is that it rewards *aiming down a column* — a cone would make it a
+ * worse Pyroclast Vent instead of a different tower.
+ *
+ * The lane is the same width a pack spreads across, so a beam fired down the
+ * road catches the road and not the enemies walking beside it.
+ */
+function firePiercingBeam(
+  world: World,
+  towerSlot: number,
+  stats: number,
+  target: number,
+  damage: number,
+): void {
+  const enemies = world.enemies;
+  const x = world.towers.x[towerSlot] as number;
+  const y = world.towers.y[towerSlot] as number;
+
+  let dirX = (enemies.x[target] as number) - x;
+  let dirY = (enemies.y[target] as number) - y;
+  const length = Math.hypot(dirX, dirY);
+  if (length === 0) {
+    queueHit(world, stats, target, towerSlot, damage);
+    return;
+  }
+  dirX /= length;
+  dirY /= length;
+
+  const range = world.towers.range[towerSlot] as number;
+  const halfWidth = world.rules.laneWidth;
+
+  for (const index of [world.groundIndex, world.airIndex]) {
+    const count = index.query(x, y, range, found);
+    for (let i = 0; i < count; i++) {
+      const slot = found[i] as number;
+      if (!canTarget(world, towerSlot, slot)) continue;
+
+      const dx = (enemies.x[slot] as number) - x;
+      const dy = (enemies.y[slot] as number) - y;
+      /* Distance along the beam; behind the tower does not count. */
+      const along = dx * dirX + dy * dirY;
+      if (along < 0 || along > range) continue;
+
+      /* Perpendicular distance from the line. */
+      const across = Math.abs(dx * dirY - dy * dirX);
+      if (across > halfWidth) continue;
+
+      queueHit(world, stats, slot, towerSlot, damage);
+    }
+  }
 }
 
 /**
@@ -186,6 +361,11 @@ function firePulse(world: World, towerSlot: number, stats: number): boolean {
   const y = world.towers.y[towerSlot] as number;
   const damage = world.towers.damage[towerSlot] as number;
 
+  const table = world.rules.towers;
+  const perks = table.perks[stats] as number;
+  const freezes = (perks & TowerPerk.FreezePulse) !== 0 && dueToFreeze(world, towerSlot, stats);
+  const pull = (perks & TowerPerk.Pulls) !== 0 ? (table.pullDistance[stats] as number) : 0;
+
   let hits = 0;
   for (const index of [world.groundIndex, world.airIndex]) {
     const count = index.query(x, y, range, found);
@@ -193,10 +373,56 @@ function firePulse(world: World, towerSlot: number, stats: number): boolean {
       const slot = found[i] as number;
       if (!canTarget(world, towerSlot, slot)) continue;
       queueHit(world, stats, slot, towerSlot, damage);
+
+      /* Glacier Heart's pulse: a hard stop on everything in reach, on its own
+         slower clock than the damage. Through `applyStatus`, so a boss shrugs
+         it off exactly as it shrugs off any other Freeze. */
+      if (freezes) applyStatus(world, slot, FREEZE, 1, towerSlot);
+      if (pull > 0) dragBack(world, slot, pull);
       hits++;
     }
   }
+
+  /* Arc Net keeps a field under itself. Laid even on a pulse that hit nothing,
+     because the point of the branch is that the ground stays dangerous after
+     the wave has gone past. */
+  layTowerGround(world, towerSlot, stats, x, y);
   return hits > 0;
+}
+
+/**
+ * Whether a freeze-pulse tower's hard stop is due.
+ *
+ * On its own timer rather than every shot: Glacier Heart's aura fires several
+ * times a second and a Siege Howitzer lands a shell every two, and a Freeze on
+ * each would be a permanent stop — the one thing §10 says no single tower may
+ * do. The timer is what makes it punctuation.
+ *
+ * Shared by the aura and the shell, because "stun on a cadence" is one
+ * mechanic wearing two silhouettes.
+ */
+export function dueToFreeze(world: World, towerSlot: number, stats: number): boolean {
+  const every = world.rules.towers.freezePulseTicks[stats] as number;
+  if (every <= 0) return false;
+  if (world.tick < (world.towers.perkReadyTick[towerSlot] as number)) return false;
+
+  world.towers.perkReadyTick[towerSlot] = world.tick + every;
+  return true;
+}
+
+/**
+ * Void Obelisk dragging an enemy back down the road.
+ *
+ * Path distance, not position: `pathDist` is authoritative and pulling in
+ * pixels would put an enemy beside the road rather than behind on it. Clamped
+ * at zero, and it never releases a block — an enemy a soldier is holding is
+ * being held, and two systems disagreeing about where it is would be worse
+ * than the pull not applying.
+ */
+function dragBack(world: World, slot: number, distance: number): void {
+  const enemies = world.enemies;
+  const moved = (enemies.pathDist[slot] as number) - distance;
+  enemies.pathDist[slot] = moved < 0 ? 0 : moved;
 }
 
 /**

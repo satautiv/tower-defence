@@ -2,6 +2,11 @@ import { MAX_QUERY_RESULTS } from '../capacity.js';
 import { DamageFlag } from '../damage.js';
 import { ProjectileFlag } from '../flags.js';
 import { canTargetAny } from './targeting.js';
+import { statIndexOf } from '../towers.js';
+import { dueToFreeze, layTowerGround } from './firing.js';
+import { applyStatus } from './status.js';
+import { STATUS_INDEX } from '../status.js';
+import { TowerPerk } from '../flags.js';
 import type { World } from '../world.js';
 
 /**
@@ -87,6 +92,27 @@ function detonate(world: World, slot: number, directTarget: number): void {
   const damage = projectiles.damage[slot] as number;
   const type = projectiles.damageType[slot] as number;
   const source = projectiles.sourceTower[slot] as number;
+
+  /* Firestorm Cannon's burning pool, where the shell actually landed rather
+     than where it was aimed — a mortar leads its target, and a pool that
+     appeared at the aim point would sit behind the pack it was meant to
+     catch (#32). */
+  let stunning = false;
+  if (source >= 0 && world.towers.isAlive(source)) {
+    const stats = statIndexOf(world, source);
+    layTowerGround(
+      world,
+      source,
+      stats,
+      projectiles.x[slot] as number,
+      projectiles.y[slot] as number,
+    );
+    /* Siege Howitzer's stun, on the same cadence Glacier Heart's freeze uses:
+       a shell that stopped a pack every time would end the stage (#32). */
+    stunning =
+      ((world.rules.towers.perks[stats] as number) & TowerPerk.FreezePulse) !== 0 &&
+      dueToFreeze(world, source, stats);
+  }
   const pierce = projectiles.armourPierce[slot] as number;
   const statusId = projectiles.statusId[slot] as number;
   const stacks = projectiles.statusStacks[slot] as number;
@@ -97,6 +123,7 @@ function detonate(world: World, slot: number, directTarget: number): void {
   if (splash <= 0) {
     if (directTarget >= 0) {
       world.damage.push(directTarget, damage, type, source, flags, statusId, stacks);
+      if (stunning) applyStatus(world, directTarget, STATUS_INDEX.freeze, 1, source);
     }
     return;
   }
@@ -121,6 +148,9 @@ function detonate(world: World, slot: number, directTarget: number): void {
         direct ? statusId : 255,
         direct ? stacks : 0,
       );
+      /* The whole blast is stopped, not only what it was aimed at — a siege
+         weapon that stunned one enemy in a pack would not be a siege weapon. */
+      if (stunning) applyStatus(world, enemy, STATUS_INDEX.freeze, 1, source);
     }
   }
 }

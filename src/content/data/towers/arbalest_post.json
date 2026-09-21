@@ -48,7 +48,11 @@
           "rangeTiles": 14.0,
           "armourPierce": 25,
           "targets": "ground",
-          "firingMode": "beam"
+          "firingMode": "beam",
+          "perks": ["pierce_fraction"],
+          "perkConfig": {
+            "pierceFraction": 0.5
+          }
         },
         {
           "cost": 640,
@@ -57,7 +61,11 @@
           "fireRate": 0.5,
           "rangeTiles": 14.0,
           "armourPierce": 40,
-          "firingMode": "beam"
+          "firingMode": "beam",
+          "perks": ["pierce_fraction"],
+          "perkConfig": {
+            "pierceFraction": 0.5
+          }
         }
       ],
       "ability": {

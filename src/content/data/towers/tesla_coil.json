@@ -66,7 +66,8 @@
           "statusApplied": {
             "status": "charge",
             "stacks": 1
-          }
+          },
+          "perks": ["discharge_at_cap"]
         },
         {
           "cost": 1040,
@@ -80,7 +81,8 @@
           "statusApplied": {
             "status": "charge",
             "stacks": 2
-          }
+          },
+          "perks": ["discharge_at_cap"]
         }
       ],
       "ability": {
@@ -116,6 +118,12 @@
           "statusApplied": {
             "status": "charge",
             "stacks": 1
+          },
+          "perks": ["leaves_ground"],
+          "perkConfig": {
+            "groundSeconds": 4,
+            "groundRadiusTiles": 1.8,
+            "groundDamagePerSecond": 18
           }
         },
         {
@@ -129,6 +137,12 @@
           "statusApplied": {
             "status": "charge",
             "stacks": 1
+          },
+          "perks": ["leaves_ground"],
+          "perkConfig": {
+            "groundSeconds": 4,
+            "groundRadiusTiles": 1.8,
+            "groundDamagePerSecond": 18
           }
         }
       ],

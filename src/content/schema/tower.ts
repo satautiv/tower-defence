@@ -87,8 +87,7 @@ export const TOWER_PERKS = [
   'refracts',
   /** Gilded Alembic: every kill on the board pays more, not just its own. */
   'global_gold',
-  /** Bulwark Order: pulls enemies onto its soldiers and returns melee damage. */
-  'taunts',
+  /** Bulwark Order: returns a share of the melee damage its soldiers take. */
   'reflects',
   /** Ranger Lodge: what it shoots takes more from everything. */
   'marks_target',
@@ -128,9 +127,6 @@ export const TowerPerkConfigSchema = z
     refractBonusPerType: NonNegative.optional(),
     /** global_gold: extra fraction on every bounty the board earns. */
     globalGoldFraction: NonNegative.optional(),
-    /** taunts: how often the pull happens, and how far it reaches. */
-    tauntSeconds: NonNegative.optional(),
-    tauntRadiusTiles: Tiles.optional(),
     /** reflects: share of melee damage returned to the attacker. */
     reflectFraction: z.number().min(0).max(1).optional(),
     /** marks_target: extra damage everything deals to the marked enemy. */

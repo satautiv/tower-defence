@@ -92,6 +92,10 @@
             "damage": 12,
             "armour": 25,
             "regenPerSecond": 4
+          },
+          "perks": ["reflects"],
+          "perkConfig": {
+            "reflectFraction": 0.2
           }
         },
         {
@@ -113,6 +117,10 @@
             "damage": 16,
             "armour": 30,
             "regenPerSecond": 6
+          },
+          "perks": ["reflects"],
+          "perkConfig": {
+            "reflectFraction": 0.2
           }
         }
       ],
@@ -161,6 +169,11 @@
             "armour": 5,
             "regenPerSecond": 4,
             "damageType": "toxic"
+          },
+          "perks": ["marks_target"],
+          "perkConfig": {
+            "markMultiplier": 1.2,
+            "markSeconds": 4
           }
         },
         {
@@ -187,6 +200,11 @@
             "armour": 8,
             "regenPerSecond": 6,
             "damageType": "toxic"
+          },
+          "perks": ["marks_target"],
+          "perkConfig": {
+            "markMultiplier": 1.2,
+            "markSeconds": 4
           }
         }
       ],

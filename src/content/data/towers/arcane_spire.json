@@ -56,6 +56,10 @@
           "statusApplied": {
             "status": "unravel",
             "stacks": 1
+          },
+          "perks": ["pulls"],
+          "perkConfig": {
+            "pullTiles": 0.35
           }
         },
         {
@@ -69,6 +73,10 @@
           "statusApplied": {
             "status": "unravel",
             "stacks": 2
+          },
+          "perks": ["pulls"],
+          "perkConfig": {
+            "pullTiles": 0.35
           }
         }
       ],
@@ -106,6 +114,11 @@
           "statusApplied": {
             "status": "unravel",
             "stacks": 1
+          },
+          "perks": ["refracts"],
+          "perkConfig": {
+            "refractRadiusTiles": 3.0,
+            "refractBonusPerType": 0.25
           }
         },
         {
@@ -120,6 +133,11 @@
           "statusApplied": {
             "status": "unravel",
             "stacks": 2
+          },
+          "perks": ["refracts"],
+          "perkConfig": {
+            "refractRadiusTiles": 3.0,
+            "refractBonusPerType": 0.25
           }
         }
       ],

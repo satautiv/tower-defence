@@ -230,8 +230,6 @@ export interface TowerTable {
   readonly refractRadius: Float32Array;
   readonly refractBonusPerType: Float32Array;
   readonly globalGoldFraction: Float32Array;
-  readonly tauntTicks: Float32Array;
-  readonly tauntRadius: Float32Array;
   readonly reflectFraction: Float32Array;
   readonly markMultiplier: Float32Array;
   readonly markTicks: Float32Array;
@@ -658,7 +656,6 @@ const PERK_BITS: Readonly<Record<string, number>> = {
   pulls: TowerPerk.Pulls,
   refracts: TowerPerk.Refracts,
   global_gold: TowerPerk.GlobalGold,
-  taunts: TowerPerk.Taunts,
   reflects: TowerPerk.Reflects,
   marks_target: TowerPerk.MarksTarget,
 };
@@ -695,8 +692,6 @@ function applyPerks(table: TowerTable, i: number, tier: TowerTier): void {
   table.refractRadius[i] = (config.refractRadiusTiles ?? 0) * TILE_SIZE;
   table.refractBonusPerType[i] = config.refractBonusPerType ?? 0;
   table.globalGoldFraction[i] = config.globalGoldFraction ?? 0;
-  table.tauntTicks[i] = (config.tauntSeconds ?? 0) * TICK_HZ;
-  table.tauntRadius[i] = (config.tauntRadiusTiles ?? 0) * TILE_SIZE;
   table.reflectFraction[i] = config.reflectFraction ?? 0;
   table.markMultiplier[i] = config.markMultiplier ?? 1;
   table.markTicks[i] = (config.markSeconds ?? 0) * TICK_HZ;
@@ -741,8 +736,6 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
     refractRadius: new Float32Array(slots),
     refractBonusPerType: new Float32Array(slots),
     globalGoldFraction: new Float32Array(slots),
-    tauntTicks: new Float32Array(slots),
-    tauntRadius: new Float32Array(slots),
     reflectFraction: new Float32Array(slots),
     markMultiplier: new Float32Array(slots).fill(1),
     markTicks: new Float32Array(slots),
@@ -1132,8 +1125,6 @@ const EMPTY_TOWERS: TowerTable = {
   refractRadius: new Float32Array(0),
   refractBonusPerType: new Float32Array(0),
   globalGoldFraction: new Float32Array(0),
-  tauntTicks: new Float32Array(0),
-  tauntRadius: new Float32Array(0),
   reflectFraction: new Float32Array(0),
   markMultiplier: new Float32Array(0),
   markTicks: new Float32Array(0),

@@ -63,6 +63,14 @@ export class TowerPool extends EntityPool {
   readonly disabledUntil = new Int32Array(this.capacity);
 
   /**
+   * Next tick a perk on its own clock may fire — Glacier Heart's Freeze, a
+   * Bulwark Order's taunt (#32).
+   *
+   * One timer, because no branch carries two perks that need their own rate.
+   */
+  readonly perkReadyTick = new Int32Array(this.capacity);
+
+  /**
    * What a Nullifier's aura is currently doing to this tower's rate of fire.
    *
    * 1 when nothing is suppressing it. Recomputed from nothing each tick by the
@@ -97,6 +105,7 @@ export class TowerPool extends EntityPool {
     this.plotId[slot] = 0;
     this.invested[slot] = 0;
     this.disabledUntil[slot] = 0;
+    this.perkReadyTick[slot] = 0;
     this.auraFireRate[slot] = 1;
   }
 }

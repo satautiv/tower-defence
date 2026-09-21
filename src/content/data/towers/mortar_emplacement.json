@@ -58,7 +58,11 @@
           "splashRadiusTiles": 2.2,
           "targets": "ground",
           "firingMode": "ballistic",
-          "projectileSpeedTiles": 10
+          "projectileSpeedTiles": 10,
+          "perks": ["freeze_pulse"],
+          "perkConfig": {
+            "freezePulseSeconds": 8
+          }
         },
         {
           "cost": 960,
@@ -70,7 +74,11 @@
           "splashRadiusTiles": 2.5,
           "targets": "ground",
           "firingMode": "ballistic",
-          "projectileSpeedTiles": 10
+          "projectileSpeedTiles": 10,
+          "perks": ["freeze_pulse"],
+          "perkConfig": {
+            "freezePulseSeconds": 8
+          }
         }
       ],
       "ability": {
@@ -109,6 +117,12 @@
           "statusApplied": {
             "status": "scorch",
             "stacks": 3
+          },
+          "perks": ["leaves_ground"],
+          "perkConfig": {
+            "groundSeconds": 5,
+            "groundRadiusTiles": 2.0,
+            "groundDamagePerSecond": 26
           }
         },
         {
@@ -125,6 +139,12 @@
           "statusApplied": {
             "status": "scorch",
             "stacks": 3
+          },
+          "perks": ["leaves_ground"],
+          "perkConfig": {
+            "groundSeconds": 5,
+            "groundRadiusTiles": 2.0,
+            "groundDamagePerSecond": 26
           }
         }
       ],

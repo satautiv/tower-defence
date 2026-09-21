@@ -1,6 +1,6 @@
 import { TICK_SECONDS } from '@core/constants';
 import { DamageFlag } from '../damage.js';
-import { EnemyFlag, SoldierFlag, TowerFlag } from '../flags.js';
+import { EnemyFlag, SoldierFlag, TowerFlag, TowerPerk } from '../flags.js';
 import { beginHeroRespawn } from './hero.js';
 import { statIndexOf } from '../towers.js';
 import type { World } from '../world.js';
@@ -391,6 +391,20 @@ function swingAtEnemy(world: World, slot: number, enemy: number): void {
     statusStacks += world.rules.ley.statusStacks[ley] as number;
   }
 
+  /* Ranger Lodge paints what it shoots, and the mark is worth something to
+     every other tower on the board — which is what makes the branch a support
+     choice rather than simply more damage (#32, §8.5). Refreshed on each hit
+     rather than stacked, so it lasts as long as the rangers keep firing and no
+     longer. */
+  if (stats >= 0 && (world.rules.towers.perks[stats] as number) & TowerPerk.MarksTarget) {
+    const table = world.rules.towers;
+    const ticks = table.markTicks[stats] as number;
+    if (ticks > 0) {
+      world.enemies.markMultiplier[enemy] = table.markMultiplier[stats] as number;
+      world.enemies.markedUntil[enemy] = world.tick + ticks;
+    }
+  }
+
   world.damage.push(
     enemy,
     damage,
@@ -424,6 +438,29 @@ function swingAtSoldier(world: World, enemy: number, slot: number): void {
 
   const hp = (soldiers.hp[slot] as number) - dealt;
   soldiers.hp[slot] = hp;
+
+  /* Bulwark Order returns a share of what it is hit for (#32, §8.5). Through
+     the shared queue like every other source, so a reflected kill pays bounty
+     and splits a splitter exactly as a shot would — and carries no source
+     tower, because the soldier landed it rather than the tower. */
+  const tower = soldiers.sourceTower[slot] as number;
+  if (tower >= 0 && world.towers.isAlive(tower)) {
+    const stats = statIndexOf(world, tower);
+    const table = world.rules.towers;
+    if ((table.perks[stats] as number) & TowerPerk.Reflects) {
+      const share = table.reflectFraction[stats] as number;
+      if (share > 0) {
+        world.damage.push(
+          enemy,
+          dealt * share,
+          table.soldierDamageType[stats] as number,
+          -1,
+          DamageFlag.None,
+        );
+      }
+    }
+  }
+
   if (hp <= 0) fall(world, slot);
 }
 

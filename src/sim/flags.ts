@@ -112,11 +112,13 @@ export const enum TowerPerk {
   Refracts = 1 << 9,
   /** Gilded Alembic: every bounty on the board pays more. */
   GlobalGold = 1 << 10,
-  /** Bulwark Order. */
-  Taunts = 1 << 11,
-  Reflects = 1 << 12,
+  /** Bulwark Order returns a share of the melee its soldiers take.
+   *  Its taunt is not here: that is its tier-5 ability, already composed from
+   *  the `taunt_in_radius` primitive (#26), and a second way to do it would be
+   *  the special case the primitives exist to prevent. */
+  Reflects = 1 << 11,
   /** Ranger Lodge: what it shoots takes more from everything. */
-  MarksTarget = 1 << 13,
+  MarksTarget = 1 << 12,
 }
 
 export const enum TowerFlag {
