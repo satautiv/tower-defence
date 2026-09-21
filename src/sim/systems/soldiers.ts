@@ -464,8 +464,15 @@ function swingAtSoldier(world: World, enemy: number, slot: number): void {
   if (hp <= 0) fall(world, slot);
 }
 
-/** A soldier goes down, releases what it held, and starts its own timer. */
-function fall(world: World, slot: number): void {
+/**
+ * A soldier goes down, releases what it held, and starts its own timer.
+ *
+ * Exported because a Rift Maw's Swallow is an instant kill rather than damage
+ * (#33) and still has to arrive here: a soldier removed any other way would
+ * leave its enemy blocked by a slot that no longer holds it, and a hero
+ * deleted rather than sent to respawn would never come back.
+ */
+export function fall(world: World, slot: number): void {
   release(world, slot);
 
   const soldiers = world.soldiers;

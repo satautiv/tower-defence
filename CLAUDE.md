@@ -16,8 +16,10 @@ because of it are on #62.
 perks, which #32's substrate now makes authorable — `perks` and `perkConfig` are on every tier,
 not only a branch's, so a T3 perk is a JSON edit rather than code. **#24 (soldiers), #25
 (hero), #26 (Warden Powers), #27 (targeting and the tower panel), #29 (enemy behaviours), #30
-(ley lines), #31 (ground effects) and #32 (tier 4/5 specialisations) are all done** and
-described below. What is left in M2 is **#33** (bosses).
+(ley lines), #31 (ground effects), #32 (tier 4/5 specialisations) and #33 (bosses) are all
+done** and described below. **M2's code is finished.** What is left before Region 1 is
+playable is the tooling and the content it serves: **#34** (map editor) then **#36** (the ten
+stages), which is also what gives the bosses a stage to stand in.
 
 Two issues stay open for things code cannot close. #30 wants editor support for placing nodes,
 which is **#34**. That and #27 both also want a check on a real phone, which is the same check
@@ -82,6 +84,57 @@ the map went untargetable through it until `CanBurrow` made it an enemy's proper
 telegraph hues against a 30° floor leaves almost no slack**, so they are spaced evenly rather
 than chosen for flavour; picking by feel put suppression and sapping 25° apart, which is the
 pair a player most needs to tell apart.
+
+**Bosses (#33) are live, and a phase is another row of the enemy table.** That is the whole
+framework: `EnemyTable` grows extra rows for a boss's later phases, appended *after* every
+ordinary enemy so an enemy's index is still its index, and crossing a threshold is
+`enemies.typeIdx[slot] = nextPhase`. Behaviours, speed, armour, melee and the sprite all come
+from that row already, so **no system below `advancePhase` knows a phase exists**. Health,
+statuses and path position live on the entity rather than the row, which is what makes it a
+transition and not a respawn — a boss that healed or forgot its Corrode on crossing 50% would
+undo the fight the player just had.
+
+Three things the row swap had to be taught, each one a bug if forgotten. **Armour and ward are
+re-derived through `defenceScaleFor`**, not copied raw, or a boss would shed the wave's defence
+growth along with its first phase. **Flags are replaced rather than merged**, but only the
+`TYPE_FLAGS` bits, so a phase that drops a trait really drops it while Blocked and Dying are
+left alone. And `BOSS_RULES` is re-applied unconditionally: a phase states its own trait list,
+so an author who writes phase two without repeating `boss` would otherwise hand the player a
+boss that becomes freezable exactly when the fight gets hard.
+
+**Grendrix's Swallow reaches only what is *blocking* it**, which is what makes the answer a real
+decision rather than a stat check: pull the rally flag back and the boss walks free, leave it
+forward and the garrison feeds it, and a Ranger Lodge fights from outside that reach. It is an
+instant kill routed through `soldiers.fall`, so a hero is sent to respawn rather than deleted
+and no enemy is left blocked by a slot that no longer holds it.
+
+**The corrosive pools added no boss-shaped code.** "Disables plots" became `GroundEffectFlag
+.Suppresses` — a capability of the ground, re-stamped every tick and reusing `disabledUntil`
+and the Sapper's own event, so a plot recovers on the tick the pool goes out with nothing to
+unwind, and a region that wants the same terrain gets it for free.
+
+**`behaviourReadyTick` is now one timer per behaviour per enemy**, flat `slot * BEHAVIOUR_BITS +
+bit`, which is exactly the growth the field's own comment predicted. Grendrix's phase two both
+swallows and spits on different cadences; one shared timer would have let whichever fired most
+often silence the rest. `EnemyFlag.WindingUp` separates "armed" from "due" on a single timer,
+which is what lets a Sapper's wind-up and a Rift Maw's bite run the same code.
+
+**Hitstop and slow-motion changed when ticks run, never which ticks run.** `src/app/cinematic.ts`
+is pure arithmetic over a clock it is handed, and `GameSession` feeds the loop a *virtual* now —
+real elapsed time multiplied by the cinematic's scale. `tests/determinism/cinematic.test.ts`
+plays a whole stage with the sequence firing every 200 frames and asserts a byte-identical hash
+against a run without it, plus that the run really did take longer in frames. That test is the
+point: this is the first thing in the game to touch the clock for a reason other than the player
+asking, and it is therefore the first thing that could quietly break replays and the balance sim.
+
+Two traps, both found by running the game rather than the tests. **The boss bar centred at the
+top sits across the speed controls** — it takes no pointer events so they still worked, but half
+of "1×" was behind it; it now hangs below the top bar's row. And **nine telegraph hues do not
+fit a 30° floor**: the two boss telegraphs forced a respace of all of them from 51° to 40°,
+moving every existing hue. That cost is paid deliberately and paid now, because the behaviour
+telegraphs have not been in front of a playtester yet and the same respace at twelve would not
+fit at all. `src/view/palette.ts` says what the answer is at ten — a second channel, shape, the
+way `reactions.ts` already does it.
 
 **Tier 4 and 5 (#32) are live, and a perk is a bit, a column and a hook.** `TowerPerk` in
 `src/sim/flags.ts` is thirteen bits on the *tier* — not the tower and not the entity, because a

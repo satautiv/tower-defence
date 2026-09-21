@@ -724,3 +724,74 @@ abbr.ui-wave__threat {
   word-break: break-word;
   max-width: 220px;
 }
+
+/* The boss health bar (#33, docs/GAME_DESIGN.md §10).
+
+   Centred at the top rather than floating over the boss, because the boss is
+   routinely under a soldier, a corrosive pool and four projectiles, and this
+   is the one number the player must never lose track of. */
+.ui-boss {
+  position: absolute;
+  /* Below the top bar, not in it: centred at the very top the bar sat across
+     the speed controls, which is only visible by running the game — the
+     controls still worked, because this panel takes no pointer events, but
+     half of "1x" was behind it. */
+  top: calc(var(--s-3) + var(--hit-min) + var(--s-3) + var(--safe-area-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-hud);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  width: min(440px, calc(100% - var(--s-8)));
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  pointer-events: none;
+}
+.ui-boss__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--t-sm);
+}
+.ui-boss__name {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ui-boss__phase {
+  color: var(--c-text-muted);
+  font-family: var(--f-numeric);
+  font-variant-numeric: tabular-nums;
+}
+.ui-boss__track {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--c-surface-raised);
+}
+.ui-boss__fill {
+  height: 100%;
+  background: var(--c-danger);
+  /* Only as fast as the poll, or the bar lags visibly behind a burst. */
+  transition: width 120ms linear;
+}
+/* A hairline the full height of the track, not a dot: the player is reading a
+   position on a line, and a marker thinner than the bar would be lost against
+   the fill it sits on. */
+.ui-boss__marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--c-text);
+}
+/* A threshold already crossed stays drawn, dimmed: it is how far the player
+   has come, and removing it would make the bar shorter than the fight. */
+.ui-boss__marker--passed {
+  background: var(--c-text-dim);
+}

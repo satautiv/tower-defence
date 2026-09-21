@@ -414,6 +414,7 @@ function resolveDeaths(world: World): void {
       enemies.x[slot] as number,
       enemies.y[slot] as number,
       deaths.killedBy[i] as number,
+      ((enemies.flags[slot] as number) & EnemyFlag.Boss) !== 0 ? 1 : 0,
     );
 
     spreadOnDeath(world, slot, killer);

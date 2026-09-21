@@ -83,7 +83,10 @@ export class EntityView {
    */
   bindAtlas(sheet: Spritesheet, world: World): void {
     this.sheet = sheet;
-    this.enemyFrames = world.rules.enemies.ids.map((id) =>
+    /* `spriteIds`, not `ids`: a boss phase is its own row and may look
+       different, but a phase that does not say otherwise keeps the boss's own
+       sprite rather than falling through to the Husk (#33). */
+    this.enemyFrames = world.rules.enemies.spriteIds.map((id) =>
       sheet.textures[`enemy_${id}`] === undefined ? 'enemy_husk' : `enemy_${id}`,
     );
     this.towerFrames = world.rules.towers.ids.map((id) =>
