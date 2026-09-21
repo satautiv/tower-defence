@@ -80,6 +80,27 @@ export const TuningSchema = z.object({
   previewWardThreshold: Positive,
 
   /**
+   * How enemies get harder as a run goes on (docs/GAME_DESIGN.md §9.2).
+   *
+   * `hp = baseHP x regionMult x (1 + growth x waveIndex) x difficultyMult`, and
+   * bounty by the square roots of the region and difficulty multipliers so a
+   * later region pays more without paying proportionally more.
+   */
+  waveScaling: z.object({
+    /** Fraction of base HP added per wave. */
+    hpGrowthPerWave: NonNegative,
+    /**
+     * How fast armour and ward grow relative to HP.
+     *
+     * Below 1 on purpose: late enemies should be tankier without making an
+     * early damage type feel worthless, which is what an equal rate would do.
+     */
+    defenceGrowthFraction: z.number().min(0).max(1),
+    /** One per region, in order. Region 1 is the balance baseline at 1.0. */
+    regionMultipliers: z.array(Positive).min(1),
+  }),
+
+  /**
    * The ley node bonuses, one entry per type in `LEY_NODE_TYPES`.
    *
    * Every type is required rather than optional: a node a map can author but

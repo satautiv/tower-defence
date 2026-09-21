@@ -58,6 +58,15 @@ export const EnemyTraitConfigSchema = z
     allyArmourBonus: NonNegative.optional(),
     /** sapper: how long a tower it reaches is disabled. */
     disableSeconds: Seconds.optional(),
+    /**
+     * How long a behaviour telegraphs before it lands.
+     *
+     * Design pillar P4: every enemy that changes the rules gets a telegraph,
+     * and a Sapper that disabled a tower the instant it arrived would be a rule
+     * change the player could not answer. Authored rather than a constant in
+     * code, because how much warning is enough is a balance question.
+     */
+    telegraphSeconds: Seconds.optional(),
     /** phase: damage threshold that triggers a jump, and how far. */
     phaseDamageThreshold: NonNegative.optional(),
     phaseDistanceTiles: Tiles.optional(),
@@ -65,6 +74,15 @@ export const EnemyTraitConfigSchema = z
     spawns: IdSchema.optional(),
     spawnIntervalSeconds: Seconds.optional(),
     spawnCount: z.number().int().positive().optional(),
+    /**
+     * shielder: how often the overshield is re-granted.
+     *
+     * Its own name rather than reusing `spawnIntervalSeconds`, which the
+     * simulation folds it into: a Shieldwright spawns nothing, and authoring a
+     * shield refresh under a key called "spawn" is how content ends up lying
+     * about itself.
+     */
+    refreshIntervalSeconds: Seconds.optional(),
   })
   .default({});
 

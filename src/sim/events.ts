@@ -37,6 +37,8 @@ export const enum SimEventKind {
   StageWon,
   StageLost,
   CommandRejected,
+  /** An enemy behaviour took effect, for its telegraph and its sound (#29). */
+  BehaviourFired,
 }
 
 export class SimEvents {
@@ -116,6 +118,28 @@ export const emitReactionTriggered = (
   y: number,
   magnitude: number,
 ) => ev.push(SimEventKind.ReactionTriggered, reactionIdx, x, y, magnitude);
+
+/** A Sapper got through: this tower holds fire for `ticks` (#29). */
+export const emitTowerDisabled = (ev: SimEvents, towerId: number, ticks: number) =>
+  ev.push(SimEventKind.TowerDisabled, towerId, ticks);
+
+/**
+ * An enemy behaviour took effect (#29).
+ *
+ * Carries the `BehaviourFlag` rather than a per-behaviour event kind, because
+ * the view's job is identical for all of them — draw the telegraph this enemy's
+ * behaviour calls for at this position — and a dozen near-identical event kinds
+ * would be a dozen places to forget one. `subjectId` is whoever the behaviour
+ * happened *to* where that differs from the source, so a shield can be drawn on
+ * the ally that received it.
+ */
+export const emitBehaviour = (
+  ev: SimEvents,
+  subjectId: number,
+  behaviour: number,
+  x: number,
+  y: number,
+) => ev.push(SimEventKind.BehaviourFired, subjectId, behaviour, x, y);
 
 /** A Warden Power went off, for its VFX and its sound. */
 export const emitPowerCast = (ev: SimEvents, powerIdx: number, x: number, y: number) =>

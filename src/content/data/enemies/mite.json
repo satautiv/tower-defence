@@ -1,0 +1,9 @@
+{
+  "id": "mite",
+  "nameKey": "enemy.mite.name",
+  "hp": 75,
+  "speed": 1.5,
+  "bounty": 2,
+  "meleeDamage": 3,
+  "meleeIntervalSeconds": 0.8
+}

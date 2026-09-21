@@ -57,8 +57,11 @@ export function firingSystem(world: World): void {
 
     /* The tower's resolved interval, not the tier's. Damage and range have
        always been read from the pool; this one line still read the table, so a
-       Flux ley node quoted a faster rate in the panel and fired at the old one. */
-    towers.cooldown[slot] = towers.fireInterval[slot] as number;
+       Flux ley node quoted a faster rate in the panel and fired at the old one.
+       A Nullifier's aura divides in here too, so suppression is a longer wait
+       for the next shot rather than a shot that never happens (#29). */
+    towers.cooldown[slot] =
+      (towers.fireInterval[slot] as number) / (towers.auraFireRate[slot] as number);
   }
 }
 

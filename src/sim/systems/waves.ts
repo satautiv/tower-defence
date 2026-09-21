@@ -63,7 +63,12 @@ export function waveSpawnerSystem(world: World): void {
         elapsed >= (runner.nextSpawnAt[progress] as number)
       ) {
         const typeIdx = waves.groupEnemy[source] as number;
-        const enemySlot = spawnEnemy(world, typeIdx, waves.groupSpawnPoint[source] as number);
+        const enemySlot = spawnEnemy(
+          world,
+          typeIdx,
+          waves.groupSpawnPoint[source] as number,
+          waveIndex,
+        );
         if (enemySlot >= 0) world.enemies.waveIndex[enemySlot] = waveIndex;
 
         runner.spawned[progress] = (runner.spawned[progress] as number) + 1;

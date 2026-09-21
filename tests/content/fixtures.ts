@@ -47,6 +47,11 @@ export function validContent(): RawContent {
         undoWindowSeconds: 3,
         previewArmourThreshold: 30,
         previewWardThreshold: 30,
+        waveScaling: {
+          hpGrowthPerWave: 0.075,
+          defenceGrowthFraction: 0.6,
+          regionMultipliers: [1.0, 1.9, 3.4, 5.8, 9.5],
+        },
         leyNodes: {
           flux: { attackSpeed: 1.25 },
           depth: { range: 1.2 },

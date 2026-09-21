@@ -53,8 +53,11 @@ export function speedMultiplier(world: World, slot: number): number {
 
   /* Ground slows multiply with status slows rather than sharing their cap: a
      Stasis Field is a different kind of thing from being Chilled, and the
-     design sells it as the answer when Chill alone is not enough (#31). */
-  return fromStatus * (enemies.groundSlow[slot] as number);
+     design sells it as the answer when Chill alone is not enough (#31).
+     A Standard Bearer's haste multiplies in the same way and can push the
+     result above 1 — it is a buff, and capping it at "not slowed" would make
+     the escort worthless exactly when it matters (#29). */
+  return fromStatus * (enemies.groundSlow[slot] as number) * (enemies.auraSpeed[slot] as number);
 }
 
 export function movementSystem(world: World): void {
@@ -95,7 +98,11 @@ function placeWalker(world: World, slot: number): void {
   enemies.y[slot] = sample.y + sample.dirX * offset;
   enemies.facing[slot] = Math.atan2(sample.dirY, sample.dirX);
 
-  setFlag(world, slot, EnemyFlag.Burrowed, path.isBurrowed(distance));
+  /* Only a Burrower uses the tunnel. The segment is a property of the road and
+     applies to everyone walking it, so without this check every enemy on the
+     map would go untargetable through it (#29). */
+  const canBurrow = ((enemies.flags[slot] as number) & EnemyFlag.CanBurrow) !== 0;
+  setFlag(world, slot, EnemyFlag.Burrowed, canBurrow && path.isBurrowed(distance));
   if (distance >= path.totalLength) markLeaked(world, slot);
 }
 

@@ -32,6 +32,8 @@ const PALETTE = {
   enemy: '#d1495b',
   armoured: '#8d99ae',
   flying: '#b892ff',
+  /** Menders, Shieldwrights, Nullifiers: the ones worth killing first. */
+  support: '#3ddc84',
   plot: '#f2c14e',
   ley: '#5ce1e6',
 } as const;
@@ -67,6 +69,24 @@ const SPRITES: SpriteSpec[] = [
   },
   { name: 'enemy_chitin_mother', size: 64, colour: PALETTE.toxic, shape: 'disc', scale: 0.44 },
   { name: 'enemy_broodling', size: 48, colour: PALETTE.toxic, shape: 'disc', scale: 0.3 },
+  { name: 'enemy_mite', size: 48, colour: PALETTE.toxic, shape: 'disc', scale: 0.2 },
+
+  /* The behaviour roster (#29). Size tracks health so the Dread Wyrm reads as
+     the elite it is, and the support trio takes `support` so the player can
+     tell "this one changes the rules" from "this one hits you" before learning
+     either silhouette — support enemies outrank damage enemies in threat
+     (docs/GAME_DESIGN.md §9.3), and that has to be legible at 2x speed. */
+  { name: 'enemy_mender', size: 48, colour: PALETTE.support, shape: 'disc', scale: 0.34 },
+  { name: 'enemy_shieldwright', size: 56, colour: PALETTE.support, shape: 'disc', scale: 0.38 },
+  { name: 'enemy_nullifier', size: 56, colour: PALETTE.support, shape: 'disc', scale: 0.42 },
+  { name: 'enemy_standard_bearer', size: 56, colour: PALETTE.support, shape: 'disc', scale: 0.38 },
+  { name: 'enemy_sapper', size: 48, colour: PALETTE.volt, shape: 'disc', scale: 0.32 },
+  { name: 'enemy_bulwark_golem', size: 64, colour: PALETTE.armoured, shape: 'block', scale: 0.5 },
+  { name: 'enemy_burrower', size: 48, colour: PALETTE.armoured, shape: 'disc', scale: 0.36 },
+  { name: 'enemy_phase_stalker', size: 48, colour: PALETTE.arcane, shape: 'disc', scale: 0.36 },
+  { name: 'enemy_carrier', size: 64, colour: PALETTE.flying, shape: 'disc', scale: 0.46 },
+  { name: 'enemy_rift_sprout', size: 56, colour: PALETTE.toxic, shape: 'block', scale: 0.4 },
+  { name: 'enemy_dread_wyrm', size: 80, colour: PALETTE.flying, shape: 'disc', scale: 0.56 },
 
   /* One per tower, coloured by the damage type it deals, so a board reads as a
      spread of elements before any real art exists. The barracks deals none, so

@@ -25,7 +25,56 @@ export const enum EnemyFlag {
   /** Reached the core. Costs lives rather than awarding bounty. */
   Leaked = 1 << 8,
   Boss = 1 << 9,
+  /**
+   * Goes underground on an authored path segment.
+   *
+   * A property of the enemy, not of the road: the segment exists for everyone
+   * who walks it, and without this every Husk on the map would vanish through
+   * the Burrower's tunnel (#29).
+   */
+  CanBurrow = 1 << 10,
 }
+
+/**
+ * What an enemy *does*, as opposed to what state it is in (#29).
+ *
+ * Kept off `EnemyFlag` and held on the enemy table rather than per entity: a
+ * behaviour is a property of the type and never varies between two Menders, so
+ * storing it per instance would be sixteen bits of duplicated constant on every
+ * slot and sixteen more to fingerprint. `EnemyFlag` is also nearly full, and
+ * the things living there — Blocked, Dying, Leaked — are exactly the ones that
+ * *do* change per enemy per tick.
+ *
+ * The mask exists so the behaviour system can reject the overwhelming majority
+ * of enemies, which have no behaviour at all, in one test.
+ */
+export const enum BehaviourFlag {
+  None = 0,
+  /** Mender: heals the most-damaged allies in radius. */
+  Healer = 1 << 0,
+  /** Shieldwright: grants an overshield to allies on an interval. */
+  Shielder = 1 << 1,
+  /** Nullifier: towers in radius fire more slowly. */
+  TowerSlowAura = 1 << 2,
+  /** Standard Bearer: allies in radius move faster and gain armour. */
+  AllyHasteAura = 1 << 3,
+  /** Sapper: disables the tower whose plot it reaches. */
+  Sapper = 1 << 4,
+  /** Carrier: drops an enemy onto the ground path beneath it. */
+  Carrier = 1 << 5,
+  /** Rift Sprout: never moves, spawns until killed. */
+  StationarySpawner = 1 << 6,
+  /** Phase Stalker: jumps forward when a single hit lands hard enough. */
+  Phase = 1 << 7,
+}
+
+/** Behaviours that fire on their own clock rather than continuously. */
+export const PERIODIC_BEHAVIOURS =
+  BehaviourFlag.Shielder | BehaviourFlag.Carrier | BehaviourFlag.StationarySpawner;
+
+/** Behaviours that sweep a radius every tick and must be recomputed from nothing. */
+export const AURA_BEHAVIOURS =
+  BehaviourFlag.Healer | BehaviourFlag.TowerSlowAura | BehaviourFlag.AllyHasteAura;
 
 export const enum TowerFlag {
   None = 0,

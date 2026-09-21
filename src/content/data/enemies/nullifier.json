@@ -1,0 +1,17 @@
+{
+  "id": "nullifier",
+  "nameKey": "enemy.nullifier.name",
+  "hp": 750,
+  "speed": 0.9,
+  "armour": 20,
+  "ward": 40,
+  "bounty": 28,
+  "livesCost": 2,
+  "traits": ["tower_slow_aura"],
+  "traitConfig": {
+    "auraRadiusTiles": 4,
+    "towerFireRateMultiplier": 0.75
+  },
+  "meleeDamage": 12,
+  "meleeIntervalSeconds": 1.2
+}
