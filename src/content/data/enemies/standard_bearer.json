@@ -1,0 +1,17 @@
+{
+  "id": "standard_bearer",
+  "nameKey": "enemy.standard_bearer.name",
+  "hp": 550,
+  "speed": 1.0,
+  "armour": 25,
+  "ward": 10,
+  "bounty": 20,
+  "traits": ["ally_haste_aura"],
+  "traitConfig": {
+    "auraRadiusTiles": 5,
+    "allySpeedMultiplier": 1.3,
+    "allyArmourBonus": 15
+  },
+  "meleeDamage": 10,
+  "meleeIntervalSeconds": 1.1
+}

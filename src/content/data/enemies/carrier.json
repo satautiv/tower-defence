@@ -1,0 +1,18 @@
+{
+  "id": "carrier",
+  "nameKey": "enemy.carrier.name",
+  "hp": 950,
+  "speed": 0.7,
+  "armour": 10,
+  "ward": 25,
+  "bounty": 30,
+  "livesCost": 3,
+  "traits": ["flying", "carrier"],
+  "traitConfig": {
+    "spawns": "husk",
+    "spawnCount": 1,
+    "spawnIntervalSeconds": 6
+  },
+  "meleeDamage": 0,
+  "meleeIntervalSeconds": 1.0
+}

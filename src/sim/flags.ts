@@ -25,6 +25,14 @@ export const enum EnemyFlag {
   /** Reached the core. Costs lives rather than awarding bounty. */
   Leaked = 1 << 8,
   Boss = 1 << 9,
+  /**
+   * Goes underground on an authored path segment.
+   *
+   * A property of the enemy, not of the road: the segment exists for everyone
+   * who walks it, and without this every Husk on the map would vanish through
+   * the Burrower's tunnel (#29).
+   */
+  CanBurrow = 1 << 10,
 }
 
 /**

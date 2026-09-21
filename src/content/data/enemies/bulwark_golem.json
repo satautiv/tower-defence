@@ -1,0 +1,16 @@
+{
+  "id": "bulwark_golem",
+  "nameKey": "enemy.bulwark_golem.name",
+  "hp": 1000,
+  "speed": 0.6,
+  "armour": 60,
+  "bounty": 25,
+  "livesCost": 2,
+  "traits": ["directional_armour"],
+  "traitConfig": {
+    "rearArmour": 10
+  },
+  "meleeDamage": 20,
+  "meleeIntervalSeconds": 1.5,
+  "maxBlockSeconds": 8
+}

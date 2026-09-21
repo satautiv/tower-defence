@@ -83,6 +83,39 @@ export const LEY_COLOUR: Readonly<Record<string, number>> = {
   surge: 0xff4d94,
 };
 
+/**
+ * Enemy behaviour telegraphs (#29, design pillar P4).
+ *
+ * *"Every enemy that changes the rules gets a telegraph"* (§9.3), and the thing
+ * a telegraph has to say first is **which** rule is about to change — a Sapper
+ * winding up and a Mender healing are answered by the player in opposite ways.
+ *
+ * Green for the support trio, because *"support enemies always outrank damage
+ * enemies in threat"* and the player's decision about all three is the same
+ * one: kill this before anything else. The two that act on a timer get their
+ * own hues, since they are threats to a place rather than to a health bar.
+ *
+ * Held to the same mutual-distinguishability rule as the ley markers rather
+ * than to the reaction rule: these are overlays on an enemy that is already
+ * on screen, and what matters is telling them from each other.
+ *
+ * Seven of them against a 30-degree floor leaves almost no slack — 360/7 is
+ * 51 — so the hues are spaced evenly rather than chosen for flavour. The first
+ * attempt picked by feel and put suppression and sapping 25 degrees apart,
+ * which the test caught: two pinks meaning "your tower is slowed" and "your
+ * tower is about to go dark", the two telegraphs a player most needs to tell
+ * apart.
+ */
+export const BEHAVIOUR_COLOUR: Readonly<Record<string, number>> = {
+  sap: 0xff5338,
+  haste: 0xfff838,
+  heal: 0x59ff38,
+  shield: 0x38ffcd,
+  suppress: 0x388bff,
+  spawn: 0x8e38ff,
+  phase: 0xff38cd,
+};
+
 /** Hue in degrees, saturation and value, each 0-1 except hue. */
 export function toHsv(colour: number): { hue: number; saturation: number; value: number } {
   const r = ((colour >> 16) & 0xff) / 255;

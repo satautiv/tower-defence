@@ -1,0 +1,18 @@
+{
+  "id": "rift_sprout",
+  "nameKey": "enemy.rift_sprout.name",
+  "hp": 650,
+  "speed": 0,
+  "armour": 30,
+  "ward": 30,
+  "bounty": 25,
+  "livesCost": 0,
+  "traits": ["stationary_spawner"],
+  "traitConfig": {
+    "spawns": "riftling",
+    "spawnCount": 2,
+    "spawnIntervalSeconds": 4
+  },
+  "meleeDamage": 0,
+  "meleeIntervalSeconds": 1.0
+}

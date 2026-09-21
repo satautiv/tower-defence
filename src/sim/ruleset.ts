@@ -364,6 +364,7 @@ const TRAIT_FLAGS: Readonly<Record<string, number>> = {
   flying: EnemyFlag.Flying,
   freeze_immune: EnemyFlag.FreezeImmune,
   directional_armour: EnemyFlag.DirectionalArmour,
+  burrow: EnemyFlag.CanBurrow,
 };
 
 /** Traits that map onto a behaviour the behaviour system carries out (#29). */
@@ -471,7 +472,10 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
     table.phaseDamageThreshold[i] = config.phaseDamageThreshold ?? 0;
     table.phaseDistance[i] = (config.phaseDistanceTiles ?? 0) * TILE_SIZE;
     table.spawnCount[i] = config.spawnCount ?? 0;
-    table.spawnIntervalTicks[i] = (config.spawnIntervalSeconds ?? 0) * TICK_HZ;
+    /* One column for every periodic behaviour: a shielder's refresh and a
+       carrier's drop are the same clock with different payloads. */
+    table.spawnIntervalTicks[i] =
+      (config.spawnIntervalSeconds ?? config.refreshIntervalSeconds ?? 0) * TICK_HZ;
 
     /* A stationary spawner is stationary by its trait rather than by an author
        remembering to write speed: 0. */

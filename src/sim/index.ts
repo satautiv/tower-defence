@@ -24,6 +24,7 @@ export type { WavePreview, WaveGroupPreview } from './waves.js';
 export { waveSpawnerSystem, startWave } from './systems/waves.js';
 export { drainCommandQueue, RejectReason } from './systems/commands.js';
 export { targetingSystem, pickTarget, canTarget, canTargetAny } from './systems/targeting.js';
+export { behaviourSystem } from './systems/behaviours.js';
 export { firingSystem } from './systems/firing.js';
 export { projectileSystem } from './systems/projectiles.js';
 export { damageResolutionSystem, effectiveDefence } from './systems/damage.js';
@@ -107,6 +108,7 @@ export * from './events.js';
 export { DamageQueue, DeathList, DamageFlag, DAMAGE_INDEX, DAMAGE_BY_INDEX } from './damage.js';
 export {
   EnemyFlag,
+  BehaviourFlag,
   TowerFlag,
   ProjectileFlag,
   SoldierFlag,

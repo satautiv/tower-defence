@@ -74,6 +74,15 @@ export const EnemyTraitConfigSchema = z
     spawns: IdSchema.optional(),
     spawnIntervalSeconds: Seconds.optional(),
     spawnCount: z.number().int().positive().optional(),
+    /**
+     * shielder: how often the overshield is re-granted.
+     *
+     * Its own name rather than reusing `spawnIntervalSeconds`, which the
+     * simulation folds it into: a Shieldwright spawns nothing, and authoring a
+     * shield refresh under a key called "spawn" is how content ends up lying
+     * about itself.
+     */
+    refreshIntervalSeconds: Seconds.optional(),
   })
   .default({});
 

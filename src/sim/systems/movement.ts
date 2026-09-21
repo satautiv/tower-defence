@@ -98,7 +98,11 @@ function placeWalker(world: World, slot: number): void {
   enemies.y[slot] = sample.y + sample.dirX * offset;
   enemies.facing[slot] = Math.atan2(sample.dirY, sample.dirX);
 
-  setFlag(world, slot, EnemyFlag.Burrowed, path.isBurrowed(distance));
+  /* Only a Burrower uses the tunnel. The segment is a property of the road and
+     applies to everyone walking it, so without this check every enemy on the
+     map would go untargetable through it (#29). */
+  const canBurrow = ((enemies.flags[slot] as number) & EnemyFlag.CanBurrow) !== 0;
+  setFlag(world, slot, EnemyFlag.Burrowed, canBurrow && path.isBurrowed(distance));
   if (distance >= path.totalLength) markLeaked(world, slot);
 }
 

@@ -23,5 +23,7 @@ export {
   POINT_RADIUS,
 } from './reactions.js';
 export type { Burst, Label, ReactionShape, ReactionStyle } from './reactions.js';
+export { BehaviourFeed, BehavioursView, behaviourColour } from './behaviours.js';
+export type { Pulse, AuraRing } from './behaviours.js';
 export { initAssets, loadBundle, unloadBundle } from './assets.js';
 export type { AssetManifest, LoadProgress } from './assets.js';

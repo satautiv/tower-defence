@@ -37,6 +37,7 @@ import { GameSession } from '@app/session';
 import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
 import { EffectsView } from '@view/effects';
+import { BehavioursView } from '@view/behaviours';
 import { ReactionsView } from '@view/reactions';
 import { AudioDirector } from '@audio/index';
 import { EntityView } from '@view/entities';
@@ -129,6 +130,7 @@ export function InStageScreen(): ReactElement {
   const entityRef = useRef<EntityView | null>(null);
   const effectsRef = useRef<EffectsView | null>(null);
   const reactionsRef = useRef<ReactionsView | null>(null);
+  const behavioursRef = useRef<BehavioursView | null>(null);
   const audioRef = useRef<AudioDirector | null>(null);
   /* Subscribed rather than read once: the toggle has to re-render its label. */
   const muted = useSettings((state) => state.muted);
@@ -328,6 +330,8 @@ export function InStageScreen(): ReactElement {
       effectsRef.current = effects;
       const reactions = new ReactionsView(view.layers);
       reactionsRef.current = reactions;
+      const behaviours = new BehavioursView(view.layers);
+      behavioursRef.current = behaviours;
 
       /* Created here, but silent until a gesture unlocks it: every mobile
          browser refuses to start audio otherwise, and a context opened too
@@ -409,6 +413,9 @@ export function InStageScreen(): ReactElement {
         if (!pausedRef.current) {
           effects.render();
           reactions.render();
+          /* Fed from the world rather than only from events, because a
+             standing aura is a state and has to keep being drawn (#29). */
+          behaviours.render(session.world);
         }
       });
     },
@@ -514,6 +521,7 @@ export function InStageScreen(): ReactElement {
     /* Including the record of which reactions have been named: for the player
        the restarted run's first Thermal Shock is a first Thermal Shock. */
     reactionsRef.current?.reset();
+    behavioursRef.current?.feed.clear();
     audioRef.current?.reset();
     closePanel();
     clearSelection();

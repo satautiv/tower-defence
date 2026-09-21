@@ -1,0 +1,15 @@
+{
+  "id": "sapper",
+  "nameKey": "enemy.sapper.name",
+  "hp": 275,
+  "speed": 1.4,
+  "bounty": 15,
+  "traits": ["sapper"],
+  "traitConfig": {
+    "auraRadiusTiles": 1.5,
+    "disableSeconds": 8,
+    "telegraphSeconds": 1.5
+  },
+  "meleeDamage": 8,
+  "meleeIntervalSeconds": 1.0
+}
