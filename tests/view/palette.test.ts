@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   DAMAGE_COLOUR,
+  LEY_COLOUR,
   MIN_HUE_SEPARATION,
+  PLOT_COLOUR,
   REACTION_COLOUR,
   STATUS_COLOUR,
   reservedColours,
@@ -121,5 +123,31 @@ describe('statuses keep the colour of the damage type that applies them', () => 
     ['fracture', 'kinetic'],
   ])('%s matches %s', (status, damage) => {
     expect(STATUS_COLOUR[status]).toBe(DAMAGE_COLOUR[damage]);
+  });
+});
+
+/**
+ * The four ley node types, and the ordinary plot they sit among.
+ *
+ * A weaker rule than the one reactions are held to, and deliberately so: these
+ * are static markers on the plot layer, drawn before anything is built and
+ * hidden under the tower afterwards, so they never share a moment with a
+ * detonation the way a status pip does. What they *do* have to survive is each
+ * other — the whole point of colouring them is that a player can read which
+ * bonus a plot carries without tapping it (docs/GAME_DESIGN.md §5).
+ */
+describe('ley node markers are tellable apart', () => {
+  const markers: Array<[string, number]> = [['plot', PLOT_COLOUR], ...Object.entries(LEY_COLOUR)];
+
+  it('covers every node type the content schema allows', () => {
+    expect(Object.keys(LEY_COLOUR).sort()).toEqual(['depth', 'flux', 'resonance', 'surge']);
+  });
+
+  it.each(
+    markers.flatMap((a, i) =>
+      markers.slice(i + 1).map((b): [string, number, string, number] => [a[0], a[1], b[0], b[1]]),
+    ),
+  )('%s is distinguishable from %s', (_a, first, _b, second) => {
+    expect(separation(first, second).distinguishable).toBe(true);
   });
 });

@@ -151,6 +151,7 @@
   position: absolute;
   width: 0;
   height: 0;
+  --build-notice-gap: 48px;
 }
 /* Full-screen catcher: a tap anywhere else dismisses the menu. */
 .ui-build__scrim {
@@ -204,16 +205,34 @@
   padding: var(--s-1) var(--s-2);
   font: 600 10px / 1.1 var(--f-ui);
 }
-/* Sits just below the plot, clear of the arc whichever way it opened. */
-.ui-build__locked {
+/* Stacked on the side of the plot the arc did not open towards.
+   Cleared by more than the arc's own radius suggests: a card is centred on its
+   arc point by hit-area alone, and the name and cost lines below that hang
+   past the plot. At 16px the label was drawn behind the end card. */
+.ui-build__notices {
   position: absolute;
-  transform: translate(-50%, var(--s-4));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+  transform: translate(-50%, var(--build-notice-gap));
+}
+.ui-build__notices--above {
+  transform: translate(-50%, calc(-100% - var(--build-notice-gap)));
+}
+.ui-build__locked,
+.ui-build__ley {
   padding: var(--s-1) var(--s-2);
   border-radius: var(--r-sm);
   background: var(--c-surface);
-  color: var(--c-text-dim);
   font: 600 var(--t-xs) / 1.2 var(--f-ui);
   white-space: nowrap;
+}
+.ui-build__locked {
+  color: var(--c-text-dim);
+}
+.ui-build__ley {
+  text-transform: capitalize;
 }
 
 /* ---- the hero ---- */
@@ -563,6 +582,28 @@ abbr.ui-wave__threat {
 }
 .ui-type--true {
   color: var(--c-text);
+}
+
+/* Ley nodes, matching the diamond the board draws on the plot. */
+.ui-ley--flux {
+  color: var(--c-ley-flux);
+}
+.ui-ley--depth {
+  color: var(--c-ley-depth);
+}
+.ui-ley--resonance {
+  color: var(--c-ley-resonance);
+}
+.ui-ley--surge {
+  color: var(--c-ley-surge);
+}
+.ui-ley__dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: currentcolor;
+  /* A diamond, so the note and the plot marker are visibly the same thing. */
+  transform: rotate(45deg);
 }
 
 /* The results sit over the board the stage ended on, which stays visible —

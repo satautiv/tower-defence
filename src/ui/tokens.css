@@ -43,6 +43,13 @@
   --c-toxic: #7fd45a;
   --c-arcane: #ff5ce0;
 
+  /* Ley nodes — the same four the board draws, from view/palette.ts */
+  --c-ley: #9d7bff;
+  --c-ley-flux: #4dd0e1;
+  --c-ley-depth: #8b7cff;
+  --c-ley-resonance: #3ddc84;
+  --c-ley-surge: #ff4d94;
+
   /* Spacing, on a 4px rhythm */
   --s-1: 4px;
   --s-2: 8px;

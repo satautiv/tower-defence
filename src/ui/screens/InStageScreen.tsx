@@ -300,7 +300,7 @@ export function InStageScreen(): ReactElement {
       }
 
       setSelection({ plotId: nearest.id, towerSlot: -1, screen: canvas });
-      setOptions(buildOptions(session.world));
+      setOptions(buildOptions(session.world, nearest.id));
       setTower(null);
     },
     [clearSelection],

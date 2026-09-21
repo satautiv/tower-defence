@@ -143,6 +143,7 @@ describe('actions locked by the pause', () => {
       cost: 100,
       affordable: true,
       stats: STATS,
+      leyNode: null,
     };
     render(
       <BuildMenu
@@ -211,6 +212,7 @@ describe('actions locked by the pause', () => {
       upgrade: { cost: 80, affordable: true, before: STATS, after: { ...STATS, dps: 14 } },
       specialisations: [],
       undoable: false,
+      leyNode: null,
       rallyRangeTiles: 0,
       soldiersAlive: 0,
       soldierCount: 0,
@@ -347,6 +349,7 @@ describe('the build arc stays on screen', () => {
       cost: 100,
       affordable: true,
       stats: STATS,
+      leyNode: null,
     }));
 
     const { container } = render(
@@ -391,6 +394,7 @@ describe('the rally control', () => {
     upgrade: null,
     specialisations: [],
     undoable: false,
+    leyNode: null,
     rallyRangeTiles: 8,
     soldiersAlive: 3,
     soldierCount: 3,

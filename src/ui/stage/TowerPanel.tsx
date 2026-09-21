@@ -84,6 +84,32 @@ function DamageNote({ type }: { type: string }): ReactElement | null {
   );
 }
 
+/**
+ * What the ground under this tower is doing for it (docs/GAME_DESIGN.md §5).
+ *
+ * Deliberately without numbers. The bonus is already folded into the stats
+ * above — the range row reads the longer range, the DPS row the faster rate —
+ * so quoting "+20%" here would be a second copy of a balance number that lives
+ * in `tuning.json`, and the copy is the one that would go stale.
+ */
+const LEY_NOTES: Readonly<Record<string, string>> = {
+  flux: 'Flux — this plot makes it fire faster.',
+  depth: 'Depth — this plot makes it reach further.',
+  resonance: 'Resonance — its hits land an extra status stack.',
+  surge: 'Surge — reactions it sets off hit harder.',
+};
+
+function LeyNote({ node }: { node: string | null }): ReactElement | null {
+  if (node === null) return null;
+  const note = LEY_NOTES[node];
+  if (note === undefined) return null;
+  return (
+    <p className={`ui-tower-panel__note ui-ley--${node}`}>
+      <span className="ui-ley__dot" /> {note}
+    </p>
+  );
+}
+
 function Targeting({
   mode,
   onChange,
@@ -209,6 +235,7 @@ export function TowerPanel({
       <Stats stats={tower.current} />
 
       <DamageNote type={tower.current.damageType} />
+      <LeyNote node={tower.leyNode} />
       <Contribution kills={tower.kills} damage={tower.damageDealt} />
 
       {/* Only for towers that choose. A barracks has no target to prefer, and
