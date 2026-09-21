@@ -65,7 +65,15 @@
             "status": "scorch",
             "stacks": 2
           },
-          "firingMode": "cone"
+          "firingMode": "cone",
+          "perks": ["bonus_vs_status", "spread_on_death"],
+          "perkConfig": {
+            "bonusVsStatus": "corrode",
+            "bonusVsStatusMultiplier": 1.6,
+            "spreadStacks": 2,
+            "spreadRadiusTiles": 2.0
+          },
+          "perkKeys": ["tower.pyroclast_vent.perk.corroded", "tower.pyroclast_vent.perk.spread"]
         },
         {
           "cost": 800,
@@ -78,7 +86,14 @@
             "status": "scorch",
             "stacks": 2
           },
-          "firingMode": "cone"
+          "firingMode": "cone",
+          "perks": ["bonus_vs_status", "spread_on_death"],
+          "perkConfig": {
+            "bonusVsStatus": "corrode",
+            "bonusVsStatusMultiplier": 1.6,
+            "spreadStacks": 2,
+            "spreadRadiusTiles": 2.0
+          }
         }
       ],
       "ability": {
@@ -120,7 +135,9 @@
             "status": "unravel",
             "stacks": 1
           },
-          "firingMode": "beam"
+          "firingMode": "beam",
+          "perks": ["piercing"],
+          "perkKeys": ["tower.plasma_lance.perk.pierce"]
         },
         {
           "cost": 800,
@@ -132,7 +149,8 @@
             "status": "unravel",
             "stacks": 2
           },
-          "firingMode": "beam"
+          "firingMode": "beam",
+          "perks": ["piercing"]
         }
       ],
       "ability": {

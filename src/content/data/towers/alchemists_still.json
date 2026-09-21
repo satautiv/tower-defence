@@ -66,7 +66,13 @@
             "status": "corrode",
             "stacks": 3
           },
-          "bonusGoldPerKill": 2
+          "bonusGoldPerKill": 2,
+          "perks": ["spread_on_death"],
+          "perkConfig": {
+            "spreadStacks": 3,
+            "spreadRadiusTiles": 2.5
+          },
+          "perkKeys": ["tower.plague_vat.perk.spread"]
         },
         {
           "cost": 800,
@@ -80,7 +86,12 @@
             "status": "corrode",
             "stacks": 3
           },
-          "bonusGoldPerKill": 2
+          "bonusGoldPerKill": 2,
+          "perks": ["spread_on_death"],
+          "perkConfig": {
+            "spreadStacks": 3,
+            "spreadRadiusTiles": 2.5
+          }
         }
       ],
       "ability": {
@@ -117,7 +128,12 @@
             "status": "corrode",
             "stacks": 2
           },
-          "bonusGoldPerKill": 6
+          "bonusGoldPerKill": 6,
+          "perks": ["global_gold"],
+          "perkConfig": {
+            "globalGoldFraction": 0.15
+          },
+          "perkKeys": ["tower.gilded_alembic.perk.gold"]
         },
         {
           "cost": 800,
@@ -131,7 +147,11 @@
             "status": "corrode",
             "stacks": 2
           },
-          "bonusGoldPerKill": 8
+          "bonusGoldPerKill": 8,
+          "perks": ["global_gold"],
+          "perkConfig": {
+            "globalGoldFraction": 0.15
+          }
         }
       ],
       "ability": {

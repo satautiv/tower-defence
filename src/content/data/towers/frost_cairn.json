@@ -61,7 +61,12 @@
             "status": "chill",
             "stacks": 2
           },
-          "firingMode": "aura"
+          "firingMode": "aura",
+          "perks": ["freeze_pulse"],
+          "perkConfig": {
+            "freezePulseSeconds": 6
+          },
+          "perkKeys": ["tower.glacier_heart.perk.pulse"]
         },
         {
           "cost": 720,
@@ -74,7 +79,11 @@
             "status": "chill",
             "stacks": 3
           },
-          "firingMode": "aura"
+          "firingMode": "aura",
+          "perks": ["freeze_pulse"],
+          "perkConfig": {
+            "freezePulseSeconds": 6
+          }
         }
       ],
       "ability": {
@@ -110,7 +119,12 @@
             "status": "chill",
             "stacks": 1
           },
-          "firingMode": "aura"
+          "firingMode": "aura",
+          "perks": ["chill_sunders"],
+          "perkConfig": {
+            "armourPerChillStack": 6
+          },
+          "perkKeys": ["tower.rime_spire.perk.sunder"]
         },
         {
           "cost": 720,
@@ -123,7 +137,11 @@
             "status": "chill",
             "stacks": 2
           },
-          "firingMode": "aura"
+          "firingMode": "aura",
+          "perks": ["chill_sunders"],
+          "perkConfig": {
+            "armourPerChillStack": 6
+          }
         }
       ],
       "ability": {

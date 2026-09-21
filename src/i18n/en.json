@@ -137,5 +137,22 @@
   "power.rally_banner.name": "Rally Banner",
   "power.rally_banner.desc": "Every soldier stands taller, and everything nearby comes to them.",
   "power.rift_seal.name": "Rift Seal",
-  "power.rift_seal.desc": "The road closes. Whatever was walking it piles up against nothing."
+  "power.rift_seal.desc": "The road closes. Whatever was walking it piles up against nothing.",
+  "tower.sniper_nest.perk.pierce": "Half of any armour in the way counts for nothing.",
+  "tower.repeater_battery.perk.rate": "No trick — just no gap between shots.",
+  "tower.pyroclast_vent.perk.corroded": "Burns Corroded enemies far harder.",
+  "tower.pyroclast_vent.perk.spread": "What it kills sets its neighbours alight.",
+  "tower.plasma_lance.perk.pierce": "The beam runs through everything in line.",
+  "tower.glacier_heart.perk.pulse": "Freezes everything in reach, on its own slow clock.",
+  "tower.rime_spire.perk.sunder": "Every stack of Chill strips armour as well as speed.",
+  "tower.siege_howitzer.perk.pulse": "Every few shells land as a hard stop.",
+  "tower.firestorm_cannon.perk.ground": "Leaves the ground burning where it lands.",
+  "tower.storm_pylon.perk.discharge": "Charge at its cap detonates instead of fading.",
+  "tower.arc_net.perk.ground": "Keeps a live floor of current under itself.",
+  "tower.bulwark_order.perk.reflect": "Its soldiers turn part of every blow back.",
+  "tower.ranger_lodge.perk.mark": "Marks what its soldiers strike — every tower hits it harder.",
+  "tower.plague_vat.perk.spread": "What it kills bursts, Corroding everything near it.",
+  "tower.gilded_alembic.perk.gold": "Every kill on the map pays a little more, whoever made it.",
+  "tower.void_obelisk.perk.pull": "Drags what it hits back down the road.",
+  "tower.prism_tower.perk.refract": "Hits harder for every other damage type landing nearby."
 }

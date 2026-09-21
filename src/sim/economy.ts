@@ -1,4 +1,5 @@
 import { TICK_SECONDS } from '@core/constants';
+import { TowerPerk } from './flags.js';
 import { TIER_SLOTS } from './ruleset.js';
 import { statIndexOf, tierSlot } from './towers.js';
 import { StagePhase } from './world.js';
@@ -139,8 +140,39 @@ export function awardReactionAether(world: World): void {
  */
 export function awardKill(world: World, typeIdx: number): void {
   const base = world.rules.enemies.bounty[typeIdx] as number;
-  addGold(world, Math.floor(base * world.rules.scaling.bounty));
+  const scaled = base * world.rules.scaling.bounty * globalGoldMultiplier(world);
+  /* Rounded, not floored. Region 1 bounties are four to six gold, so a
+     Gilded Alembic's fifteen percent is under one gold a kill — flooring
+     discarded it every single time and the branch did nothing at all where it
+     is first unlocked. Rounding is unbiased across a stage's worth of kills;
+     flooring is biased to zero exactly where the numbers are smallest. */
+  addGold(world, Math.round(scaled));
   addAether(world, world.rules.tuning.aetherPerKill);
+}
+
+/**
+ * Gilded Alembic's board-wide cut (#32, docs/GAME_DESIGN.md §8.5).
+ *
+ * Unlike `bonusGoldPerKill`, which pays the tower that landed the kill, this
+ * pays on *every* bounty the board earns — which is the whole branch: it is
+ * worth building not because it kills but because everything else does.
+ *
+ * Additive across several, not multiplicative: four Alembics should be four
+ * times a good idea, never sixteen, and compounding is how an economy tower
+ * turns into the only tower.
+ */
+function globalGoldMultiplier(world: World): number {
+  const towers = world.towers;
+  const table = world.rules.towers;
+
+  let bonus = 0;
+  for (let slot = 0; slot < towers.watermark; slot++) {
+    if (!towers.isAlive(slot)) continue;
+    const stats = statIndexOf(world, slot);
+    if (((table.perks[stats] as number) & TowerPerk.GlobalGold) === 0) continue;
+    bonus += table.globalGoldFraction[stats] as number;
+  }
+  return 1 + bonus;
 }
 
 /** Extra gold an economy tower adds on top of a bounty. */

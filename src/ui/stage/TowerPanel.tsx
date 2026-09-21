@@ -19,6 +19,12 @@ export interface TowerPanelProps {
   rallyArmed?: boolean;
   /** Paused: everything reads, nothing changes the tower. */
   locked?: boolean;
+  /**
+   * Resolves a locale key — a branch's name, a perk's one-line description.
+   * One resolver rather than two, because both are the same lookup and a
+   * second prop only invites passing the wrong one.
+   */
+  text: (key: string) => string;
 }
 
 const round = (value: number): string =>
@@ -164,7 +170,7 @@ function Contribution({ kills, damage }: { kills: number; damage: number }): Rea
   );
 }
 
-function Stats({ stats }: { stats: TierStats }): ReactElement {
+function Stats({ stats, compact = false }: { stats: TierStats; compact?: boolean }): ReactElement {
   return (
     <div className="ui-stats">
       <div className="ui-stat">
@@ -187,12 +193,14 @@ function Stats({ stats }: { stats: TierStats }): ReactElement {
           </span>
         </div>
       )}
-      <div className="ui-stat">
-        <span className="ui-stat__label">Targets</span>
-        <span className="ui-stat__value">
-          {stats.hitsGround && stats.hitsAir ? 'ground + air' : stats.hitsAir ? 'air' : 'ground'}
-        </span>
-      </div>
+      {!compact && (
+        <div className="ui-stat">
+          <span className="ui-stat__label">Targets</span>
+          <span className="ui-stat__value">
+            {stats.hitsGround && stats.hitsAir ? 'ground + air' : stats.hitsAir ? 'air' : 'ground'}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -217,6 +225,7 @@ export function TowerPanel({
   onRally,
   rallyArmed = false,
   locked = false,
+  text,
 }: TowerPanelProps): ReactElement {
   /* Locked controls stay visible, so the player can still see what an upgrade
      costs and buys while planning. */
@@ -231,7 +240,7 @@ export function TowerPanel({
   };
 
   return (
-    <Panel className="ui-tower-panel" title={tower.id.replace(/_/g, ' ')}>
+    <Panel className="ui-tower-panel" title={text(tower.nameKey)}>
       <Stats stats={tower.current} />
 
       <DamageNote type={tower.current.damageType} />
@@ -292,16 +301,31 @@ export function TowerPanel({
           <p className="ui-muted">
             A specialisation is permanent. Changing it costs full price again.
           </p>
-          {tower.specialisations.map((option) => (
-            <Button
-              key={option.branch}
-              disabled={!option.affordable}
-              onClick={guard(() => onSpecialise(option.branch))}
-              {...lock}
-            >
-              Branch {option.branch + 1} &mdash; {option.cost}
-            </Button>
-          ))}
+          {/* Side by side, because this is the one irreversible decision the
+              player makes about a tower and the branches differ by what they
+              *do*, not by how much. Stacked, the two read as a list to scroll;
+              in columns they read as a comparison (#27, #32). */}
+          <div className="ui-branches">
+            {tower.specialisations.map((option) => (
+              <div key={option.branch} className="ui-branch">
+                <span className="ui-branch__name">{text(option.nameKey)}</span>
+                <Stats stats={option.after} compact />
+                {option.perkKeys.map((key) => (
+                  <p key={key} className="ui-branch__perk">
+                    {text(key)}
+                  </p>
+                ))}
+                <Button
+                  variant="primary"
+                  disabled={!option.affordable}
+                  onClick={guard(() => onSpecialise(option.branch))}
+                  {...lock}
+                >
+                  Choose &mdash; {option.cost}
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

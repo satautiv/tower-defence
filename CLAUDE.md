@@ -13,16 +13,15 @@ their own words". `docs/PLAYTEST-REACTIONS.md` holds the protocol; the verdict a
 because of it are on #62.
 
 **M2's gameplay issues are done.** #23 has the roster in; what remains open on it are the T3
-perks that need code rather than data. **#24 (soldiers), #25 (hero), #26 (Warden Powers), #27
-(targeting and the tower panel), #29 (enemy behaviours), #30 (ley lines) and #31 (ground
-effects) are all done** and described below. What is left in M2 is **#32** (tier 4/5
-specialisations) and **#33** (bosses), both of which are content-shaped rather than
-system-shaped now that the substrate exists.
+perks, which #32's substrate now makes authorable — `perks` and `perkConfig` are on every tier,
+not only a branch's, so a T3 perk is a JSON edit rather than code. **#24 (soldiers), #25
+(hero), #26 (Warden Powers), #27 (targeting and the tower panel), #29 (enemy behaviours), #30
+(ley lines), #31 (ground effects) and #32 (tier 4/5 specialisations) are all done** and
+described below. What is left in M2 is **#33** (bosses).
 
-Three issues stay open for things code cannot close. #27 wants a tier-4 side-by-side
-comparison, which is worth doing once **#32** gives it something to compare beyond a stat line.
-#30 wants editor support for placing nodes, which is **#34**. Both also want a check on a real
-phone, which is the same check #20 and #55 are waiting on.
+Two issues stay open for things code cannot close. #30 wants editor support for placing nodes,
+which is **#34**. That and #27 both also want a check on a real phone, which is the same check
+#20 and #55 are waiting on.
 
 **#19 and #20 stay open on purpose.** #19 needs a playtest with three people who have not
 seen the design (protocol in `docs/PLAYTEST-M1.md`); #20 needs the slice run on a physical
@@ -83,6 +82,51 @@ the map went untargetable through it until `CanBurrow` made it an enemy's proper
 telegraph hues against a 30° floor leaves almost no slack**, so they are spaced evenly rather
 than chosen for flavour; picking by feel put suppression and sapping 25° apart, which is the
 pair a player most needs to tell apart.
+
+**Tier 4 and 5 (#32) are live, and a perk is a bit, a column and a hook.** `TowerPerk` in
+`src/sim/flags.ts` is thirteen bits on the *tier* — not the tower and not the entity, because a
+perk never varies between two Sniper Nests and the tier is what a specialisation changes.
+`applyPerks` in `ruleset.ts` turns the authored `perks` array and its `perkConfig` into that
+mask plus nineteen numeric columns, so **no system reads a perk's name during a tick**: it tests
+one bit and reads one float. The rule that kept it from sprawling is the one `effects.ts`
+already had — **when a branch cannot be expressed, add a primitive, never a special case**, and
+`tests/sim/perks.test.ts` drives each of the thirteen through a stage rather than asserting the
+mask.
+
+Where each hooks is the whole design. `pierce_fraction` and `bonus_vs_status` sit in
+`effectiveDefence`, the one damage formula; `spread_on_death` and `discharge_at_cap` sit in
+`damage.ts` after the queue drains, so what they push re-enters the *same* queue and a contagion
+kill pays bounty and splits like any other; `piercing`, `pulls`, `refracts`, `leaves_ground` and
+`freeze_pulse` are all in `firing.ts`, because they change what a shot *is*; `global_gold` is a
+multiplier in `awardKill`; `reflects` and `marks_target` are in `soldiers.ts`, the only two that
+belong to a garrison. **Nothing branches on a tower's id anywhere**, which is what lets
+`roster.test.ts` still drive a synthetic ninth tower through a whole stage.
+
+Two traps, both found by running the game rather than the tests. **A 15% cut of a Region 1
+bounty is zero**: Gilded Alembic multiplied a 6-gold kill and `Math.floor` ate the whole perk,
+so the branch did nothing at all for its first stage. `awardKill` rounds now, and the test uses
+an ordinary 6-gold bounty deliberately. And **`freeze_pulse` on every shot is a permanent
+stop** — the one thing §10 forbids a single tower — so it runs on `perkReadyTick`, its own
+clock, shared by Glacier Heart's aura and the Siege Howitzer's shell because "stun on a cadence"
+is one mechanic in two silhouettes.
+
+**Measured at 200 runs per strategy, the perks moved two numbers.** `greedy`'s median reaction
+count goes from 1 to **4** and `balanced`'s to **96**, because a branch that lays ground, spreads
+Corrode on death or discharges Charge at its cap is a second status source on a board that had
+one. And a **third** single-tower board now clears 1-1 alone — Arcane Spire joins Flame Vent and
+Frost Cairn, where five of eight still cannot. That is pillar P1 moving the wrong way by one, and
+it belongs to #50 rather than here: the capstones are doing what §10 says they should, on a stage
+authored before any of them existed.
+
+**The tier-4 panel is the side-by-side #27 was waiting for**, and building it found that both
+options carried the *tower's* id: every tower on the board offered "Arbalest Post" against
+"Arbalest Post". `TowerTable` now holds `branchIds`, `branchNameKeys` and `perkKeys`, and the
+panel takes **one `text` resolver rather than a `name` and a `perk`**, since both are the same
+lookup and a second prop only invites passing the wrong one. Every branch's tier 4 must carry at
+least one `perkKeys` line — `roster.test.ts` fails without it — because two branches routinely
+land within a few points of each other on DPS, and a column with no words is a coin flip with
+extra steps. That same resolver fixed the panel's own title, which had been printing
+`wardens_barracks` with the underscores swapped for spaces.
 
 **Ley lines (#30) are live, and they added no system.** Four node types, all four authored in
 `tuning.json` as four independent columns — attack speed, range, status stacks, reaction damage
