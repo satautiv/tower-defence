@@ -45,15 +45,22 @@ export interface UpgradeOption {
 
 export interface SpecialisationOption {
   branch: 0 | 1;
+  /** The branch's own id — `sniper_nest`, not `arbalest_post` (#32). */
   id: string;
+  /** What to call it on screen. */
+  nameKey: string;
   cost: number;
   affordable: boolean;
   after: TierStats;
+  /** What this branch does that the other does not. Locale keys. */
+  perkKeys: readonly string[];
 }
 
 export interface TowerInfo {
   slot: number;
   id: string;
+  /** What to call it on screen — the id is a key, not a name. */
+  nameKey: string;
   tier: number;
   specialisation: number;
   current: TierStats;
@@ -208,16 +215,19 @@ export function towerInfo(world: World, slot: number): TowerInfo | null {
     if (cost < 0) continue;
     specialisations.push({
       branch,
-      id: world.rules.towers.ids[typeIdx] ?? 'unknown',
       cost,
       affordable: canAfford(world, cost),
       after: statsAt(world, typeIdx * TIER_SLOTS + tierSlot(3, branch), ley),
+      id: world.rules.towers.branchIds[typeIdx * 2 + branch] ?? 'unknown',
+      nameKey: world.rules.towers.branchNameKeys[typeIdx * 2 + branch] ?? '',
+      perkKeys: world.rules.towers.perkKeys[typeIdx * TIER_SLOTS + tierSlot(3, branch)] ?? [],
     });
   }
 
   return {
     slot,
     id: world.rules.towers.ids[typeIdx] ?? 'unknown',
+    nameKey: world.rules.towers.nameKeys[typeIdx] ?? '',
     tier,
     specialisation,
     current,

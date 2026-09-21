@@ -338,6 +338,48 @@
   padding-top: var(--s-3);
   border-top: 1px solid var(--c-border);
 }
+/* Two columns rather than two stacked cards: the tier-4 choice is permanent,
+   and a comparison a player has to scroll between is not a comparison (#27). */
+.ui-branches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+.ui-branch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+}
+.ui-branch__name {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+/* The rows are a stat sheet at half the width, so the label sits above its
+   number instead of being squeezed against it. */
+.ui-branch .ui-stat {
+  flex-direction: column;
+  gap: 0;
+  font-size: var(--t-xs);
+}
+.ui-branch__perk {
+  margin: 0;
+  font-size: var(--t-xs);
+  line-height: 1.35;
+  color: var(--c-text-muted);
+}
+/* What the branch *does* is the reason to pick it, so the perks take the
+   slack and the button stays pinned to the bottom of both columns. The
+   narrower type is what keeps "Choose — 450" on one line at half width. */
+.ui-branch > .ui-button {
+  margin-top: auto;
+  padding-inline: var(--s-2);
+  font-size: var(--t-sm);
+}
+
 .ui-tower-panel__actions {
   display: flex;
   gap: var(--s-2);

@@ -203,6 +203,7 @@ describe('actions locked by the pause', () => {
     const tower: TowerInfo = {
       slot: 0,
       id: 'arbalest_post',
+      nameKey: 'tower.arbalest_post.name',
       tier: 0,
       specialisation: -1,
       current: STATS,
@@ -228,6 +229,7 @@ describe('actions locked by the pause', () => {
         onSell={onSell}
         onUndo={vi.fn()}
         onClose={vi.fn()}
+        text={(key) => key}
         locked
       />,
     );
@@ -385,6 +387,7 @@ describe('the rally control', () => {
   const garrisoned = (over: Partial<TowerInfo> = {}): TowerInfo => ({
     slot: 0,
     id: 'wardens_barracks',
+    nameKey: 'tower.wardens_barracks.name',
     tier: 0,
     specialisation: -1,
     current: STATS,
@@ -413,6 +416,7 @@ describe('the rally control', () => {
         onSell={vi.fn()}
         onUndo={vi.fn()}
         onClose={vi.fn()}
+        text={(key) => key}
         {...props}
       />,
     );

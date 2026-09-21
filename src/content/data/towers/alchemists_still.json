@@ -71,7 +71,8 @@
           "perkConfig": {
             "spreadStacks": 3,
             "spreadRadiusTiles": 2.5
-          }
+          },
+          "perkKeys": ["tower.plague_vat.perk.spread"]
         },
         {
           "cost": 800,
@@ -131,7 +132,8 @@
           "perks": ["global_gold"],
           "perkConfig": {
             "globalGoldFraction": 0.15
-          }
+          },
+          "perkKeys": ["tower.gilded_alembic.perk.gold"]
         },
         {
           "cost": 800,

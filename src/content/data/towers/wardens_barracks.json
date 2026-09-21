@@ -96,7 +96,8 @@
           "perks": ["reflects"],
           "perkConfig": {
             "reflectFraction": 0.2
-          }
+          },
+          "perkKeys": ["tower.bulwark_order.perk.reflect"]
         },
         {
           "cost": 800,
@@ -174,7 +175,8 @@
           "perkConfig": {
             "markMultiplier": 1.2,
             "markSeconds": 4
-          }
+          },
+          "perkKeys": ["tower.ranger_lodge.perk.mark"]
         },
         {
           "cost": 800,

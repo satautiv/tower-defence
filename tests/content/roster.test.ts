@@ -93,6 +93,17 @@ describe('the roster the design names', () => {
     }
   });
 
+  /* The tier-4 choice is permanent and the two branches often read alike on
+     a stat sheet, so the words are what the player actually decides on. An
+     empty column is the panel saying "pick one" and nothing more (#27, #32). */
+  it('says in words what each branch does', () => {
+    for (const tower of registry.towers.values()) {
+      for (const spec of tower.specialisations) {
+        expect(spec.tiers[0].perkKeys.length, `${tower.id}/${spec.id}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
   it('gives every tower two specialisations and a capstone ability each', () => {
     for (const tower of registry.towers.values()) {
       expect(tower.specialisations).toHaveLength(2);

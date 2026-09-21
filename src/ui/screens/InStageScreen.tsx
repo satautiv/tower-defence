@@ -66,6 +66,7 @@ import type { KeyAction } from '../keys.js';
 import { useSettings } from '../settings.js';
 import {
   enemyName,
+  text,
   heroAbilityName,
   heroName,
   powerName,
@@ -751,6 +752,7 @@ export function InStageScreen(): ReactElement {
                   : undefined
               }
               rallyArmed={tower !== null && rallyFor === tower.slot}
+              text={text}
               tower={tower}
               undoSeconds={undoLeft}
               onUpgrade={() => dispatch((q) => upgradeTower(q, tower.slot))}

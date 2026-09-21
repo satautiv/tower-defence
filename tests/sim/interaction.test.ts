@@ -203,6 +203,34 @@ describe('what the interface is shown', () => {
     expect(info.upgrade).toBeNull();
   });
 
+  /* The panel showed "Branch 1" and "Branch 2" for every tower on the board,
+     because both options carried the *tower's* id rather than the branch's.
+     A side-by-side comparison of two things with the same name is a list. */
+  it('names each branch as itself, not as the tower', () => {
+    world.resources.gold = 99_999;
+    const slot = build(world);
+    world.towers.tier[slot] = 2;
+
+    const info = towerInfo(world, slot)!;
+    const [first, second] = info.specialisations;
+    expect(first!.id).not.toBe(info.id);
+    expect(second!.id).not.toBe(info.id);
+    expect(first!.id).not.toBe(second!.id);
+  });
+
+  /* What a branch *does* is the reason to pick it, and it is the half the
+     stat rows cannot say — two branches can share a DPS and diverge on it. */
+  it("carries each branch's perk descriptions", () => {
+    world.resources.gold = 99_999;
+    const slot = build(world);
+    world.towers.tier[slot] = 2;
+
+    const info = towerInfo(world, slot)!;
+    for (const option of info.specialisations) {
+      expect(option.perkKeys.length).toBeGreaterThan(0);
+    }
+  });
+
   it('offers nothing further at the capstone', () => {
     world.resources.gold = 99_999;
     const slot = build(world);

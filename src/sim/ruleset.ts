@@ -182,6 +182,18 @@ export const enum TargetClass {
 export interface TowerTable {
   readonly ids: readonly string[];
   readonly indexOf: ReadonlyMap<string, number>;
+  /**
+   * Branch ids, indexed `typeIdx * 2 + branch` (#32).
+   *
+   * The panel used to label the tier-4 choice "Branch 1" and "Branch 2"
+   * because the only id it could reach was the tower's, which is the same for
+   * both. A choice whose options are unnamed is not a choice.
+   */
+  readonly branchIds: readonly string[];
+  /** Each tower's display key, indexed by `typeIdx`. */
+  readonly nameKeys: readonly string[];
+  /** Each branch's display key, indexed `typeIdx * 2 + branch`. */
+  readonly branchNameKeys: readonly string[];
   readonly cost: Int32Array;
   readonly damage: Float32Array;
   readonly damageType: Uint8Array;
@@ -215,6 +227,8 @@ export interface TowerTable {
    * that is only a stat block.
    */
   readonly perks: Uint16Array;
+  /** Flavour text keys per tier, for the panel. Indexed like the stat columns. */
+  readonly perkKeys: ReadonlyArray<readonly string[]>;
   readonly pierceFraction: Float32Array;
   /** 255 when the tier has no status it hits harder into. */
   readonly bonusVsStatus: Uint8Array;
@@ -701,8 +715,24 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
   const ids = [...registry.towers.keys()].sort();
   const slots = ids.length * TIER_SLOTS;
 
+  const perkKeys: string[][] = [];
+  const branchIds: string[] = new Array<string>(ids.length * 2).fill('');
+  const nameKeys: string[] = new Array<string>(ids.length).fill('');
+  const branchNameKeys: string[] = new Array<string>(ids.length * 2).fill('');
+  ids.forEach((id, typeIdx) => {
+    const tower = registry.towers.get(id);
+    nameKeys[typeIdx] = tower?.nameKey ?? '';
+    tower?.specialisations.forEach((spec, branch) => {
+      branchIds[typeIdx * 2 + branch] = spec.id;
+      branchNameKeys[typeIdx * 2 + branch] = spec.nameKey;
+    });
+  });
+
   const table: TowerTable = {
     ids,
+    branchIds,
+    nameKeys,
+    branchNameKeys,
     indexOf: new Map(ids.map((id, index) => [id, index])),
     cost: new Int32Array(slots),
     damage: new Float32Array(slots),
@@ -722,6 +752,7 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
     statusId: new Uint8Array(slots).fill(255),
     statusStacks: new Uint8Array(slots),
     perks: new Uint16Array(slots),
+    perkKeys: perkKeys,
     pierceFraction: new Float32Array(slots),
     bonusVsStatus: new Uint8Array(slots).fill(NO_STATUS),
     bonusVsStatusMultiplier: new Float32Array(slots).fill(1),
@@ -786,6 +817,7 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
         table.statusStacks[i] = tier.statusApplied.stacks;
       }
       applyPerks(table, i, tier);
+      perkKeys[i] = [...tier.perkKeys];
 
       const garrison = tier.garrison;
       if (garrison !== undefined) {
@@ -1092,6 +1124,9 @@ const EMPTY_WAVES: WaveTable = {
 
 const EMPTY_TOWERS: TowerTable = {
   ids: [],
+  branchIds: [],
+  nameKeys: [],
+  branchNameKeys: [],
   indexOf: new Map(),
   cost: new Int32Array(0),
   damage: new Float32Array(0),
@@ -1111,6 +1146,7 @@ const EMPTY_TOWERS: TowerTable = {
   statusId: new Uint8Array(0),
   statusStacks: new Uint8Array(0),
   perks: new Uint16Array(0),
+  perkKeys: [],
   pierceFraction: new Float32Array(0),
   bonusVsStatus: new Uint8Array(0),
   bonusVsStatusMultiplier: new Float32Array(0),

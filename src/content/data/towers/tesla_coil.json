@@ -67,7 +67,8 @@
             "status": "charge",
             "stacks": 1
           },
-          "perks": ["discharge_at_cap"]
+          "perks": ["discharge_at_cap"],
+          "perkKeys": ["tower.storm_pylon.perk.discharge"]
         },
         {
           "cost": 1040,
@@ -124,7 +125,8 @@
             "groundSeconds": 4,
             "groundRadiusTiles": 1.8,
             "groundDamagePerSecond": 18
-          }
+          },
+          "perkKeys": ["tower.arc_net.perk.ground"]
         },
         {
           "cost": 1040,

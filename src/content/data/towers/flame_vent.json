@@ -72,7 +72,8 @@
             "bonusVsStatusMultiplier": 1.6,
             "spreadStacks": 2,
             "spreadRadiusTiles": 2.0
-          }
+          },
+          "perkKeys": ["tower.pyroclast_vent.perk.corroded", "tower.pyroclast_vent.perk.spread"]
         },
         {
           "cost": 800,
@@ -135,7 +136,8 @@
             "stacks": 1
           },
           "firingMode": "beam",
-          "perks": ["piercing"]
+          "perks": ["piercing"],
+          "perkKeys": ["tower.plasma_lance.perk.pierce"]
         },
         {
           "cost": 800,

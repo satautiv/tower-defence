@@ -60,7 +60,8 @@
           "perks": ["pulls"],
           "perkConfig": {
             "pullTiles": 0.35
-          }
+          },
+          "perkKeys": ["tower.void_obelisk.perk.pull"]
         },
         {
           "cost": 880,
@@ -119,7 +120,8 @@
           "perkConfig": {
             "refractRadiusTiles": 3.0,
             "refractBonusPerType": 0.25
-          }
+          },
+          "perkKeys": ["tower.prism_tower.perk.refract"]
         },
         {
           "cost": 880,

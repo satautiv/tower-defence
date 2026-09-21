@@ -62,7 +62,8 @@
           "perks": ["freeze_pulse"],
           "perkConfig": {
             "freezePulseSeconds": 8
-          }
+          },
+          "perkKeys": ["tower.siege_howitzer.perk.pulse"]
         },
         {
           "cost": 960,
@@ -123,7 +124,8 @@
             "groundSeconds": 5,
             "groundRadiusTiles": 2.0,
             "groundDamagePerSecond": 26
-          }
+          },
+          "perkKeys": ["tower.firestorm_cannon.perk.ground"]
         },
         {
           "cost": 960,
