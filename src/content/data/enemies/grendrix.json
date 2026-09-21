@@ -1,0 +1,37 @@
+{
+  "id": "grendrix",
+  "nameKey": "enemy.grendrix.name",
+  "hp": 18000,
+  "speed": 0.5,
+  "armour": 55,
+  "ward": 35,
+  "bounty": 300,
+  "livesCost": 10,
+  "traits": ["boss", "devours"],
+  "traitConfig": {
+    "devourIntervalSeconds": 12,
+    "devourHealFraction": 0.15,
+    "telegraphSeconds": 2.0
+  },
+  "meleeDamage": 45,
+  "meleeIntervalSeconds": 1.5,
+  "maxBlockSeconds": 4,
+  "phases": [
+    {
+      "belowHealthFraction": 0.5,
+      "spriteId": "grendrix_enraged",
+      "traits": ["boss", "devours", "spits_ground"],
+      "traitConfig": {
+        "devourIntervalSeconds": 9,
+        "devourHealFraction": 0.15,
+        "telegraphSeconds": 1.5,
+        "groundIntervalSeconds": 6,
+        "groundRadiusTiles": 2.2,
+        "groundSeconds": 10,
+        "groundDamagePerSecond": 22,
+        "groundSuppressesTowers": true
+      },
+      "speed": 0.62
+    }
+  ]
+}

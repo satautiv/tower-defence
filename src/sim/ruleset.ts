@@ -3,10 +3,12 @@ import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
 import type { TowerTier } from '@content/schema/tower';
 import type { TuningDefinition } from '@content/schema/tuning';
+import type { EnemyDefinition, EnemyPhase } from '@content/schema/enemy';
 import { LEY_NODE_TYPES, STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
-import { BehaviourFlag, EnemyFlag, TowerPerk } from './flags.js';
+import { BEHAVIOUR_BITS, BehaviourFlag, EnemyFlag, GroundEffectFlag, TowerPerk } from './flags.js';
+import { behaviourBit } from './flags.js';
 import { DAMAGE_INDEX } from './damage.js';
 import { resolveEffect } from './effects.js';
 import type { ResolvedEffect } from './effects.js';
@@ -48,6 +50,24 @@ export interface EnemyTable {
   readonly splitCount: Uint8Array;
   /** EnemyFlag bits implied by the enemy's traits. */
   readonly flags: Uint16Array;
+  /**
+   * Atlas id for this row, which is the content id for all but a boss phase.
+   *
+   * A phase may look different from the one before it, and a transition the
+   * player can see is the cheapest half of "clearly telegraphed" (#33).
+   */
+  readonly spriteIds: readonly string[];
+  /**
+   * Health fraction at or below which this row becomes `nextPhase`, and the
+   * row it becomes. -1 for everything that is not a boss mid-fight.
+   *
+   * The transition is the whole framework: a boss crossing its threshold swaps
+   * its own `typeIdx` to the next row, and every rule the simulation reads —
+   * behaviours, speed, armour, melee, the sprite — comes from that row
+   * already. Nothing else in `src/sim` learned a word about phases.
+   */
+  readonly phaseBelowFraction: Float32Array;
+  readonly nextPhase: Int16Array;
 
   /**
    * BehaviourFlag bits, keyed by type rather than held per enemy (#29).
@@ -71,6 +91,22 @@ export interface EnemyTable {
   /** Ticks a sapper holds a tower down for, and how long it winds up first. */
   readonly disableTicks: Float32Array;
   readonly telegraphTicks: Float32Array;
+  /**
+   * Each behaviour's own clock, flat `typeIdx * BEHAVIOUR_BITS + bit`.
+   *
+   * One column per behaviour rather than one shared "interval": Grendrix's
+   * phase two swallows on one clock and spits on another, and a shared column
+   * would have made each reset the other. It also stops a shield refresh from
+   * being authored under a key called `spawn`.
+   */
+  readonly behaviourIntervalTicks: Float32Array;
+  /** Fraction of its own maximum health a swallow returns (#33). */
+  readonly devourHealFraction: Float32Array;
+  /** The pool a spitter leaves: pixels, ticks, damage per tick, and its flags. */
+  readonly groundRadius: Float32Array;
+  readonly groundTicks: Float32Array;
+  readonly groundDamagePerSecond: Float32Array;
+  readonly groundFlags: Uint8Array;
   /** Single-hit damage that makes a Phase Stalker jump, and how far in pixels. */
   readonly phaseDamageThreshold: Float32Array;
   readonly phaseDistance: Float32Array;
@@ -419,6 +455,8 @@ const TRAIT_BEHAVIOURS: Readonly<Record<string, number>> = {
   carrier: BehaviourFlag.Carrier,
   stationary_spawner: BehaviourFlag.StationarySpawner,
   phase: BehaviourFlag.Phase,
+  devours: BehaviourFlag.Devours,
+  spits_ground: BehaviourFlag.SpitsGround,
 };
 
 function behaviourForTraits(traits: readonly string[]): number {
@@ -426,6 +464,16 @@ function behaviourForTraits(traits: readonly string[]): number {
   for (const trait of traits) mask |= TRAIT_BEHAVIOURS[trait] ?? 0;
   return mask;
 }
+
+/**
+ * The flags a boss keeps for the whole fight, whatever a later phase restates.
+ *
+ * Phase two of a boss is still a boss: it does not become freezable halfway
+ * down its health bar because the phase's trait list happened to omit the
+ * word. The rule is enforced here rather than trusted to authoring, for the
+ * same reason `boss` implies the immunities in the first place.
+ */
+const BOSS_RULES = EnemyFlag.Boss | EnemyFlag.FreezeImmune | EnemyFlag.StunImmune;
 
 function flagsForTraits(traits: readonly string[]): number {
   let flags = 0;
@@ -439,11 +487,42 @@ function flagsForTraits(traits: readonly string[]): number {
 }
 
 function buildEnemyTable(registry: ContentRegistry): EnemyTable {
-  const ids = [...registry.enemies.keys()].sort();
+  const baseIds = [...registry.enemies.keys()].sort();
+
+  /* A boss phase is another row of the same table, appended after every
+     ordinary enemy so that an enemy's index is still its index. That is the
+     entire phase framework: crossing a threshold swaps an enemy's `typeIdx`,
+     and behaviours, speed, armour, melee and the sprite all follow because
+     they were never anywhere else (#33). */
+  const ids: string[] = [...baseIds];
+  const spriteIds: string[] = [...baseIds];
+  const rows: { def: EnemyDefinition; phase: EnemyPhase | null }[] = [];
+  for (const id of baseIds) {
+    const def = registry.enemies.get(id);
+    if (def === undefined) continue;
+    rows.push({ def, phase: null });
+  }
+  /* Phase rows in a second pass, so `indexOf` still maps a content id to the
+     row an author can actually reference in a wave. */
+  const phaseRowOf = new Map<string, number[]>();
+  baseIds.forEach((id) => {
+    const def = registry.enemies.get(id);
+    if (def === undefined || def.phases.length === 0) return;
+    const indices: number[] = [];
+    def.phases.forEach((phase, n) => {
+      indices.push(ids.length);
+      ids.push(`${id}#${n + 2}`);
+      spriteIds.push(phase.spriteId ?? id);
+      rows.push({ def, phase });
+    });
+    phaseRowOf.set(id, indices);
+  });
+
   const count = ids.length;
 
   const table: EnemyTable = {
     ids,
+    spriteIds,
     hp: new Float32Array(count),
     speed: new Float32Array(count),
     armour: new Float32Array(count),
@@ -459,6 +538,8 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
     splitsInto: new Int16Array(count).fill(-1),
     splitCount: new Uint8Array(count),
     flags: new Uint16Array(count),
+    phaseBelowFraction: new Float32Array(count),
+    nextPhase: new Int16Array(count).fill(-1),
     behaviour: new Uint16Array(count),
     auraRadius: new Float32Array(count),
     auraTargets: new Uint8Array(count),
@@ -471,70 +552,130 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
     allyArmourBonus: new Float32Array(count),
     disableTicks: new Float32Array(count),
     telegraphTicks: new Float32Array(count),
+    behaviourIntervalTicks: new Float32Array(count * BEHAVIOUR_BITS),
+    devourHealFraction: new Float32Array(count),
+    groundRadius: new Float32Array(count),
+    groundTicks: new Float32Array(count),
+    groundDamagePerSecond: new Float32Array(count),
+    groundFlags: new Uint8Array(count),
     phaseDamageThreshold: new Float32Array(count),
     phaseDistance: new Float32Array(count),
     spawns: new Int16Array(count).fill(-1),
     spawnCount: new Uint8Array(count),
     spawnIntervalTicks: new Float32Array(count),
-    indexOf: new Map(ids.map((id, index) => [id, index])),
+    indexOf: new Map(baseIds.map((id, index) => [id, index])),
   };
 
-  ids.forEach((id, i) => {
-    const enemy = registry.enemies.get(id);
-    if (enemy === undefined) return;
-    table.hp[i] = enemy.hp;
-    table.speed[i] = enemy.speed * TILE_SIZE;
-    table.armour[i] = enemy.armour;
-    table.ward[i] = enemy.ward;
-    table.rearArmour[i] = enemy.traitConfig.rearArmour ?? enemy.armour;
-    table.overshield[i] = enemy.traitConfig.overshield ?? 0;
-    table.bounty[i] = enemy.bounty;
-    table.livesCost[i] = enemy.livesCost;
-    table.meleeDamage[i] = enemy.meleeDamage;
-    table.meleeIntervalTicks[i] = enemy.meleeIntervalSeconds * TICK_HZ;
-    table.maxBlockTicks[i] = enemy.maxBlockSeconds * TICK_HZ;
-    table.evasion[i] = enemy.traitConfig.evasionChance ?? 0;
-    table.splitCount[i] = enemy.traitConfig.splitCount ?? 0;
-    table.flags[i] = flagsForTraits(enemy.traits);
+  rows.forEach((row, i) => fillEnemyRow(table, i, row.def, row.phase));
 
-    const config = enemy.traitConfig;
-    table.behaviour[i] = behaviourForTraits(enemy.traits);
-    table.auraRadius[i] = (config.auraRadiusTiles ?? 0) * TILE_SIZE;
-    table.auraTargets[i] = config.auraTargets ?? 0;
-    table.healPerTick[i] = (config.healPerSecond ?? 0) / TICK_HZ;
-    /* A shielder's `overshield` is the pool it *grants*; on an enemy with the
-       overshield trait the same field is the pool it carries. One number, two
-       readings, decided by which trait is present. */
-    table.shieldAmount[i] = config.overshield ?? 0;
-    table.towerFireRateMultiplier[i] = config.towerFireRateMultiplier ?? 1;
-    table.allySpeedMultiplier[i] = config.allySpeedMultiplier ?? 1;
-    table.allyArmourBonus[i] = config.allyArmourBonus ?? 0;
-    table.disableTicks[i] = (config.disableSeconds ?? 0) * TICK_HZ;
-    table.telegraphTicks[i] = (config.telegraphSeconds ?? 0) * TICK_HZ;
-    table.phaseDamageThreshold[i] = config.phaseDamageThreshold ?? 0;
-    table.phaseDistance[i] = (config.phaseDistanceTiles ?? 0) * TILE_SIZE;
-    table.spawnCount[i] = config.spawnCount ?? 0;
-    /* One column for every periodic behaviour: a shielder's refresh and a
-       carrier's drop are the same clock with different payloads. */
-    table.spawnIntervalTicks[i] =
-      (config.spawnIntervalSeconds ?? config.refreshIntervalSeconds ?? 0) * TICK_HZ;
+  /* Chain each boss's phases: row n hands off to row n+1 at its threshold, and
+     the last one hands off to nobody. The base row carries the first
+     threshold, which is why this walks the chain rather than the list. */
+  for (const [id, indices] of phaseRowOf) {
+    const def = registry.enemies.get(id);
+    if (def === undefined) continue;
+    let from = table.indexOf.get(id) ?? -1;
+    def.phases.forEach((phase, n) => {
+      const to = indices[n] as number;
+      if (from < 0) return;
+      table.phaseBelowFraction[from] = phase.belowHealthFraction;
+      table.nextPhase[from] = to;
+      from = to;
+    });
+  }
 
-    /* A stationary spawner is stationary by its trait rather than by an author
-       remembering to write speed: 0. */
-    if ((table.behaviour[i] as number) & BehaviourFlag.StationarySpawner) table.speed[i] = 0;
-  });
-
-  /* Resolved in a second pass: a splitter or a carrier may name an enemy that
+  /* Resolved in a third pass: a splitter or a carrier may name an enemy that
      appears later in the sorted list, so every index has to exist first. */
-  ids.forEach((id, i) => {
-    const config = registry.enemies.get(id)?.traitConfig;
-    if (config?.splitsInto !== undefined) {
+  rows.forEach((row, i) => {
+    const config = row.phase?.traitConfig ?? row.def.traitConfig;
+    if (config.splitsInto !== undefined) {
       table.splitsInto[i] = table.indexOf.get(config.splitsInto) ?? -1;
     }
-    if (config?.spawns !== undefined) table.spawns[i] = table.indexOf.get(config.spawns) ?? -1;
+    if (config.spawns !== undefined) table.spawns[i] = table.indexOf.get(config.spawns) ?? -1;
   });
 
   return table;
+}
+
+/**
+ * Writes one row of the enemy table, from a definition and an optional phase.
+ *
+ * A phase states its own traits and may override a stat; everything it leaves
+ * out it inherits, because a boss crossing 50% is still the same boss with the
+ * same health pool, bounty and lives. One function for both so a column added
+ * for an ordinary enemy cannot quietly go missing on a phase row.
+ */
+function fillEnemyRow(
+  table: EnemyTable,
+  i: number,
+  enemy: EnemyDefinition,
+  phase: EnemyPhase | null,
+): void {
+  const traits = phase === null ? enemy.traits : phase.traits;
+  const config = phase === null ? enemy.traitConfig : phase.traitConfig;
+
+  table.hp[i] = enemy.hp;
+  table.speed[i] = (phase?.speed ?? enemy.speed) * TILE_SIZE;
+  table.armour[i] = phase?.armour ?? enemy.armour;
+  table.ward[i] = phase?.ward ?? enemy.ward;
+  table.rearArmour[i] = config.rearArmour ?? (table.armour[i] as number);
+  table.overshield[i] = config.overshield ?? 0;
+  table.bounty[i] = enemy.bounty;
+  table.livesCost[i] = enemy.livesCost;
+  table.meleeDamage[i] = enemy.meleeDamage;
+  table.meleeIntervalTicks[i] = enemy.meleeIntervalSeconds * TICK_HZ;
+  table.maxBlockTicks[i] = enemy.maxBlockSeconds * TICK_HZ;
+  table.evasion[i] = config.evasionChance ?? 0;
+  table.splitCount[i] = config.splitCount ?? 0;
+  /* A phase inherits `boss` whether or not it restates it: the rules that flag
+     carries are the ones a boss must not shed halfway through a fight. */
+  table.flags[i] = flagsForTraits(traits) | (flagsForTraits(enemy.traits) & BOSS_RULES);
+
+  const behaviour = behaviourForTraits(traits);
+  table.behaviour[i] = behaviour;
+  table.auraRadius[i] = (config.auraRadiusTiles ?? 0) * TILE_SIZE;
+  table.auraTargets[i] = config.auraTargets ?? 0;
+  table.healPerTick[i] = (config.healPerSecond ?? 0) / TICK_HZ;
+  /* A shielder's `overshield` is the pool it *grants*; on an enemy with the
+     overshield trait the same field is the pool it carries. One number, two
+     readings, decided by which trait is present. */
+  table.shieldAmount[i] = config.overshield ?? 0;
+  table.towerFireRateMultiplier[i] = config.towerFireRateMultiplier ?? 1;
+  table.allySpeedMultiplier[i] = config.allySpeedMultiplier ?? 1;
+  table.allyArmourBonus[i] = config.allyArmourBonus ?? 0;
+  table.disableTicks[i] = (config.disableSeconds ?? 0) * TICK_HZ;
+  table.telegraphTicks[i] = (config.telegraphSeconds ?? 0) * TICK_HZ;
+  table.phaseDamageThreshold[i] = config.phaseDamageThreshold ?? 0;
+  table.phaseDistance[i] = (config.phaseDistanceTiles ?? 0) * TILE_SIZE;
+  table.spawnCount[i] = config.spawnCount ?? 0;
+  table.spawnIntervalTicks[i] = (config.spawnIntervalSeconds ?? 0) * TICK_HZ;
+
+  table.devourHealFraction[i] = config.devourHealFraction ?? 0;
+  table.groundRadius[i] = (config.groundRadiusTiles ?? 0) * TILE_SIZE;
+  table.groundTicks[i] = (config.groundSeconds ?? 0) * TICK_HZ;
+  table.groundDamagePerSecond[i] = config.groundDamagePerSecond ?? 0;
+  table.groundFlags[i] =
+    GroundEffectFlag.Alive |
+    (config.groundSuppressesTowers === true ? GroundEffectFlag.Suppresses : 0);
+
+  /* Each behaviour's clock into its own slot, under the key that names it.
+     A shielder refreshes, a carrier drops, a maw swallows — the same column
+     family, never the same column. */
+  const clocks = i * BEHAVIOUR_BITS;
+  setClock(table, clocks, BehaviourFlag.Shielder, config.refreshIntervalSeconds);
+  setClock(table, clocks, BehaviourFlag.Carrier, config.spawnIntervalSeconds);
+  setClock(table, clocks, BehaviourFlag.StationarySpawner, config.spawnIntervalSeconds);
+  setClock(table, clocks, BehaviourFlag.Devours, config.devourIntervalSeconds);
+  setClock(table, clocks, BehaviourFlag.SpitsGround, config.groundIntervalSeconds);
+
+  /* A stationary spawner is stationary by its trait rather than by an author
+     remembering to write speed: 0. */
+  if ((behaviour & BehaviourFlag.StationarySpawner) !== 0) table.speed[i] = 0;
+}
+
+function setClock(table: EnemyTable, clocks: number, flag: number, seconds?: number): void {
+  if (seconds === undefined) return;
+  table.behaviourIntervalTicks[clocks + behaviourBit(flag)] = seconds * TICK_HZ;
 }
 
 /**
@@ -1210,6 +1351,15 @@ export const EMPTY_RULESET: Ruleset = {
   waves: EMPTY_WAVES,
   enemies: {
     ids: [],
+    spriteIds: [],
+    phaseBelowFraction: new Float32Array(0),
+    nextPhase: new Int16Array(0),
+    behaviourIntervalTicks: new Float32Array(0),
+    devourHealFraction: new Float32Array(0),
+    groundRadius: new Float32Array(0),
+    groundTicks: new Float32Array(0),
+    groundDamagePerSecond: new Float32Array(0),
+    groundFlags: new Uint8Array(0),
     hp: new Float32Array(0),
     speed: new Float32Array(0),
     armour: new Float32Array(0),

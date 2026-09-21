@@ -88,6 +88,39 @@ const RECIPES: Readonly<Record<string, StingerRecipe>> = {
   amplify: { fromHz: 440, toHz: 700, wave: 'sine', attack: 0.02, decay: 0.3, gain: 0.3, noise: 0 },
 };
 
+/**
+ * The two boss moments a player must not miss (#33).
+ *
+ * In the same file and the same vocabulary as the reactions, and deliberately
+ * outside `RECIPES`: these are not reactions, and a boss that showed up in
+ * `stingerIds()` would quietly join whatever iterates the reaction set. They
+ * sit far below the reactions in pitch and far above them in length, which is
+ * the one pair of axes nothing else in the set uses — a boss event has to be
+ * recognisable under a board already making five other noises.
+ */
+export const BOSS_STINGERS: Readonly<Record<'phase' | 'defeat', StingerRecipe>> = {
+  /* The turn: a rising growl that does not resolve. */
+  phase: {
+    fromHz: 90,
+    toHz: 260,
+    wave: 'sawtooth',
+    attack: 0.03,
+    decay: 0.9,
+    gain: 0.55,
+    noise: 0.5,
+  },
+  /* The kill: everything falling away at once. */
+  defeat: {
+    fromHz: 420,
+    toHz: 45,
+    wave: 'square',
+    attack: 0.01,
+    decay: 1.4,
+    gain: 0.6,
+    noise: 0.6,
+  },
+};
+
 const FALLBACK: StingerRecipe = {
   fromHz: 400,
   toHz: 800,

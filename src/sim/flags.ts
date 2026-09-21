@@ -33,7 +33,33 @@ export const enum EnemyFlag {
    * the Burrower's tunnel (#29).
    */
   CanBurrow = 1 << 10,
+  /**
+   * Telegraphing a behaviour that has not landed yet (#33).
+   *
+   * Per entity rather than per type because it is exactly the kind of thing
+   * `EnemyFlag` is for: it changes tick to tick, and two Sappers on the same
+   * board are at different points in their wind-up. It also distinguishes the
+   * two halves of one timer — scheduled, then due — which is what lets a
+   * Sapper's wind-up and a Rift Maw's swallow share one mechanism.
+   */
+  WindingUp = 1 << 11,
 }
+
+/**
+ * The flags an enemy gets from its type, as opposed to from what is happening
+ * to it right now.
+ *
+ * Named so a boss phase can replace exactly these and leave Blocked, Dying,
+ * Leaked and the wind-up alone: a transition changes what the enemy *is*, not
+ * what it is in the middle of.
+ */
+export const TYPE_FLAGS =
+  EnemyFlag.Flying |
+  EnemyFlag.FreezeImmune |
+  EnemyFlag.StunImmune |
+  EnemyFlag.DirectionalArmour |
+  EnemyFlag.Boss |
+  EnemyFlag.CanBurrow;
 
 /**
  * What an enemy *does*, as opposed to what state it is in (#29).
@@ -66,11 +92,42 @@ export const enum BehaviourFlag {
   StationarySpawner = 1 << 6,
   /** Phase Stalker: jumps forward when a single hit lands hard enough. */
   Phase = 1 << 7,
+  /** Grendrix's Swallow: eats a soldier holding it, and heals for it (#33). */
+  Devours = 1 << 8,
+  /** Leaves a pool of ground behind it on a clock. */
+  SpitsGround = 1 << 9,
 }
+
+/** How many bits `BehaviourFlag` uses. One timer per bit, per enemy. */
+export const BEHAVIOUR_BITS = 10;
 
 /** Behaviours that fire on their own clock rather than continuously. */
 export const PERIODIC_BEHAVIOURS =
-  BehaviourFlag.Shielder | BehaviourFlag.Carrier | BehaviourFlag.StationarySpawner;
+  BehaviourFlag.Shielder |
+  BehaviourFlag.Carrier |
+  BehaviourFlag.StationarySpawner |
+  BehaviourFlag.SpitsGround;
+
+/**
+ * Behaviours that warn before they land, and therefore need two timer states.
+ *
+ * Pillar P4: an enemy that changes the rules gets a telegraph. A Sapper that
+ * darkened a tower on contact and a Rift Maw that ate a soldier on contact are
+ * the same unanswerable rule change, so they run the same wind-up.
+ */
+export const TELEGRAPHED_BEHAVIOURS = BehaviourFlag.Sapper | BehaviourFlag.Devours;
+
+/**
+ * The bit index of a single behaviour flag, for indexing its timer.
+ *
+ * Derived from the flag rather than looked up in a table, because the argument
+ * is always an exact power of two — the callers iterate one bit at a time —
+ * and a table would be a second list to keep in step with the enum. `clz32`
+ * rather than `log2` to stay in integers in a per-tick path.
+ */
+export function behaviourBit(flag: number): number {
+  return 31 - Math.clz32(flag);
+}
 
 /** Behaviours that sweep a radius every tick and must be recomputed from nothing. */
 export const AURA_BEHAVIOURS =
@@ -155,6 +212,14 @@ export const enum GroundEffectFlag {
   Alive = 1 << 0,
   /** Blocks ground movement rather than damaging, e.g. Rift Seal. */
   Blocking = 1 << 1,
+  /**
+   * Holds down the towers it covers, the way a Sapper does (#33).
+   *
+   * On the ground rather than on whatever laid it: a corrosive pool spat by a
+   * Rift Maw and a patch of region terrain that does the same thing are one
+   * idea, and the plot does not care which arrived.
+   */
+  Suppresses = 1 << 2,
 }
 
 export function hasFlag(flags: number, flag: number): boolean {

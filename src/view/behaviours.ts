@@ -62,6 +62,8 @@ export function behaviourColour(behaviour: number): number | null {
   if ((behaviour & BehaviourFlag.TowerSlowAura) !== 0) return BEHAVIOUR_COLOUR.suppress ?? null;
   if ((behaviour & BehaviourFlag.AllyHasteAura) !== 0) return BEHAVIOUR_COLOUR.haste ?? null;
   if ((behaviour & BehaviourFlag.Sapper) !== 0) return BEHAVIOUR_COLOUR.sap ?? null;
+  if ((behaviour & BehaviourFlag.Devours) !== 0) return BEHAVIOUR_COLOUR.devour ?? null;
+  if ((behaviour & BehaviourFlag.SpitsGround) !== 0) return BEHAVIOUR_COLOUR.spit ?? null;
   if ((behaviour & BehaviourFlag.Phase) !== 0) return BEHAVIOUR_COLOUR.phase ?? null;
   if ((behaviour & (BehaviourFlag.Carrier | BehaviourFlag.StationarySpawner)) !== 0) {
     return BEHAVIOUR_COLOUR.spawn ?? null;
@@ -71,6 +73,18 @@ export function behaviourColour(behaviour: number): number | null {
 
 /** Radius a one-off telegraph draws at, in world pixels. */
 const PULSE_RADIUS = 26;
+/**
+ * A boss telegraph draws bigger (#33).
+ *
+ * Nine hues at 40 degrees is readable standing still and less so on a board
+ * with three hundred enemies on it, and the two that cost the player the most
+ * to miss — a soldier about to be eaten, a plot about to go dark — are the two
+ * worth a second channel. Size rather than a new colour, because the hue
+ * circle is what ran out.
+ */
+const BOSS_PULSE_RADIUS = 46;
+
+const BOSS_TELEGRAPHS = BehaviourFlag.Devours | BehaviourFlag.SpitsGround;
 
 export class BehaviourFeed {
   readonly pulses: Pulse[] = [];
@@ -87,7 +101,7 @@ export class BehaviourFeed {
 
       const colour = behaviourColour(event.b);
       if (colour === null) continue;
-      this.add(event.c, event.d, colour);
+      this.add(event.c, event.d, colour, (event.b & BOSS_TELEGRAPHS) !== 0);
     }
   }
 
@@ -125,7 +139,7 @@ export class BehaviourFeed {
     }
   }
 
-  private add(x: number, y: number, colour: number): void {
+  private add(x: number, y: number, colour: number, boss = false): void {
     if (this.pulses.length >= MAX_PULSES) {
       this.dropped++;
       return;
@@ -133,7 +147,7 @@ export class BehaviourFeed {
     this.pulses.push({
       x,
       y,
-      radius: PULSE_RADIUS,
+      radius: boss ? BOSS_PULSE_RADIUS : PULSE_RADIUS,
       colour,
       life: PULSE_FRAMES,
       maxLife: PULSE_FRAMES,

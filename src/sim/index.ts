@@ -69,10 +69,12 @@ export {
   threatsOf,
   THREAT_TAGS,
   enemyInfo,
+  bossInfo,
   enemyNear,
 } from './inspect.js';
 export type {
   EnemyInfo,
+  BossInfo,
   EnemyStatus,
   NextWave,
   WaveEnemy,

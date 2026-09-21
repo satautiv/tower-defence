@@ -99,21 +99,31 @@ export const LEY_COLOUR: Readonly<Record<string, number>> = {
  * than to the reaction rule: these are overlays on an enemy that is already
  * on screen, and what matters is telling them from each other.
  *
- * Seven of them against a 30-degree floor leaves almost no slack — 360/7 is
- * 51 — so the hues are spaced evenly rather than chosen for flavour. The first
- * attempt picked by feel and put suppression and sapping 25 degrees apart,
- * which the test caught: two pinks meaning "your tower is slowed" and "your
- * tower is about to go dark", the two telegraphs a player most needs to tell
- * apart.
+ * They are spaced evenly rather than chosen for flavour, and the slack is
+ * nearly gone. The first attempt picked by feel and put suppression and
+ * sapping 25 degrees apart, which the test caught: two pinks meaning "your
+ * tower is slowed" and "your tower is about to go dark", the two telegraphs a
+ * player most needs to tell apart.
+ *
+ * The bosses' two (#33) forced a respace of all of them. Seven sat at 51
+ * degrees; nine sit at 40, still clear of the floor but with a third of the
+ * room. Every existing hue moved as a result, which is a cost paid
+ * deliberately and paid now: the behaviour telegraphs have not been in front
+ * of a playtester yet, and the same respace at twelve would not fit at all.
+ * **Whoever adds a tenth cannot solve it here.** The answer at that point is
+ * the one `src/view/reactions.ts` already took — a second channel, shape, so
+ * two telegraphs can share a hue and still be told apart.
  */
 export const BEHAVIOUR_COLOUR: Readonly<Record<string, number>> = {
   sap: 0xff5338,
-  haste: 0xfff838,
-  heal: 0x59ff38,
-  shield: 0x38ffcd,
-  suppress: 0x388bff,
-  spawn: 0x8e38ff,
-  phase: 0xff38cd,
+  haste: 0xffd738,
+  heal: 0xa2ff38,
+  shield: 0x38ff53,
+  suppress: 0x38ffd7,
+  spawn: 0x38a2ff,
+  phase: 0x5338ff,
+  devour: 0xd738ff,
+  spit: 0xff38a2,
 };
 
 /** Hue in degrees, saturation and value, each 0-1 except hue. */

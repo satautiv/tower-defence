@@ -606,3 +606,78 @@ export function enemyNear(world: World, x: number, y: number, radius: number): n
   }
   return nearest;
 }
+
+export interface BossInfo {
+  slot: number;
+  entityId: number;
+  /** The base row's id, so a phase change does not rename the boss. */
+  enemyId: string;
+  hp: number;
+  maxHp: number;
+  /** Which phase it is in now, counting the base row as zero. */
+  phase: number;
+  /**
+   * Every threshold on the way down, as health fractions in [0,1].
+   *
+   * The whole chain rather than the next one, because the bar draws them all
+   * at once: a player deciding whether to spend a Warden Power now or hold it
+   * is reading how far the next transition is, and a marker that appeared only
+   * as it arrived would tell them after the decision mattered.
+   */
+  thresholds: number[];
+}
+
+/**
+ * The boss the health bar is for, or null (#33).
+ *
+ * The lowest-health living boss rather than the first found, so a fight with
+ * an elite escort puts the bar on the thing actually dying. Slots are walked
+ * in order and ties break on the lower slot, so the choice is the same in
+ * every run of the same seed.
+ */
+export function bossInfo(world: World): BossInfo | null {
+  const enemies = world.enemies;
+  const table = world.rules.enemies;
+
+  let best = -1;
+  let bestFraction = Number.POSITIVE_INFINITY;
+  for (let slot = 0; slot < enemies.watermark; slot++) {
+    if (!inspectable(world, slot)) continue;
+    if (((enemies.flags[slot] as number) & EnemyFlag.Boss) === 0) continue;
+
+    const maxHp = enemies.maxHp[slot] as number;
+    const fraction = maxHp <= 0 ? 0 : (enemies.hp[slot] as number) / maxHp;
+    if (fraction < bestFraction) {
+      bestFraction = fraction;
+      best = slot;
+    }
+  }
+  if (best < 0) return null;
+
+  const base = enemies.baseTypeIdx[best] as number;
+  const current = enemies.typeIdx[best] as number;
+
+  /* Walked from the base row rather than read off a list: the chain is where
+     the thresholds live, and following it is also how the phase number is
+     worked out without storing a second copy that could disagree. */
+  const thresholds: number[] = [];
+  let phase = 0;
+  let row = base;
+  let seen = 0;
+  while ((table.nextPhase[row] as number) >= 0) {
+    thresholds.push(table.phaseBelowFraction[row] as number);
+    row = table.nextPhase[row] as number;
+    seen++;
+    if (row === current) phase = seen;
+  }
+
+  return {
+    slot: best,
+    entityId: enemies.ids[best] as number,
+    enemyId: table.ids[base] ?? 'unknown',
+    hp: enemies.hp[best] as number,
+    maxHp: enemies.maxHp[best] as number,
+    phase,
+    thresholds,
+  };
+}

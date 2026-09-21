@@ -2,6 +2,7 @@ import { TICK_HZ, TILE_SIZE } from '@core/constants';
 import { DamageFlag } from '../damage.js';
 import { GroundEffectFlag } from '../flags.js';
 import { EnemyFlag } from '../flags.js';
+import { emitTowerDisabled } from '../events.js';
 import { STATUS_COUNT } from '../status.js';
 import { applyStatus } from './status.js';
 import type { World } from '../world.js';
@@ -44,6 +45,9 @@ export function groundEffectSystem(world: World): void {
     }
 
     applyContinuous(world, slot);
+    if (((effects.flags[slot] as number) & GroundEffectFlag.Suppresses) !== 0) {
+      suppressPlots(world, slot);
+    }
 
     const next = (effects.nextTickIn[slot] as number) - 1;
     effects.nextTickIn[slot] = next;
@@ -91,6 +95,45 @@ function applyContinuous(world: World, slot: number): void {
        standing an entire wave still, which is not a thing this design sells. */
     if (slow < (enemies.groundSlow[enemy] as number)) enemies.groundSlow[enemy] = slow;
     if (blocks) enemies.groundBlocked[enemy] = 1;
+  }
+}
+
+/**
+ * Ground that holds down the towers standing in it (#33).
+ *
+ * Re-stamped every tick rather than set once with an end time, which is the
+ * same bargain auras and ground slows already take: the pool's own expiry is
+ * then the only thing that decides how long a plot stays dark, and a tower
+ * recovers on the tick the pool goes out with no bookkeeping to unwind. The
+ * stamp is two ticks rather than one so a plot does not flicker between a
+ * pool's tick and the firing system's.
+ *
+ * Reuses `disabledUntil` and the same event a Sapper emits, because from the
+ * player's side it is the same thing happening — and a second way to darken a
+ * tower would be a second thing to remember in the firing loop.
+ */
+function suppressPlots(world: World, slot: number): void {
+  const effects = world.groundEffects;
+  const towers = world.towers;
+  const x = effects.x[slot] as number;
+  const y = effects.y[slot] as number;
+  const radius = effects.radius[slot] as number;
+  const radiusSq = radius * radius;
+
+  for (let tower = 0; tower < towers.watermark; tower++) {
+    if (!towers.isAlive(tower)) continue;
+    const dx = (towers.x[tower] as number) - x;
+    const dy = (towers.y[tower] as number) - y;
+    if (dx * dx + dy * dy > radiusSq) continue;
+
+    const until = world.tick + 2;
+    if (until <= (towers.disabledUntil[tower] as number)) continue;
+    /* Announced only as it lands, not on every re-stamp, or a pool would
+       shout once a tick for its whole life. */
+    if ((towers.disabledUntil[tower] as number) <= world.tick) {
+      emitTowerDisabled(world.events, towers.ids[tower] as number, 2);
+    }
+    towers.disabledUntil[tower] = until;
   }
 }
 
@@ -164,6 +207,8 @@ export interface GroundEffectSpec {
   /** Movement multiplier inside, 1 for none. 0.25 is a 75% slow. */
   slowMultiplier?: number;
   blocks?: boolean;
+  /** Holds down the towers it covers, the way a Sapper does. */
+  suppresses?: boolean;
   sourceTower?: number;
 }
 
@@ -201,7 +246,9 @@ export function createGroundEffect(world: World, spec: GroundEffectSpec): number
   effects.slowMultiplier[slot] = spec.slowMultiplier ?? 1;
   effects.sourceTower[slot] = spec.sourceTower ?? -1;
   effects.flags[slot] =
-    GroundEffectFlag.Alive | (spec.blocks === true ? GroundEffectFlag.Blocking : 0);
+    GroundEffectFlag.Alive |
+    (spec.blocks === true ? GroundEffectFlag.Blocking : 0) |
+    (spec.suppresses === true ? GroundEffectFlag.Suppresses : 0);
 
   return slot;
 }

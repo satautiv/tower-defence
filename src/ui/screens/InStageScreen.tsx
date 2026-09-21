@@ -8,6 +8,7 @@ import {
   callWave,
   enemyInfo,
   enemyNear,
+  bossInfo,
   nextWave,
   plotInfo,
   prospectiveRange,
@@ -19,6 +20,7 @@ import {
   heroInfo,
   powerOptions,
   setSpeed,
+  SimEventKind,
   specialiseTower,
   towerInfo,
   undoBuild,
@@ -32,6 +34,7 @@ import type {
   PowerOption,
   StageResult,
   TowerInfo,
+  World,
 } from '@sim/index';
 import { GameSession } from '@app/session';
 import type { GameView } from '@view/app';
@@ -60,6 +63,7 @@ import { HeroBar } from '../stage/HeroBar.js';
 import { PowerBar } from '../stage/PowerBar.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
 import { WavePreview } from '../stage/WavePreview.js';
+import { BossBar } from '../stage/BossBar.js';
 import { useUiStore } from '../store.js';
 import { focusOf, keyAction, nextSpeed } from '../keys.js';
 import type { KeyAction } from '../keys.js';
@@ -386,6 +390,11 @@ export function InStageScreen(): ReactElement {
         effects.consume(session.world);
         reactions.consume(session.world, reactionName);
         audio.consume(session.world, now);
+        /* A boss going down stops the board dead and then runs it slowly
+           (#33, §17.2). Read from the event buffer here rather than decided
+           inside the simulation, which has no business knowing what the
+           presentation does about a death it reported. */
+        if (killedABoss(session.world)) session.playDefeatSequence(now);
         /* Every consumer has read the buffer, so it can be dropped. */
         session.clearEvents();
 
@@ -484,6 +493,11 @@ export function InStageScreen(): ReactElement {
   const readNextWave = useCallback(() => {
     const session = sessionRef.current;
     return session === null ? null : nextWave(session.world);
+  }, []);
+
+  const readBoss = useCallback(() => {
+    const session = sessionRef.current;
+    return session === null ? null : bossInfo(session.world);
   }, []);
 
   const hudSource = useCallback((): HudModel => {
@@ -701,6 +715,11 @@ export function InStageScreen(): ReactElement {
             }}
           />
 
+          {/* Above the wave preview and below the top bar: the one number a
+              player must never lose track of while a boss is alive, and
+              nothing at all when none is (#33). */}
+          {result === null && <BossBar read={readBoss} nameOf={enemyName} />}
+
           {/* Nothing is coming once the stage is over; "final wave" would be
               a wrong thing to say over a board lost at wave six. */}
           {result === null && (
@@ -791,4 +810,18 @@ export function InStageScreen(): ReactElement {
       )}
     </div>
   );
+}
+
+/**
+ * Whether a boss died this frame.
+ *
+ * The flag rides on the event because the slot is already freed by the time
+ * anything drains the buffer — there is nothing left to ask.
+ */
+function killedABoss(world: World): boolean {
+  for (let i = 0; i < world.events.count; i++) {
+    const event = world.events.at(i);
+    if (event.kind === SimEventKind.EnemyDied && event.e === 1) return true;
+  }
+  return false;
 }

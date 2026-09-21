@@ -1,8 +1,24 @@
+import { TICK_HZ, TILE_SIZE } from '@core/constants';
 import { MAX_QUERY_RESULTS } from '../capacity.js';
-import { AURA_BEHAVIOURS, BehaviourFlag, EnemyFlag, PERIODIC_BEHAVIOURS } from '../flags.js';
-import { emitBehaviour, emitTowerDisabled } from '../events.js';
+import { DAMAGE_INDEX } from '../damage.js';
+import { STATUS_INDEX } from '../status.js';
+import {
+  AURA_BEHAVIOURS,
+  BEHAVIOUR_BITS,
+  BehaviourFlag,
+  EnemyFlag,
+  GroundEffectFlag,
+  PERIODIC_BEHAVIOURS,
+  SoldierFlag,
+  TELEGRAPHED_BEHAVIOURS,
+  TYPE_FLAGS,
+  behaviourBit,
+} from '../flags.js';
+import { emitBehaviour, emitBossPhase, emitTowerDisabled } from '../events.js';
 import { laneOffsetFor } from '../path.js';
-import { spawnEnemy } from '../spawn.js';
+import { defenceScaleFor, spawnEnemy } from '../spawn.js';
+import { createGroundEffect } from './groundEffects.js';
+import { fall } from './soldiers.js';
 import type { World } from '../world.js';
 
 /**
@@ -46,7 +62,10 @@ export function behaviourSystem(world: World): void {
     const flags = enemies.flags[slot] as number;
     if ((flags & (EnemyFlag.Dying | EnemyFlag.Leaked)) !== 0) continue;
 
-    const typeIdx = enemies.typeIdx[slot] as number;
+    /* Before anything reads a rule off the table, in case this tick's row is
+       not last tick's: a boss below its threshold is a different row, and
+       every rule below comes from that row. */
+    const typeIdx = advancePhase(world, slot);
     const behaviour = table.behaviour[typeIdx] as number;
     /* The overwhelming majority of the roster leaves in one test. */
     if (behaviour === 0) continue;
@@ -57,28 +76,150 @@ export function behaviourSystem(world: World): void {
 
     if ((behaviour & AURA_BEHAVIOURS) !== 0) runAuras(world, slot, typeIdx, behaviour);
     if ((behaviour & PERIODIC_BEHAVIOURS) !== 0) runPeriodic(world, slot, typeIdx, behaviour);
-    if ((behaviour & BehaviourFlag.Sapper) !== 0) sap(world, slot, typeIdx);
+    if ((behaviour & TELEGRAPHED_BEHAVIOURS) !== 0) runTelegraphed(world, slot, typeIdx, behaviour);
   }
 }
 
 /**
- * A Sapper reaching a tower's plot, and the wind-up before it lands.
+ * A boss crossing a health threshold, which is the whole of the multi-phase
+ * framework (#33, docs/GAME_DESIGN.md §10).
+ *
+ * The transition is one assignment, because a phase is another row of the
+ * enemy table: behaviours, speed, armour, melee and the sprite all come from
+ * `typeIdx`, so swapping it swaps every rule at once and no system below this
+ * line knows a phase exists. Health, statuses and path position are untouched
+ * — they live on the entity, not on the row — which is what makes this a
+ * transition rather than a new enemy.
+ *
+ * Loops rather than steps once, so a burst that takes a boss through two
+ * thresholds in a tick lands it in the phase its health actually says. Runs
+ * before the behaviours below it, so the tick a boss enters phase two is the
+ * tick phase two acts.
+ */
+function advancePhase(world: World, slot: number): number {
+  const table = world.rules.enemies;
+  const enemies = world.enemies;
+  let typeIdx = enemies.typeIdx[slot] as number;
+
+  let next = table.nextPhase[typeIdx] as number;
+  if (next < 0) return typeIdx;
+
+  const maxHp = enemies.maxHp[slot] as number;
+  if (maxHp <= 0) return typeIdx;
+  const fraction = (enemies.hp[slot] as number) / maxHp;
+
+  while (next >= 0 && fraction <= (table.phaseBelowFraction[typeIdx] as number)) {
+    typeIdx = next;
+    next = table.nextPhase[typeIdx] as number;
+    /* Timers belong to the phase that set them: a swallow charged in phase one
+       must not land the instant phase two begins with a different clock. */
+    const clocks = slot * BEHAVIOUR_BITS;
+    for (let i = 0; i < BEHAVIOUR_BITS; i++) enemies.behaviourReadyTick[clocks + i] = 0;
+    enemies.flags[slot] = (enemies.flags[slot] as number) & ~EnemyFlag.WindingUp;
+
+    enemies.typeIdx[slot] = typeIdx;
+    enemies.speed[slot] = table.speed[typeIdx] as number;
+    /* Re-derived through the same scaling the spawn used, not copied raw: a
+       boss that crossed a threshold must not shed the wave's defence growth
+       along with its first phase. Overshield is deliberately left alone —
+       it is a pool that changes in play, and refilling it here would make
+       every transition a free heal. */
+    const wave = enemies.waveIndex[slot] as number;
+    const defence = defenceScaleFor(world, wave < 0 ? 0 : wave);
+    enemies.armour[slot] = (table.armour[typeIdx] as number) * defence;
+    enemies.ward[slot] = (table.ward[typeIdx] as number) * defence;
+    /* Replaced rather than merged, so a phase that drops a trait really drops
+       it — but only the bits a type owns, leaving Blocked and Dying alone. */
+    enemies.flags[slot] =
+      ((enemies.flags[slot] as number) & ~TYPE_FLAGS) | (table.flags[typeIdx] as number);
+
+    emitBossPhase(
+      world.events,
+      enemies.ids[slot] as number,
+      typeIdx,
+      enemies.x[slot] as number,
+      enemies.y[slot] as number,
+    );
+  }
+  return typeIdx;
+}
+
+/**
+ * Behaviours that warn before they land: a Sapper's reach, a Rift Maw's bite.
  *
  * The telegraph is the whole reason this is not one line: *"every enemy that
  * changes the rules gets a telegraph"* (§9.3), and a tower that simply went
- * dark the instant a Sapper arrived would be a rule change with no answer. The
- * wind-up gives the player a window to kill it in — which is what makes a
- * Sapper *"demand a player reaction"* rather than tax them.
+ * dark the instant a Sapper arrived — or a soldier that simply vanished —
+ * would be a rule change with no answer. The wind-up gives the player a window
+ * to act in, which is what makes such an enemy *demand a reaction* rather than
+ * tax one.
  *
- * The target is re-found every tick rather than remembered, so walking out of
- * reach — or the tower being sold mid-wind-up — abandons the attempt with no
- * stale slot to clean up. Reusing `behaviourReadyTick` is safe because no
- * enemy is both a sapper and periodic.
+ * Both halves run through one shape: find a target, arm, land, and a target
+ * that leaves reach mid-wind-up disarms with nothing to clean up.
+ * `EnemyFlag.WindingUp` is what separates "armed" from "due" on a single
+ * timer, so the two states do not need two fields.
  */
+function runTelegraphed(world: World, slot: number, typeIdx: number, behaviour: number): void {
+  if ((behaviour & BehaviourFlag.Sapper) !== 0) sap(world, slot, typeIdx);
+  if ((behaviour & BehaviourFlag.Devours) !== 0) devour(world, slot, typeIdx);
+}
+
+/**
+ * Arms or advances a wind-up, and reports whether it is due this tick.
+ *
+ * Returns false both while nothing is in reach and while the warning is still
+ * playing, so a caller reads as "find a target, then act if it is time".
+ */
+function windUp(
+  world: World,
+  slot: number,
+  typeIdx: number,
+  flag: number,
+  armed: boolean,
+): boolean {
+  const enemies = world.enemies;
+  const timer = slot * BEHAVIOUR_BITS + behaviourBit(flag);
+  const flags = enemies.flags[slot] as number;
+
+  if (!armed) {
+    /* Nothing in reach: forget any wind-up, so an enemy that walks past one
+       target does not arrive at the next already charged. */
+    enemies.flags[slot] = flags & ~EnemyFlag.WindingUp;
+    return false;
+  }
+
+  if ((flags & EnemyFlag.WindingUp) === 0) {
+    if (world.tick < (enemies.behaviourReadyTick[timer] as number)) return false;
+    enemies.flags[slot] = flags | EnemyFlag.WindingUp;
+    enemies.behaviourReadyTick[timer] =
+      world.tick + (world.rules.enemies.telegraphTicks[typeIdx] as number);
+    emitBehaviour(
+      world.events,
+      enemies.ids[slot] as number,
+      flag,
+      enemies.x[slot] as number,
+      enemies.y[slot] as number,
+    );
+    return false;
+  }
+
+  if (world.tick < (enemies.behaviourReadyTick[timer] as number)) return false;
+
+  enemies.flags[slot] = flags & ~EnemyFlag.WindingUp;
+  /* The cooldown is the behaviour's own clock, or zero for one that simply
+     re-telegraphs at its next target — which is a Sapper, and the point. */
+  enemies.behaviourReadyTick[timer] =
+    world.tick + (world.rules.enemies.behaviourIntervalTicks[timer] as number);
+  return true;
+}
+
+/** A Sapper reaching a tower's plot and holding it down. */
 function sap(world: World, slot: number, typeIdx: number): void {
   const table = world.rules.enemies;
   const enemies = world.enemies;
 
+  /* Re-found every tick rather than remembered, so walking out of reach — or
+     the tower being sold mid-wind-up — abandons the attempt. */
   const target = nearestSappableTower(
     world,
     enemies.x[slot] as number,
@@ -86,26 +227,7 @@ function sap(world: World, slot: number, typeIdx: number): void {
     table.auraRadius[typeIdx] as number,
   );
 
-  if (target < 0) {
-    /* Nothing in reach: forget any wind-up, so a Sapper that walks past a
-       tower does not arrive at the next one already charged. */
-    enemies.behaviourReadyTick[slot] = 0;
-    return;
-  }
-
-  if ((enemies.behaviourReadyTick[slot] as number) === 0) {
-    enemies.behaviourReadyTick[slot] = world.tick + (table.telegraphTicks[typeIdx] as number);
-    emitBehaviour(
-      world.events,
-      enemies.ids[slot] as number,
-      BehaviourFlag.Sapper,
-      enemies.x[slot] as number,
-      enemies.y[slot] as number,
-    );
-    return;
-  }
-
-  if (world.tick < (enemies.behaviourReadyTick[slot] as number)) return;
+  if (!windUp(world, slot, typeIdx, BehaviourFlag.Sapper, target >= 0)) return;
 
   world.towers.disabledUntil[target] = world.tick + (table.disableTicks[typeIdx] as number);
   emitTowerDisabled(
@@ -113,9 +235,82 @@ function sap(world: World, slot: number, typeIdx: number): void {
     world.towers.ids[target] as number,
     table.disableTicks[typeIdx] as number,
   );
-  /* Cleared rather than set to a cooldown: the next tower it reaches gets its
-     own telegraph, which is the point. */
-  enemies.behaviourReadyTick[slot] = 0;
+}
+
+/**
+ * Grendrix's Swallow: it eats whoever is holding it, and grows for it (§10).
+ *
+ * The mechanic the player must answer rather than out-damage. It reaches only
+ * what is *blocking* it, which is what makes the answer a real decision: pull
+ * the rally flag back and the boss walks free, leave it forward and the
+ * garrison feeds it. A Ranger Lodge fights from outside that reach, which is
+ * the counter the design names.
+ *
+ * An instant kill rather than damage, because a swallow a tanky soldier
+ * survives is a swallow that reads as a stumble. The heal is the cost of
+ * letting it happen, and it is a fraction of the boss's own maximum so the
+ * number stays meaningful when #36 restats the fight.
+ */
+function devour(world: World, slot: number, typeIdx: number): void {
+  const enemies = world.enemies;
+  const soldiers = world.soldiers;
+  const victim = enemies.blockedBy[slot] as number;
+
+  const holding =
+    victim >= 0 &&
+    soldiers.isAlive(victim) &&
+    ((soldiers.flags[victim] as number) & SoldierFlag.Respawning) === 0;
+
+  if (!windUp(world, slot, typeIdx, BehaviourFlag.Devours, holding)) return;
+
+  /* Through the soldier system's own death path, so a hero is sent to respawn
+     rather than deleted and a garrison's count stays true. */
+  fall(world, victim);
+
+  const healed =
+    (enemies.maxHp[slot] as number) * (world.rules.enemies.devourHealFraction[typeIdx] as number);
+  enemies.hp[slot] = Math.min(enemies.maxHp[slot] as number, (enemies.hp[slot] as number) + healed);
+
+  emitBehaviour(
+    world.events,
+    enemies.ids[slot] as number,
+    BehaviourFlag.Devours,
+    enemies.x[slot] as number,
+    enemies.y[slot] as number,
+  );
+}
+
+/**
+ * Grendrix's phase two: corrosive pools that hold down the plots they land on.
+ *
+ * Laid through `createGroundEffect` like every other puddle in the game, so a
+ * boss's pool and a Firestorm Cannon's are the same object and the player
+ * reads them the same way. What is new is on the ground rather than on the
+ * boss — `Suppresses` — which is why the plot-disabling half of this mechanic
+ * needed no boss-shaped code at all.
+ */
+function spitGround(world: World, slot: number, typeIdx: number): void {
+  const table = world.rules.enemies;
+  const enemies = world.enemies;
+  const seconds = (table.groundTicks[typeIdx] as number) / TICK_HZ;
+  if (seconds <= 0) return;
+
+  const x = enemies.x[slot] as number;
+  const y = enemies.y[slot] as number;
+
+  createGroundEffect(world, {
+    x,
+    y,
+    radiusTiles: (table.groundRadius[typeIdx] as number) / TILE_SIZE,
+    seconds,
+    damagePerSecond: table.groundDamagePerSecond[typeIdx] as number,
+    damageType: DAMAGE_INDEX.toxic,
+    statusId: STATUS_INDEX.corrode,
+    statusStacks: 1,
+    suppresses: ((table.groundFlags[typeIdx] as number) & GroundEffectFlag.Suppresses) !== 0,
+  });
+
+  emitBehaviour(world.events, enemies.ids[slot] as number, BehaviourFlag.SpitsGround, x, y);
 }
 
 /** The closest live tower in reach that is not already held down, or -1. */
@@ -322,19 +517,38 @@ function pickMostDamaged(
   return taken;
 }
 
-/** Behaviours that fire on their own clock: shields, drops, spawns. */
+/**
+ * Behaviours that fire on their own clock: shields, drops, spawns, spits.
+ *
+ * Each behaviour reads *its own* timer and *its own* interval, rather than the
+ * one clock this used to share. Grendrix's phase two both swallows and spits
+ * on different cadences, and a shared timer would have meant each reset the
+ * other — the one behaviour that fired most often would have silenced the
+ * rest. The bits are walked lowest-first so two behaviours due on the same
+ * tick always resolve in the same order, whatever the roster.
+ */
 function runPeriodic(world: World, slot: number, typeIdx: number, behaviour: number): void {
   const enemies = world.enemies;
   const table = world.rules.enemies;
-  const interval = table.spawnIntervalTicks[typeIdx] as number;
-  if (interval <= 0) return;
+  const clocks = slot * BEHAVIOUR_BITS;
+  const intervals = typeIdx * BEHAVIOUR_BITS;
 
-  if (world.tick < (enemies.behaviourReadyTick[slot] as number)) return;
-  enemies.behaviourReadyTick[slot] = world.tick + interval;
+  let bits = behaviour & PERIODIC_BEHAVIOURS;
+  while (bits !== 0) {
+    /* Lowest set bit, cleared each pass: no allocation, no iteration over
+       behaviours this enemy does not have. */
+    const flag = bits & -bits;
+    bits ^= flag;
 
-  if ((behaviour & BehaviourFlag.Shielder) !== 0) shieldAllies(world, slot, typeIdx);
-  if ((behaviour & (BehaviourFlag.Carrier | BehaviourFlag.StationarySpawner)) !== 0) {
-    spawnBrood(world, slot, typeIdx, behaviour);
+    const bit = behaviourBit(flag);
+    const interval = table.behaviourIntervalTicks[intervals + bit] as number;
+    if (interval <= 0) continue;
+    if (world.tick < (enemies.behaviourReadyTick[clocks + bit] as number)) continue;
+    enemies.behaviourReadyTick[clocks + bit] = world.tick + interval;
+
+    if (flag === BehaviourFlag.Shielder) shieldAllies(world, slot, typeIdx);
+    else if (flag === BehaviourFlag.SpitsGround) spitGround(world, slot, typeIdx);
+    else spawnBrood(world, slot, typeIdx, behaviour);
   }
 }
 

@@ -4,6 +4,21 @@ import { emitEnemySpawned } from './events.js';
 import type { World } from './world.js';
 
 /**
+ * How much a wave's scaling multiplies armour and ward (§9.2).
+ *
+ * Armour and ward grow more slowly than health, so a late enemy is tankier
+ * without making an early damage type worthless. Its own function because a
+ * boss phase re-derives its defences from a different table row and must land
+ * on the same scale it spawned with — recomputed from the enemy's own wave
+ * rather than stored, so there is no second copy to drift.
+ */
+export function defenceScaleFor(world: World, waveIndex: number): number {
+  const scale = world.rules.scaling;
+  const hpScale = scale.hp * (1 + scale.hpGrowthPerWave * waveIndex);
+  return 1 + (hpScale - 1) * scale.defenceGrowthFraction;
+}
+
+/**
  * Brings an enemy into the world with its authored stats.
  *
  * The one place an enemy is created. Copying the stat block into the pool at
@@ -35,12 +50,12 @@ export function spawnEnemy(
      and a Carrier's drop must be scaled by the wave their parent belongs to,
      not by whichever wave happens to be running when they appear. */
   const hpScale = scale.hp * (1 + scale.hpGrowthPerWave * waveIndex);
-  /* Armour and ward grow more slowly than health, so a late enemy is tankier
-     without making an early damage type worthless (§9.2). */
-  const defenceScale = 1 + (hpScale - 1) * scale.defenceGrowthFraction;
+  const defenceScale = defenceScaleFor(world, waveIndex);
   const hp = (table.hp[typeIdx] as number) * hpScale;
 
   enemies.typeIdx[slot] = typeIdx;
+  enemies.baseTypeIdx[slot] = typeIdx;
+  enemies.waveIndex[slot] = waveIndex;
   enemies.spawnPoint[slot] = spawnPointIndex;
   enemies.hp[slot] = hp;
   enemies.maxHp[slot] = hp;

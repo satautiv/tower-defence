@@ -36,6 +36,9 @@ const PALETTE = {
   support: '#3ddc84',
   plot: '#f2c14e',
   ley: '#5ce1e6',
+  /** Bosses and elites: nothing else on the board is this colour (#33). */
+  boss: '#ffd166',
+  bossEnraged: '#ff4d4d',
 } as const;
 
 const darken = (c: Rgba, amount = 0.45): Rgba => ({
@@ -87,6 +90,29 @@ const SPRITES: SpriteSpec[] = [
   { name: 'enemy_carrier', size: 64, colour: PALETTE.flying, shape: 'disc', scale: 0.46 },
   { name: 'enemy_rift_sprout', size: 56, colour: PALETTE.toxic, shape: 'block', scale: 0.4 },
   { name: 'enemy_dread_wyrm', size: 80, colour: PALETTE.flying, shape: 'disc', scale: 0.56 },
+
+  /* Bosses and elites (#33). Larger than anything else on the board and in a
+     colour nothing else uses, because "that is the boss" has to be readable
+     before the health bar is. A phase that changes the rules changes the
+     sprite too: the enraged frames are the cheapest half of "clearly
+     telegraphed", and they are what a player sees from across the map. */
+  { name: 'enemy_grendrix', size: 96, colour: PALETTE.boss, shape: 'disc', scale: 0.62 },
+  {
+    name: 'enemy_grendrix_enraged',
+    size: 96,
+    colour: PALETTE.bossEnraged,
+    shape: 'disc',
+    scale: 0.68,
+  },
+  { name: 'enemy_maw_spawn', size: 72, colour: PALETTE.boss, shape: 'disc', scale: 0.5 },
+  { name: 'enemy_rust_prelate', size: 72, colour: PALETTE.boss, shape: 'block', scale: 0.48 },
+  {
+    name: 'enemy_rust_prelate_bared',
+    size: 72,
+    colour: PALETTE.bossEnraged,
+    shape: 'block',
+    scale: 0.52,
+  },
 
   /* One per tower, coloured by the damage type it deals, so a board reads as a
      spread of elements before any real art exists. The barracks deals none, so

@@ -1,4 +1,5 @@
 import { MAX_ENEMIES } from '../capacity.js';
+import { BEHAVIOUR_BITS } from '../flags.js';
 import { STATUS_COUNT } from '../status.js';
 import { EntityPool } from './pool.js';
 
@@ -137,14 +138,28 @@ export class EnemyPool extends EntityPool {
   readonly markedUntil = new Int32Array(this.capacity);
 
   /**
-   * Next tick a periodic behaviour fires — a shield refresh, a carrier's drop,
-   * a sprout's spawn.
+   * Next tick each periodic behaviour fires — a shield refresh, a carrier's
+   * drop, a sprout's spawn, a Rift Maw's swallow.
    *
-   * One timer, because no enemy in the design carries two periodic behaviours.
-   * If one ever does, this becomes a small per-behaviour array rather than a
-   * second field nobody remembers to reset.
+   * Flat `slot * BEHAVIOUR_BITS + bit`. This was one timer per enemy while no
+   * enemy carried two periodic behaviours, and the comment here said what to
+   * do when one did: Grendrix's phase two both swallows and spits, on
+   * different clocks, and sharing a timer would have made each reset the
+   * other. Indexed by bit position rather than through a map of which
+   * behaviours are periodic, so adding one is an enum entry and nothing else.
    */
-  readonly behaviourReadyTick = new Int32Array(this.capacity);
+  readonly behaviourReadyTick = new Int32Array(this.capacity * BEHAVIOUR_BITS);
+
+  /**
+   * Which authored phase this enemy is in, as an index into the enemy table.
+   *
+   * A boss crossing a threshold swaps its own `typeIdx` to the phase's row,
+   * which is the whole of the transition: every rule the simulation reads —
+   * behaviours, speed, armour, melee — comes from that row already. This
+   * records where it started, so the health bar can draw the markers and a
+   * reset can put it back.
+   */
+  readonly baseTypeIdx = new Uint16Array(this.capacity);
 
   readonly meta: (EnemyMeta | null)[] = new Array<EnemyMeta | null>(this.capacity).fill(null);
 
@@ -185,8 +200,11 @@ export class EnemyPool extends EntityPool {
     this.auraArmour[slot] = 0;
     this.markMultiplier[slot] = 1;
     this.markedUntil[slot] = 0;
-    this.behaviourReadyTick[slot] = 0;
+    this.baseTypeIdx[slot] = 0;
     this.meta[slot] = null;
+
+    const timers = slot * BEHAVIOUR_BITS;
+    for (let i = 0; i < BEHAVIOUR_BITS; i++) this.behaviourReadyTick[timers + i] = 0;
 
     const base = slot * STATUS_COUNT;
     for (let i = 0; i < STATUS_COUNT; i++) {

@@ -154,5 +154,8 @@
   "tower.plague_vat.perk.spread": "What it kills bursts, Corroding everything near it.",
   "tower.gilded_alembic.perk.gold": "Every kill on the map pays a little more, whoever made it.",
   "tower.void_obelisk.perk.pull": "Drags what it hits back down the road.",
-  "tower.prism_tower.perk.refract": "Hits harder for every other damage type landing nearby."
+  "tower.prism_tower.perk.refract": "Hits harder for every other damage type landing nearby.",
+  "enemy.grendrix.name": "Grendrix, the Rift Maw",
+  "enemy.maw_spawn.name": "Maw Spawn",
+  "enemy.rust_prelate.name": "Rust Prelate"
 }

@@ -32,6 +32,8 @@ export const ENEMY_TRAITS = [
   'stationary_spawner',
   'freeze_immune',
   'boss',
+  'devours',
+  'spits_ground',
 ] as const;
 export const EnemyTraitSchema = z.enum(ENEMY_TRAITS);
 export type EnemyTrait = z.infer<typeof EnemyTraitSchema>;
@@ -83,8 +85,64 @@ export const EnemyTraitConfigSchema = z
      * about itself.
      */
     refreshIntervalSeconds: Seconds.optional(),
+    /**
+     * devours: the fraction of its own maximum health a swallow returns.
+     *
+     * Grendrix's Swallow is an instant kill on a soldier, so there is no
+     * damage number to author — what a designer tunes is how much the boss
+     * gains by doing it, and therefore how badly the player wants to deny it
+     * (docs/GAME_DESIGN.md §10).
+     */
+    devourHealFraction: z.number().min(0).max(1).optional(),
+    /** devours: how often it may swallow. */
+    devourIntervalSeconds: Seconds.optional(),
+    /** spits_ground: the pool it leaves, in the ground-effect system's terms. */
+    groundIntervalSeconds: Seconds.optional(),
+    groundRadiusTiles: Tiles.optional(),
+    groundSeconds: Seconds.optional(),
+    groundDamagePerSecond: NonNegative.optional(),
+    /**
+     * spits_ground: whether the pool holds down the towers it covers.
+     *
+     * A capability of the ground rather than of the boss, because "this patch
+     * of floor suppresses what stands in it" is the same idea whether a Rift
+     * Maw spat it or a region authored it into its terrain.
+     */
+    groundSuppressesTowers: z.boolean().optional(),
   })
   .default({});
+
+/**
+ * What a boss becomes below a health threshold (#33, docs/GAME_DESIGN.md §10).
+ *
+ * A phase states its whole trait set rather than a diff against the phase
+ * before it. A designer thinks "in phase two it spits pools and stops
+ * swallowing", not "add one trait and remove another", and a diff is the
+ * format that makes a two-line change read as four.
+ *
+ * Everything a phase leaves out it inherits: the same health pool, bounty,
+ * lives and melee, because a boss crossing 50% is still the same boss.
+ */
+export const EnemyPhaseSchema = z.object({
+  /**
+   * Health fraction at or below which this phase begins.
+   *
+   * Descending and exclusive of 1, checked cross-file: a phase that began at
+   * full health would never be left, and two phases sharing a threshold would
+   * make which one you get depend on iteration order.
+   */
+  belowHealthFraction: z.number().gt(0).lt(1),
+  /** Overrides the base sprite, so a transition is visible and not only felt. */
+  spriteId: IdSchema.optional(),
+  traits: z.array(EnemyTraitSchema).default([]),
+  traitConfig: EnemyTraitConfigSchema,
+  /** Stat overrides. Anything omitted stays what it was. */
+  speed: NonNegative.optional(),
+  armour: NonNegative.optional(),
+  ward: NonNegative.optional(),
+});
+
+export type EnemyPhase = z.infer<typeof EnemyPhaseSchema>;
 
 export const EnemySchema = z.object({
   id: IdSchema,
@@ -114,6 +172,11 @@ export const EnemySchema = z.object({
   maxBlockSeconds: Positive.default(12),
   /** Status this enemy applies when it attacks, if any. */
   statusApplied: StatusApplicationSchema.optional(),
+  /**
+   * Later phases, in descending threshold order. Empty for everything but a
+   * boss, and the simulation pays nothing for an enemy that has none.
+   */
+  phases: z.array(EnemyPhaseSchema).default([]),
 });
 
 export type EnemyDefinition = z.infer<typeof EnemySchema>;

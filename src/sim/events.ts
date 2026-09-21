@@ -39,6 +39,8 @@ export const enum SimEventKind {
   CommandRejected,
   /** An enemy behaviour took effect, for its telegraph and its sound (#29). */
   BehaviourFired,
+  /** A boss crossed a health threshold into its next phase (#33). */
+  BossPhaseChanged,
 }
 
 export class SimEvents {
@@ -80,13 +82,22 @@ export const emitEnemySpawned = (
   y: number,
 ) => ev.push(SimEventKind.EnemySpawned, id, typeIdx, x, y);
 
+/**
+ * An enemy died. `boss` is 1 for a boss or elite, 0 otherwise (#33).
+ *
+ * Carried on the event rather than looked up by the consumer, because by the
+ * time the audio and view layers drain this the slot has been freed and the
+ * only honest answer would be a guess. It is also the cue for the defeat
+ * sequence, which has to fire on the frame the kill lands.
+ */
 export const emitEnemyDied = (
   ev: SimEvents,
   id: number,
   x: number,
   y: number,
   damageType: number,
-) => ev.push(SimEventKind.EnemyDied, id, x, y, damageType);
+  boss = 0,
+) => ev.push(SimEventKind.EnemyDied, id, x, y, damageType, boss);
 
 export const emitEnemyLeaked = (ev: SimEvents, id: number, livesCost: number) =>
   ev.push(SimEventKind.EnemyLeaked, id, livesCost);
@@ -140,6 +151,17 @@ export const emitBehaviour = (
   x: number,
   y: number,
 ) => ev.push(SimEventKind.BehaviourFired, subjectId, behaviour, x, y);
+
+/**
+ * A boss entered a new phase (#33).
+ *
+ * Carries the row it became rather than a phase number, because that is what
+ * the view already indexes to find a sprite — and it is the same number the
+ * simulation itself switched to, so there is no second notion of "which phase"
+ * to drift out of step.
+ */
+export const emitBossPhase = (ev: SimEvents, id: number, typeIdx: number, x: number, y: number) =>
+  ev.push(SimEventKind.BossPhaseChanged, id, typeIdx, x, y);
 
 /** A Warden Power went off, for its VFX and its sound. */
 export const emitPowerCast = (ev: SimEvents, powerIdx: number, x: number, y: number) =>

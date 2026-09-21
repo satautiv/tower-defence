@@ -1,0 +1,34 @@
+{
+  "id": "rust_prelate",
+  "nameKey": "enemy.rust_prelate.name",
+  "hp": 1100,
+  "speed": 0.85,
+  "armour": 35,
+  "ward": 30,
+  "bounty": 60,
+  "livesCost": 3,
+  "traits": ["boss", "healer"],
+  "traitConfig": {
+    "auraRadiusTiles": 4.5,
+    "healPerSecond": 55,
+    "auraTargets": 3
+  },
+  "meleeDamage": 18,
+  "meleeIntervalSeconds": 1.4,
+  "maxBlockSeconds": 5,
+  "phases": [
+    {
+      "belowHealthFraction": 0.45,
+      "spriteId": "rust_prelate_bared",
+      "traits": ["boss", "spits_ground"],
+      "traitConfig": {
+        "groundIntervalSeconds": 5,
+        "groundRadiusTiles": 1.8,
+        "groundSeconds": 8,
+        "groundDamagePerSecond": 16,
+        "groundSuppressesTowers": true
+      },
+      "speed": 1.2
+    }
+  ]
+}

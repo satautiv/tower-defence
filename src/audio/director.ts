@@ -1,6 +1,12 @@
 import { SimEventKind } from '@sim/index';
 import type { World } from '@sim/index';
-import { StingerThrottle, detuneFor, stingerFor, stingerSeconds } from './stingers.js';
+import {
+  BOSS_STINGERS,
+  StingerThrottle,
+  detuneFor,
+  stingerFor,
+  stingerSeconds,
+} from './stingers.js';
 import type { StingerRecipe } from './stingers.js';
 
 /**
@@ -107,6 +113,21 @@ export class AudioDirector {
 
     for (let i = 0; i < world.events.count; i++) {
       const event = world.events.at(i);
+
+      /* A boss phase turning over, through the same throttle as everything
+         else so a transition during a busy frame cannot stack on itself. */
+      if (event.kind === SimEventKind.BossPhaseChanged) {
+        const recipe = BOSS_STINGERS.phase;
+        if (this.throttle.admit('boss_phase', nowMs, stingerSeconds(recipe))) this.play(recipe);
+        continue;
+      }
+
+      if (event.kind === SimEventKind.EnemyDied && event.e === 1) {
+        const recipe = BOSS_STINGERS.defeat;
+        if (this.throttle.admit('boss_defeat', nowMs, stingerSeconds(recipe))) this.play(recipe);
+        continue;
+      }
+
       if (event.kind !== SimEventKind.ReactionTriggered) continue;
 
       const id = table.ids[event.a] ?? 'unknown';
