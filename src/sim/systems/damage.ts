@@ -1,7 +1,8 @@
+import { MAX_QUERY_RESULTS } from '../capacity.js';
 import { DAMAGE_INDEX, DamageFlag } from '../damage.js';
 import { addGold, awardKill, bonusGoldFor } from '../economy.js';
 import { emitBehaviour, emitDamageDealt, emitEnemyDied } from '../events.js';
-import { BehaviourFlag, EnemyFlag } from '../flags.js';
+import { BehaviourFlag, EnemyFlag, TowerPerk } from '../flags.js';
 import { laneOffsetFor } from '../path.js';
 import { spawnEnemy } from '../spawn.js';
 import { STATUS_COUNT, STATUS_INDEX } from '../status.js';
@@ -29,6 +30,8 @@ const FREEZE = STATUS_INDEX.freeze;
 const CORRODE = STATUS_INDEX.corrode;
 const UNRAVEL = STATUS_INDEX.unravel;
 const FRACTURE = STATUS_INDEX.fracture;
+const CHILL = STATUS_INDEX.chill;
+const CHARGE = STATUS_INDEX.charge;
 
 export function damageResolutionSystem(world: World): void {
   const queue = world.damage;
@@ -55,6 +58,14 @@ export function effectiveDefence(
   armourPierce: number,
   fromX: number,
   fromY: number,
+  /**
+   * Stat index of the tower that is attacking, or -1 (#32).
+   *
+   * Optional and trailing because most callers — the enemy panel, a burn, a
+   * reaction — are asking "how tough is this enemy" rather than "how tough is
+   * it to *this tower*", and only a branch perk makes the two differ.
+   */
+  statIndex = -1,
 ): number {
   const enemies = world.enemies;
   const tuning = world.rules.tuning;
@@ -78,6 +89,28 @@ export function effectiveDefence(
   const perStack = world.rules.statuses.defenceReductionPerStack[CORRODE] as number;
   let defence = base - corrode * perStack;
   if (kinetic) defence -= armourPierce;
+
+  if (statIndex >= 0) {
+    const towers = world.rules.towers;
+    const perks = towers.perks[statIndex] as number;
+
+    /* Rime Spire: its Chill eats armour rather than only slowing, which is the
+       whole of why it is a different tower from Glacier Heart (§8.5). Armour
+       only — the design says "−armour", and sundering Ward too would make it
+       the answer to everything. */
+    if ((perks & TowerPerk.ChillSunders) !== 0 && kinetic) {
+      defence -=
+        (towers.armourPerChillStack[statIndex] as number) * enemies.stacksOf(enemySlot, CHILL);
+    }
+
+    /* Sniper Nest ignores a *share* of what is left, where `armourPierce` is a
+       flat subtraction. A fraction is what makes it the answer to an elite:
+       flat pierce stops mattering the moment armour outgrows it, and the
+       design wants this tower to stay the boss answer at every region. */
+    if ((perks & TowerPerk.PierceFraction) !== 0 && kinetic && defence > 0) {
+      defence *= 1 - (towers.pierceFraction[statIndex] as number);
+    }
+  }
 
   if (world.tick < (enemies.defenceMultiplierUntil[enemySlot] as number)) {
     defence *= enemies.defenceMultiplier[enemySlot] as number;
@@ -122,11 +155,15 @@ function resolveOne(world: World, index: number): void {
 
   let amount = queue.amount[index] as number;
 
+  /* The attacking tower's tier, or -1. Branch perks are the only reason the
+     same enemy is tougher to one tower than to another (#32). */
+  const statIndex = source >= 0 && world.towers.isAlive(source) ? statIndexOf(world, source) : -1;
+
   if (type !== TRUE_DAMAGE && (damageFlags & DamageFlag.True) === 0) {
     const kinetic = type === KINETIC;
     const pierce =
-      (damageFlags & DamageFlag.ArmourPierce) !== 0 && source >= 0 && world.towers.isAlive(source)
-        ? (world.rules.towers.armourPierce[statIndexOf(world, source)] as number)
+      (damageFlags & DamageFlag.ArmourPierce) !== 0 && statIndex >= 0
+        ? (world.rules.towers.armourPierce[statIndex] as number)
         : 0;
 
     const fromX =
@@ -138,7 +175,7 @@ function resolveOne(world: World, index: number): void {
         ? (world.towers.y[source] as number)
         : (enemies.y[slot] as number);
 
-    const defence = effectiveDefence(world, slot, kinetic, pierce, fromX, fromY);
+    const defence = effectiveDefence(world, slot, kinetic, pierce, fromX, fromY, statIndex);
     const half = world.rules.tuning.defenceHalfPoint;
     amount *= 1 - defence / (defence + half);
 
@@ -157,6 +194,26 @@ function resolveOne(world: World, index: number): void {
   }
 
   if ((damageFlags & DamageFlag.IsReaction) !== 0) amount *= world.reactionPower;
+
+  /* Pyroclast Vent hits far harder into Corrode — a status it cannot apply
+     itself, so the bonus is only ever collected by a *board* that pairs it
+     with an Alchemist. That is pillar P1 written as a number (§8.4). */
+  if (statIndex >= 0) {
+    const towers = world.rules.towers;
+    if ((towers.perks[statIndex] as number) & TowerPerk.BonusVsStatus) {
+      const against = towers.bonusVsStatus[statIndex] as number;
+      if (against < STATUS_COUNT && enemies.stacksOf(slot, against) > 0) {
+        amount *= towers.bonusVsStatusMultiplier[statIndex] as number;
+      }
+    }
+  }
+
+  /* An enemy the marked tower has painted takes more from everything, which
+     is what makes a Ranger Lodge worth building beside damage rather than
+     instead of it. */
+  if (world.tick < (enemies.markedUntil[slot] as number)) {
+    amount *= enemies.markMultiplier[slot] as number;
+  }
 
   /* A heavy physical blow shatters a frozen target. */
   if (
@@ -196,6 +253,7 @@ function resolveOne(world: World, index: number): void {
     world.towers.damageDealt[source] = (world.towers.damageDealt[source] as number) + amount;
   }
   applyOnHitStatus(world, index, slot);
+  maybeDischarge(world, slot, statIndex);
 
   emitDamageDealt(
     world.events,
@@ -285,6 +343,38 @@ function maybePhase(world: World, slot: number, amount: number): void {
   );
 }
 
+/**
+ * Storm Pylon's discharge (#32, docs/GAME_DESIGN.md §8.4).
+ *
+ * *"Charge-stack stun + discharge"*. An enemy taken to the Charge cap is
+ * frozen and the stacks are spent, which is what turns Charge from a chain
+ * modifier into a win condition and makes the Pylon the crowd answer its
+ * branch is meant to be.
+ *
+ * Freeze rather than a stun of its own, because the game already has exactly
+ * one hard stop and a second one would need its own immunity rules, its own
+ * icon and its own interaction with every slow — for one tower. Boss immunity
+ * therefore applies for free, which is correct: this must not stun a boss.
+ */
+function maybeDischarge(world: World, slot: number, statIndex: number): void {
+  if (statIndex < 0) return;
+  const towers = world.rules.towers;
+  if (((towers.perks[statIndex] as number) & TowerPerk.DischargeAtCap) === 0) return;
+
+  const enemies = world.enemies;
+  const cap = world.rules.statuses.maxStacks[CHARGE] as number;
+  if (cap <= 0 || enemies.stacksOf(slot, CHARGE) < cap) return;
+
+  /* Spent, not merely converted: the cost of the stun is the chain length the
+     Charge was buying, so a Pylon trades reach for a stop. */
+  const at = slot * STATUS_COUNT + CHARGE;
+  enemies.statusStacks[at] = 0;
+  enemies.statusExpiry[at] = 0;
+  enemies.statusDirty[slot] = 1;
+
+  applyStatus(world, slot, FREEZE, 1);
+}
+
 /** Seeded, so a dodge is part of the replay rather than a surprise. */
 function rollsEvade(world: World, slot: number): boolean {
   const chance = world.rules.enemies.evasion[world.enemies.typeIdx[slot] as number] as number;
@@ -326,10 +416,65 @@ function resolveDeaths(world: World): void {
       deaths.killedBy[i] as number,
     );
 
+    spreadOnDeath(world, slot, killer);
     splitOnDeath(world, slot, typeIdx);
     enemies.free(slot);
   }
   deaths.clear();
+}
+
+/** Reused by the contagion sweep, so a death allocates nothing. */
+const contagion = new Int32Array(MAX_QUERY_RESULTS);
+
+/**
+ * Pyroclast Vent's Scorch and Plague Vat's Corrode, passed from a corpse (#32).
+ *
+ * One perk for both, with the status read from the tier, because they differ
+ * only in payload — and because the thing that makes them a *branch* is the
+ * same in each case: the tower stops being worth its cost against one enemy
+ * and starts being worth it against a pack.
+ *
+ * Attributed to the tower that landed the kill, so a spread that completes a
+ * reaction pair is credited to it and a Surge node pays out (#30).
+ */
+function spreadOnDeath(world: World, slot: number, killer: number): void {
+  if (killer < 0 || !world.towers.isAlive(killer)) return;
+
+  const towers = world.rules.towers;
+  const statIndex = statIndexOf(world, killer);
+  if (((towers.perks[statIndex] as number) & TowerPerk.SpreadOnDeath) === 0) return;
+
+  const status = towers.statusId[statIndex] as number;
+  const stacks = towers.spreadStacks[statIndex] as number;
+  const radius = towers.spreadRadius[statIndex] as number;
+  if (status >= STATUS_COUNT || stacks <= 0 || radius <= 0) return;
+
+  /* A leaker has already scored and is being collected; spreading from it
+     would let a tower keep working after the enemy reached the core. */
+  if (((world.enemies.flags[slot] as number) & EnemyFlag.Leaked) !== 0) return;
+
+  const enemies = world.enemies;
+  const x = enemies.x[slot] as number;
+  const y = enemies.y[slot] as number;
+
+  let found = 0;
+  for (const index of [world.groundIndex, world.airIndex]) {
+    const hits = index.query(x, y, radius, world.queryBuffer);
+    for (let i = 0; i < hits && found < contagion.length; i++) {
+      const other = world.queryBuffer[i] as number;
+      if (other === slot || !enemies.isAlive(other)) continue;
+      const flags = enemies.flags[other] as number;
+      if ((flags & (EnemyFlag.Dying | EnemyFlag.Leaked)) !== 0) continue;
+      contagion[found++] = other;
+    }
+  }
+
+  /* Gathered before any status lands, because `applyStatus` can escalate Chill
+     into Freeze and a spread that read the index mid-application would be
+     deciding its own recipients. */
+  for (let i = 0; i < found; i++) {
+    applyStatus(world, contagion[i] as number, status, stacks, killer);
+  }
 }
 
 /**

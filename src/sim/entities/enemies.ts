@@ -127,6 +127,16 @@ export class EnemyPool extends EntityPool {
   readonly auraArmour = new Float32Array(this.capacity);
 
   /**
+   * A Ranger Lodge's mark: extra damage from *every* source until it lapses.
+   *
+   * Held per enemy rather than per attacker, because the whole point is that
+   * the mark is worth something to the rest of the board — a debuff only the
+   * tower that applied it could collect would just be more damage (#32).
+   */
+  readonly markMultiplier = new Float32Array(this.capacity);
+  readonly markedUntil = new Int32Array(this.capacity);
+
+  /**
    * Next tick a periodic behaviour fires — a shield refresh, a carrier's drop,
    * a sprout's spawn.
    *
@@ -173,6 +183,8 @@ export class EnemyPool extends EntityPool {
     this.groundBlocked[slot] = 0;
     this.auraSpeed[slot] = 1;
     this.auraArmour[slot] = 0;
+    this.markMultiplier[slot] = 1;
+    this.markedUntil[slot] = 0;
     this.behaviourReadyTick[slot] = 0;
     this.meta[slot] = null;
 

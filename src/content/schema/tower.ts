@@ -50,6 +50,95 @@ export const GarrisonSchema = z.object({
   statusApplied: StatusApplicationSchema.optional(),
 });
 
+/**
+ * The mechanics that make a specialisation a *choice* rather than a number
+ * (#32, docs/GAME_DESIGN.md §8.2–8.5).
+ *
+ * A branch's stat block already differs; what makes Sniper Nest and Repeater
+ * Battery different *strategies* is that one ignores armour and the other
+ * stacks Fracture for the whole board. Those are rules, and rules need a name
+ * the simulation can read.
+ *
+ * Named traits rather than free-form scripting, for the same reason enemy
+ * behaviours are: the list is short, every entry is something a system already
+ * knows how to do, and when a branch cannot be expressed the answer is to add
+ * one here rather than a special case wherever it happened to be needed.
+ */
+export const TOWER_PERKS = [
+  /** Sniper Nest: ignores a *fraction* of armour, where pierce is flat. */
+  'pierce_fraction',
+  /** Pyroclast Vent: hits harder into a status it did not apply itself. */
+  'bonus_vs_status',
+  /** Rime Spire: its Chill eats armour and feeds the Shatter bonus. */
+  'chill_sunders',
+  /** Storm Pylon: an enemy at the Charge cap is stunned and discharged. */
+  'discharge_at_cap',
+  /** Pyroclast Vent, Plague Vat: a corpse passes its status to its neighbours. */
+  'spread_on_death',
+  /** Firestorm Cannon, Arc Net: leaves ground behind where it struck. */
+  'leaves_ground',
+  /** Glacier Heart: a periodic Freeze on everything in reach. */
+  'freeze_pulse',
+  /** Plasma Lance: the beam does not stop at the first enemy. */
+  'piercing',
+  /** Void Obelisk: drags what it hits towards itself. */
+  'pulls',
+  /** Prism Tower: borrows the damage types of its neighbours. */
+  'refracts',
+  /** Gilded Alembic: every kill on the board pays more, not just its own. */
+  'global_gold',
+  /** Bulwark Order: pulls enemies onto its soldiers and returns melee damage. */
+  'taunts',
+  'reflects',
+  /** Ranger Lodge: what it shoots takes more from everything. */
+  'marks_target',
+] as const;
+export const TowerPerkSchema = z.enum(TOWER_PERKS);
+export type TowerPerkId = z.infer<typeof TowerPerkSchema>;
+
+/**
+ * Per-perk numbers. Only the fields a given perk reads are meaningful.
+ *
+ * Every one of these is a balance number, so it lives here rather than in
+ * `src/` — the simulator sweeps them and a retune must not need a rebuild.
+ */
+export const TowerPerkConfigSchema = z
+  .object({
+    /** pierce_fraction: share of armour ignored, 0–1. */
+    pierceFraction: z.number().min(0).max(1).optional(),
+    /** bonus_vs_status: which status, and the extra damage against it. */
+    bonusVsStatus: StatusApplicationSchema.shape.status.optional(),
+    bonusVsStatusMultiplier: Positive.optional(),
+    /** chill_sunders: armour removed per stack of Chill on the target. */
+    armourPerChillStack: NonNegative.optional(),
+    /** spread_on_death: stacks handed to each neighbour, and how far. */
+    spreadStacks: z.number().int().positive().optional(),
+    spreadRadiusTiles: Tiles.optional(),
+    /** leaves_ground: the patch a shot leaves where it lands. */
+    groundSeconds: NonNegative.optional(),
+    groundRadiusTiles: Tiles.optional(),
+    groundDamagePerSecond: NonNegative.optional(),
+    /** freeze_pulse: how often, in seconds. */
+    freezePulseSeconds: NonNegative.optional(),
+    /** pulls: pixels of path distance dragged back per hit. */
+    pullTiles: Tiles.optional(),
+    /** refracts: how far it looks for neighbours to borrow from. */
+    refractRadiusTiles: Tiles.optional(),
+    /** refracts: damage added per distinct borrowed type, as a fraction. */
+    refractBonusPerType: NonNegative.optional(),
+    /** global_gold: extra fraction on every bounty the board earns. */
+    globalGoldFraction: NonNegative.optional(),
+    /** taunts: how often the pull happens, and how far it reaches. */
+    tauntSeconds: NonNegative.optional(),
+    tauntRadiusTiles: Tiles.optional(),
+    /** reflects: share of melee damage returned to the attacker. */
+    reflectFraction: z.number().min(0).max(1).optional(),
+    /** marks_target: extra damage everything deals to the marked enemy. */
+    markMultiplier: Positive.optional(),
+    markSeconds: NonNegative.optional(),
+  })
+  .default({});
+
 /** One rung of a tower's upgrade path. */
 export const TowerTierSchema = z.object({
   cost: z.number().int().positive(),
@@ -75,7 +164,11 @@ export const TowerTierSchema = z.object({
   armourPierce: NonNegative.default(0),
   /** Extra gold per kill, for economy towers. */
   bonusGoldPerKill: NonNegative.default(0),
+  /** Flavour: what the perk reads as in the tower panel. */
   perkKeys: z.array(LocaleKeySchema).default([]),
+  /** Mechanics: what the perk actually does (#32). */
+  perks: z.array(TowerPerkSchema).default([]),
+  perkConfig: TowerPerkConfigSchema,
   /** Soldiers this tier fields. Absent for every tower that shoots. */
   garrison: GarrisonSchema.optional(),
 });

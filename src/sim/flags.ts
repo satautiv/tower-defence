@@ -76,6 +76,49 @@ export const PERIODIC_BEHAVIOURS =
 export const AURA_BEHAVIOURS =
   BehaviourFlag.Healer | BehaviourFlag.TowerSlowAura | BehaviourFlag.AllyHasteAura;
 
+/**
+ * What a tower's *branch* does, beyond what its numbers do (#32).
+ *
+ * Keyed by stat index on the tower table rather than held per tower, for the
+ * same reason enemy behaviours are keyed by type: a perk belongs to the tier,
+ * never to the instance, and two Prism Towers refract identically. Resolving
+ * it per tier also means an upgrade picks up its new perks through
+ * `applyTowerStats` with nothing else to remember.
+ *
+ * The mask exists so the damage formula, the firing loop and the death pass
+ * can each reject an ordinary tower in one test.
+ */
+export const enum TowerPerk {
+  None = 0,
+  /** Ignores a fraction of armour, where `armourPierce` is a flat subtraction. */
+  PierceFraction = 1 << 0,
+  /** Hits harder into a status — Pyroclast Vent against Corroded. */
+  BonusVsStatus = 1 << 1,
+  /** Rime Spire: its Chill eats armour instead of only slowing. */
+  ChillSunders = 1 << 2,
+  /** Storm Pylon: an enemy at the Charge cap is frozen and discharged. */
+  DischargeAtCap = 1 << 3,
+  /** A corpse hands its status to its neighbours. */
+  SpreadOnDeath = 1 << 4,
+  /** Leaves a patch of ground where the shot landed. */
+  LeavesGround = 1 << 5,
+  /** Glacier Heart: a periodic Freeze on everything in reach. */
+  FreezePulse = 1 << 6,
+  /** Plasma Lance: the beam carries on through what it hits. */
+  Piercing = 1 << 7,
+  /** Void Obelisk: drags what it hits back down the path. */
+  Pulls = 1 << 8,
+  /** Prism Tower: borrows its neighbours' damage types. */
+  Refracts = 1 << 9,
+  /** Gilded Alembic: every bounty on the board pays more. */
+  GlobalGold = 1 << 10,
+  /** Bulwark Order. */
+  Taunts = 1 << 11,
+  Reflects = 1 << 12,
+  /** Ranger Lodge: what it shoots takes more from everything. */
+  MarksTarget = 1 << 13,
+}
+
 export const enum TowerFlag {
   None = 0,
   Alive = 1 << 0,

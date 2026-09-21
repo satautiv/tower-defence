@@ -1,11 +1,12 @@
 import { TICK_HZ, TILE_SIZE } from '@core/constants';
 import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
+import type { TowerTier } from '@content/schema/tower';
 import type { TuningDefinition } from '@content/schema/tuning';
 import { LEY_NODE_TYPES, STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
-import { BehaviourFlag, EnemyFlag } from './flags.js';
+import { BehaviourFlag, EnemyFlag, TowerPerk } from './flags.js';
 import { DAMAGE_INDEX } from './damage.js';
 import { resolveEffect } from './effects.js';
 import type { ResolvedEffect } from './effects.js';
@@ -205,6 +206,35 @@ export interface TowerTable {
   /** 255 when the tier applies no status. */
   readonly statusId: Uint8Array;
   readonly statusStacks: Uint8Array;
+
+  /**
+   * TowerPerk bits for this tier (#32), and the numbers each one reads.
+   *
+   * Keyed by stat index, so an upgrade or a branch picks its perks up through
+   * `applyTowerStats` with nothing else to remember, and zero for every tier
+   * that is only a stat block.
+   */
+  readonly perks: Uint16Array;
+  readonly pierceFraction: Float32Array;
+  /** 255 when the tier has no status it hits harder into. */
+  readonly bonusVsStatus: Uint8Array;
+  readonly bonusVsStatusMultiplier: Float32Array;
+  readonly armourPerChillStack: Float32Array;
+  readonly spreadStacks: Uint8Array;
+  readonly spreadRadius: Float32Array;
+  readonly groundTicks: Float32Array;
+  readonly groundRadiusTiles: Float32Array;
+  readonly groundDamagePerSecond: Float32Array;
+  readonly freezePulseTicks: Float32Array;
+  readonly pullDistance: Float32Array;
+  readonly refractRadius: Float32Array;
+  readonly refractBonusPerType: Float32Array;
+  readonly globalGoldFraction: Float32Array;
+  readonly tauntTicks: Float32Array;
+  readonly tauntRadius: Float32Array;
+  readonly reflectFraction: Float32Array;
+  readonly markMultiplier: Float32Array;
+  readonly markTicks: Float32Array;
 
   /** Soldiers this tier fields. Zero for every tower that shoots. */
   readonly soldierCount: Uint8Array;
@@ -612,6 +642,66 @@ const TARGET_INDEX: Readonly<Record<string, number>> = {
   both: TargetClass.Both,
 };
 
+/** What `statusId` and friends hold when a tier names no status. */
+const NO_STATUS = 255;
+
+/** Trait id to bit, so a perk is authored by name and read as a mask (#32). */
+const PERK_BITS: Readonly<Record<string, number>> = {
+  pierce_fraction: TowerPerk.PierceFraction,
+  bonus_vs_status: TowerPerk.BonusVsStatus,
+  chill_sunders: TowerPerk.ChillSunders,
+  discharge_at_cap: TowerPerk.DischargeAtCap,
+  spread_on_death: TowerPerk.SpreadOnDeath,
+  leaves_ground: TowerPerk.LeavesGround,
+  freeze_pulse: TowerPerk.FreezePulse,
+  piercing: TowerPerk.Piercing,
+  pulls: TowerPerk.Pulls,
+  refracts: TowerPerk.Refracts,
+  global_gold: TowerPerk.GlobalGold,
+  taunts: TowerPerk.Taunts,
+  reflects: TowerPerk.Reflects,
+  marks_target: TowerPerk.MarksTarget,
+};
+
+/**
+ * Flattens a tier's perks and their numbers into the table.
+ *
+ * Every value lands in its own column even when the perk that reads it is
+ * absent, so a system can multiply or add unconditionally rather than branch
+ * twice — once on the mask and once on whether the number is there.
+ */
+function applyPerks(table: TowerTable, i: number, tier: TowerTier): void {
+  let mask = 0;
+  for (const perk of tier.perks) mask |= PERK_BITS[perk] ?? 0;
+  table.perks[i] = mask;
+  if (mask === 0) return;
+
+  const config = tier.perkConfig;
+  table.pierceFraction[i] = config.pierceFraction ?? 0;
+  if (config.bonusVsStatus !== undefined) {
+    table.bonusVsStatus[i] = STATUS_INDEX[config.bonusVsStatus];
+  }
+  table.bonusVsStatusMultiplier[i] = config.bonusVsStatusMultiplier ?? 1;
+  table.armourPerChillStack[i] = config.armourPerChillStack ?? 0;
+  table.spreadStacks[i] = config.spreadStacks ?? 0;
+  table.spreadRadius[i] = (config.spreadRadiusTiles ?? 0) * TILE_SIZE;
+  /* Ground patches keep their radius in *tiles*: `createGroundEffect` converts,
+     and handing it pixels would double the conversion. */
+  table.groundTicks[i] = (config.groundSeconds ?? 0) * TICK_HZ;
+  table.groundRadiusTiles[i] = config.groundRadiusTiles ?? 0;
+  table.groundDamagePerSecond[i] = config.groundDamagePerSecond ?? 0;
+  table.freezePulseTicks[i] = (config.freezePulseSeconds ?? 0) * TICK_HZ;
+  table.pullDistance[i] = (config.pullTiles ?? 0) * TILE_SIZE;
+  table.refractRadius[i] = (config.refractRadiusTiles ?? 0) * TILE_SIZE;
+  table.refractBonusPerType[i] = config.refractBonusPerType ?? 0;
+  table.globalGoldFraction[i] = config.globalGoldFraction ?? 0;
+  table.tauntTicks[i] = (config.tauntSeconds ?? 0) * TICK_HZ;
+  table.tauntRadius[i] = (config.tauntRadiusTiles ?? 0) * TILE_SIZE;
+  table.reflectFraction[i] = config.reflectFraction ?? 0;
+  table.markMultiplier[i] = config.markMultiplier ?? 1;
+  table.markTicks[i] = (config.markSeconds ?? 0) * TICK_HZ;
+}
+
 function buildTowerTable(registry: ContentRegistry): TowerTable {
   const ids = [...registry.towers.keys()].sort();
   const slots = ids.length * TIER_SLOTS;
@@ -636,6 +726,26 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
     bonusGoldPerKill: new Float32Array(slots),
     statusId: new Uint8Array(slots).fill(255),
     statusStacks: new Uint8Array(slots),
+    perks: new Uint16Array(slots),
+    pierceFraction: new Float32Array(slots),
+    bonusVsStatus: new Uint8Array(slots).fill(NO_STATUS),
+    bonusVsStatusMultiplier: new Float32Array(slots).fill(1),
+    armourPerChillStack: new Float32Array(slots),
+    spreadStacks: new Uint8Array(slots),
+    spreadRadius: new Float32Array(slots),
+    groundTicks: new Float32Array(slots),
+    groundRadiusTiles: new Float32Array(slots),
+    groundDamagePerSecond: new Float32Array(slots),
+    freezePulseTicks: new Float32Array(slots),
+    pullDistance: new Float32Array(slots),
+    refractRadius: new Float32Array(slots),
+    refractBonusPerType: new Float32Array(slots),
+    globalGoldFraction: new Float32Array(slots),
+    tauntTicks: new Float32Array(slots),
+    tauntRadius: new Float32Array(slots),
+    reflectFraction: new Float32Array(slots),
+    markMultiplier: new Float32Array(slots).fill(1),
+    markTicks: new Float32Array(slots),
     soldierCount: new Uint8Array(slots),
     soldierHp: new Float32Array(slots),
     soldierDamage: new Float32Array(slots),
@@ -682,6 +792,7 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
         table.statusId[i] = STATUS_INDEX[tier.statusApplied.status];
         table.statusStacks[i] = tier.statusApplied.stacks;
       }
+      applyPerks(table, i, tier);
 
       const garrison = tier.garrison;
       if (garrison !== undefined) {
@@ -1006,6 +1117,26 @@ const EMPTY_TOWERS: TowerTable = {
   bonusGoldPerKill: new Float32Array(0),
   statusId: new Uint8Array(0),
   statusStacks: new Uint8Array(0),
+  perks: new Uint16Array(0),
+  pierceFraction: new Float32Array(0),
+  bonusVsStatus: new Uint8Array(0),
+  bonusVsStatusMultiplier: new Float32Array(0),
+  armourPerChillStack: new Float32Array(0),
+  spreadStacks: new Uint8Array(0),
+  spreadRadius: new Float32Array(0),
+  groundTicks: new Float32Array(0),
+  groundRadiusTiles: new Float32Array(0),
+  groundDamagePerSecond: new Float32Array(0),
+  freezePulseTicks: new Float32Array(0),
+  pullDistance: new Float32Array(0),
+  refractRadius: new Float32Array(0),
+  refractBonusPerType: new Float32Array(0),
+  globalGoldFraction: new Float32Array(0),
+  tauntTicks: new Float32Array(0),
+  tauntRadius: new Float32Array(0),
+  reflectFraction: new Float32Array(0),
+  markMultiplier: new Float32Array(0),
+  markTicks: new Float32Array(0),
   soldierCount: new Uint8Array(0),
   soldierHp: new Float32Array(0),
   soldierDamage: new Float32Array(0),
