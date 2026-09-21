@@ -12,10 +12,16 @@ reaction system from "a tester triggered it and did not notice" to "all three ex
 their own words". `docs/PLAYTEST-REACTIONS.md` holds the protocol; the verdict and what changed
 because of it are on #62.
 
-**M2 is unblocked.** #23 has the roster in; what remains open on it are the T3 perks that need
-code rather than data. Next in M2: #24 (soldiers — the Warden's Barracks does nothing until
-then), #25 (hero), #26 (Warden Powers), #27 (targeting modes, now unblocked), #29 (enemy
-behaviours), #30 (ley lines), #31 (ground effects).
+**M2 is most of the way through.** #23 has the roster in; what remains open on it are the T3
+perks that need code rather than data. **#24 (soldiers), #25 (hero), #26 (Warden Powers), #27
+(targeting and the tower panel), #30 (ley lines) and #31 (ground effects) are all done** and
+described below. **#29 (enemy behaviours) is the only M2 gameplay issue with nothing built
+yet** — twelve behaviours plus the wave-scaling formula, and the next thing to pick up.
+
+Three issues stay open for things code cannot close. #27 wants a tier-4 side-by-side
+comparison, which is worth doing once **#32** gives it something to compare beyond a stat line.
+#30 wants editor support for placing nodes, which is **#34**. Both also want a check on a real
+phone, which is the same check #20 and #55 are waiting on.
 
 **#19 and #20 stay open on purpose.** #19 needs a playtest with three people who have not
 seen the design (protocol in `docs/PLAYTEST-M1.md`); #20 needs the slice run on a physical
@@ -26,8 +32,8 @@ because the slice has no reactions.
 `src/sim/` holds the `World`, five structure-of-arrays entity pools, the command queue, event
 buffer, damage queue and the fifteen-step tick pipeline, plus paths and movement (#11), the wave
 spawner (#12), targeting, firing and projectiles (#13), damage resolution (#14), economy (#15),
-lives and win/lose (#16). One of the pipeline's fifteen steps is still `noop`: `heroSystem`
-(#25). `flushEvents` is deliberately empty, because the consumer drains and clears.
+lives and win/lose (#16). Every step of the pipeline now does something; `flushEvents` is
+deliberately empty, because the consumer drains and clears.
 
 **Ground effects (#31) are live.** `src/sim/systems/groundEffects.ts` runs pools, fields, lava
 and the map's one-shot lever through one pool, because they differ only in payload. **Effects
@@ -37,6 +43,45 @@ Slows take the strongest rather than multiplying, so layering fields can never s
 still, but ground slows *do* compound with status slows, because a Stasis Field is a different
 kind of thing from being Chilled. Ground state is recomputed from nothing each tick rather than
 accumulated, so an enemy that walks out stops being slowed the moment it does.
+
+**Ley lines (#30) are live, and they added no system.** Four node types, all four authored in
+`tuning.json` as four independent columns — attack speed, range, status stacks, reaction damage
+— of which each type fills exactly one. That shape is the whole trick: the stat pipeline
+multiplies four numbers unconditionally instead of branching on which node it is standing on,
+and a fifth node type is a JSON edit rather than a new case in `applyTowerStats`.
+
+Three of the four are stats and land in **`applyTowerStats`, the one funnel every rung goes
+through**, which is what makes "bonuses apply at every tier and specialisation" true without a
+single upgrade path having to remember it — an upgrade re-stats, and re-statting re-applies the
+node. The node is copied onto the tower at build time and read from `plotById` inside
+`placeTower`, so a test and the balance simulator get it as surely as the command handler does.
+
+**Surge needed the one genuinely new idea: a reaction has to know whose it was.**
+`EnemyPool.statusSource` records the tower whose hit applied the most recent status, threaded
+through `applyStatus` as an optional last argument, and the reaction is credited to whoever
+completed the pair. Everything that is not a tower — a ground field, a Warden Power, a
+reaction's own ignition — passes -1 and clears the credit, which is correct rather than
+lossy. `escalate` passes the source on, or a Frost Cairn on a Surge node would lose its bonus
+at the exact moment it stacks Chill to five and freezes. The multiplier is folded into the
+reaction's `magnitude` once, so the burst, the blast, the arc and the lingering burn are all
+surged by one multiplication — and because the credit follows the *hit*, a Surge node on the
+board is not a Surge node on someone else's reaction.
+
+**The measured effect, isolated by neutralising the tuning and re-running:** `greedy` — the
+caricature board that took plots in cost order and triggered **zero** reactions in 200/200 runs
+— now triggers one in **every** run, because plot 2 on stage 1-1 is a Resonance node and greedy
+takes it early. `balanced` is untouched (81 vs 80), which is the right shape: the node dragged
+the laziest possible board into the mechanic without changing what a real board does. That is
+the node earning its place rather than a balance change hiding inside a feature.
+
+Ley colours live in `src/view/palette.ts` with the rest, but they are **deliberately exempt from
+the reaction rule** and the file says why: they are static plot markers, drawn before anything
+is built and covered by the tower afterwards, so they never share a moment with a detonation —
+and nine hues are already reserved, so four more at 30 degrees' clearance would not fit. What
+they *are* held to is each other, so a player can read which bonus a plot carries without
+tapping it. One trap, found by running the game rather than the tests: **the build menu's arc
+has an inner radius of 96px but its cards hang well past the plot**, so a notice placed 16px
+below the plot is drawn behind the end card and reads as nothing at all.
 
 **Abilities are data (#26).** `src/sim/effects.ts` holds eight primitives, and the rule that
 keeps them honest is: when something cannot be expressed, add a primitive rather than a special
@@ -168,12 +213,14 @@ mechanism in the first place.
 
 Three things it did *not* fix, left for #50 and #23:
 
-- **`greedy` still triggers zero reactions at any health.** 600 starting gold buys exactly six
-  Flame Vents, which take plots 0–5, so the cheaper Frost Cairns always end up at the far end of
-  the path and never share a segment. Tuning starting gold to fix it produced chaotic results
-  (0 → 24 → 6 → 0 reactions), because it depends on precisely when gold crosses a price
+- **`greedy` still triggers almost no reactions at any health.** 600 starting gold buys exactly
+  six Flame Vents, which take plots 0–5, so the cheaper Frost Cairns always end up at the far
+  end of the path and never share a segment. Tuning starting gold to fix it produced chaotic
+  results (0 → 24 → 6 → 0 reactions), because it depends on precisely when gold crosses a price
   threshold. That is a caricature of a player, not a stage defect — both real playtesters mixed
-  towers unprompted.
+  towers unprompted. **Ley lines (#30) later moved it off zero**, to exactly one reaction per
+  run: greedy takes plot 2 early and plot 2 is a Resonance node. One is still not playing the
+  game, and the figures in the table above predate both the roster and the nodes.
 - **`rush` now loses every run**, where before it won 100% without losing a life. Calling every
   wave early went from free to fatal in one step. The simulator warns rather than fails on it:
   `rush` is exempt from the authored band, because a player turning the risk dial to its limit
