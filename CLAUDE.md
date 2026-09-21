@@ -12,11 +12,12 @@ reaction system from "a tester triggered it and did not notice" to "all three ex
 their own words". `docs/PLAYTEST-REACTIONS.md` holds the protocol; the verdict and what changed
 because of it are on #62.
 
-**M2 is most of the way through.** #23 has the roster in; what remains open on it are the T3
+**M2's gameplay issues are done.** #23 has the roster in; what remains open on it are the T3
 perks that need code rather than data. **#24 (soldiers), #25 (hero), #26 (Warden Powers), #27
-(targeting and the tower panel), #30 (ley lines) and #31 (ground effects) are all done** and
-described below. **#29 (enemy behaviours) is the only M2 gameplay issue with nothing built
-yet** — twelve behaviours plus the wave-scaling formula, and the next thing to pick up.
+(targeting and the tower panel), #29 (enemy behaviours), #30 (ley lines) and #31 (ground
+effects) are all done** and described below. What is left in M2 is **#32** (tier 4/5
+specialisations) and **#33** (bosses), both of which are content-shaped rather than
+system-shaped now that the substrate exists.
 
 Three issues stay open for things code cannot close. #27 wants a tier-4 side-by-side
 comparison, which is worth doing once **#32** gives it something to compare beyond a stat line.
@@ -43,6 +44,45 @@ Slows take the strongest rather than multiplying, so layering fields can never s
 still, but ground slows *do* compound with status slows, because a Stasis Field is a different
 kind of thing from being Chilled. Ground state is recomputed from nothing each tick rather than
 accumulated, so an enemy that walks out stops being slowed the moment it does.
+
+**Enemy behaviours (#29) are live.** `src/sim/systems/behaviours.ts` is one pipeline step before
+movement, holding eight behaviours: Mender, Shieldwright, Nullifier, Standard Bearer, Sapper,
+Carrier, Rift Sprout and Phase Stalker. **Auras take the ground-effect bargain exactly** —
+recomputed from nothing every tick, with the source querying the world rather than every enemy
+asking who is buffing it. That is the whole of how "auras apply and remove cleanly on death and
+on range exit" is met: a Nullifier the player just killed stops suppressing towers on the next
+tick, with no per-enemy bookkeeping a death could strand. Strongest wins rather than
+multiplying, so two Nullifiers make a tower bad and not silent.
+
+**The behaviour mask lives on the enemy table keyed by type, not per entity.** Behaviours never
+vary between two Menders; `EnemyFlag` has six bits left and what lives there — Blocked, Dying,
+Leaked — is exactly what *does* change per tick. One test rejects the ordinary roster.
+
+Phase sits beside the shatter check in `damage.ts`, because it responds to the size of a single
+hit and that number exists nowhere else; it fires only if the enemy survived, so a killing blow
+does not teleport the corpse. The Sapper telegraphs before it lands — a tower that went dark on
+contact would be a rule change with no answer, and the wind-up is the window the player kills it
+in. `src/view/behaviours.ts` draws both halves, and the split matters: **a moment comes from the
+event buffer and ages out, a standing aura is read from the world every frame**, because a ring
+that aged out would say the danger had passed while it had not.
+
+**Wave scaling (§9.2) is live**, every coefficient in `tuning.json`. Armour and ward grow at
+0.6× the health rate so a late enemy is tankier without making an early damage type worthless,
+and bounty grows by the square root so a player cannot out-earn the curve. A splitter's children
+and a Carrier's drop are scaled by their *parent's* wave, not the current one.
+
+**What it did to the stage, measured at 60 runs per strategy:** 1-1 stops being free. Median
+lives left falls from 19 to 8 for a balanced board and 13 to 3 for greedy, both still winning
+100% inside the band. **Five of the eight single-tower boards can no longer clear it alone**,
+where every one of them could before — real movement on pillar P1. Flame Vent and Frost Cairn
+still solo it at 20/20, so P1 is improved rather than fixed.
+
+Two traps the authoring found, both worth knowing: **`burrow` applied to everyone walking the
+segment** rather than to Burrowers, because the tunnel is a property of the road — every Husk on
+the map went untargetable through it until `CanBurrow` made it an enemy's property. And **seven
+telegraph hues against a 30° floor leaves almost no slack**, so they are spaced evenly rather
+than chosen for flavour; picking by feel put suppression and sapping 25° apart, which is the
+pair a player most needs to tell apart.
 
 **Ley lines (#30) are live, and they added no system.** Four node types, all four authored in
 `tuning.json` as four independent columns — attack speed, range, status stacks, reaction damage
