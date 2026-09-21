@@ -128,9 +128,18 @@ export function awardReactionAether(world: World): void {
   addAether(world, world.rules.tuning.aetherPerReaction);
 }
 
-/** Aether and gold for a kill. */
+/**
+ * Aether and gold for a kill.
+ *
+ * Bounty scales by the *square roots* of the region and difficulty multipliers
+ * while health scales by the multipliers themselves (§9.2). That gap is
+ * deliberate and is most of what makes later regions harder: an enemy with
+ * nineteen times the health is not worth nineteen times the gold, so a player
+ * cannot simply out-earn the curve. Rounded down, because gold is whole.
+ */
 export function awardKill(world: World, typeIdx: number): void {
-  addGold(world, world.rules.enemies.bounty[typeIdx] as number);
+  const base = world.rules.enemies.bounty[typeIdx] as number;
+  addGold(world, Math.floor(base * world.rules.scaling.bounty));
   addAether(world, world.rules.tuning.aetherPerKill);
 }
 

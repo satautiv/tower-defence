@@ -19,9 +19,9 @@ describe('the pipeline matches the specification', () => {
    * must run before damage so a Superconduct strips armour in time to matter.
    * A reordering that looks harmless changes the game, so the order is pinned.
    */
-  it('runs exactly the fifteen specified systems', () => {
+  it('runs exactly the sixteen specified systems', () => {
     expect(SYSTEMS.map((s) => s.name)).toEqual([...SYSTEM_ORDER]);
-    expect(SYSTEMS).toHaveLength(15);
+    expect(SYSTEMS).toHaveLength(16);
   });
 
   it('calls them in that order, once each per tick', () => {
@@ -48,6 +48,15 @@ describe('the pipeline matches the specification', () => {
     ['damageResolution', 'economySystem'],
     ['economySystem', 'lifecycleSystem'],
     ['drainCommandQueue', 'waveSpawner'],
+    /* A haste aura has to be worth something on the tick it is computed, and a
+       Nullifier's suppression has to be read by the towers it suppresses rather
+       than a tick late (#29). */
+    ['behaviourSystem', 'movementSystem'],
+    ['behaviourSystem', 'targetingSystem'],
+    ['behaviourSystem', 'firingSystem'],
+    /* After reactions, so a behaviour never acts on a pair that has already
+       detonated this tick. */
+    ['reactionSystem', 'behaviourSystem'],
   ])('%s runs before %s', (earlier, later) => {
     expect(SYSTEM_ORDER.indexOf(earlier)).toBeLessThan(SYSTEM_ORDER.indexOf(later));
   });

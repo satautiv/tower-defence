@@ -1,7 +1,7 @@
 import { DAMAGE_INDEX, DamageFlag } from '../damage.js';
 import { addGold, awardKill, bonusGoldFor } from '../economy.js';
-import { emitDamageDealt, emitEnemyDied } from '../events.js';
-import { EnemyFlag } from '../flags.js';
+import { emitBehaviour, emitDamageDealt, emitEnemyDied } from '../events.js';
+import { BehaviourFlag, EnemyFlag } from '../flags.js';
 import { laneOffsetFor } from '../path.js';
 import { spawnEnemy } from '../spawn.js';
 import { STATUS_COUNT, STATUS_INDEX } from '../status.js';
@@ -68,6 +68,11 @@ export function effectiveDefence(
   if (kinetic && ((enemies.flags[enemySlot] as number) & EnemyFlag.DirectionalArmour) !== 0) {
     if (isBehind(world, enemySlot, fromX, fromY)) base = table.rearArmour[typeIdx] as number;
   }
+
+  /* A Standard Bearer's armour applies to both defences: the design describes
+     it as toughening the column, and a bonus that armoured only the physical
+     half would silently make the escort pointless against half the roster. */
+  base += enemies.auraArmour[enemySlot] as number;
 
   const corrode = enemies.stacksOf(enemySlot, CORRODE);
   const perStack = world.rules.statuses.defenceReductionPerStack[CORRODE] as number;
@@ -181,6 +186,9 @@ function resolveOne(world: World, index: number): void {
 
   enemies.hp[slot] = (enemies.hp[slot] as number) - amount;
   world.stats.damageDealt += amount;
+  /* After the health is applied, and only if it survived: a hit that kills a
+     Phase Stalker should not also teleport the corpse two tiles up the road. */
+  if ((enemies.hp[slot] as number) > 0) maybePhase(world, slot, amount);
   /* Attributed where it came from, so a panel can say what this tower has
      contributed. Sources that are not towers — burns, reactions, soldiers —
      carry -1 and are counted only in the stage total. */
@@ -229,6 +237,51 @@ function applyOnHitStatus(world: World, index: number, slot: number): void {
     statusId,
     queue.statusStacks[index] as number,
     queue.source[index] as number,
+  );
+}
+
+/**
+ * A Phase Stalker's jump (#29, docs/GAME_DESIGN.md §9.1).
+ *
+ * *"Teleports 2 tiles forward on any hit > 100 damage. Punishes burst-only
+ * boards."* Measured against the damage that actually landed, after armour,
+ * ward and every multiplier — so stripping its Ward with Corrode is what makes
+ * a shot heavy enough to set it off, which is the counter-play the line is for.
+ *
+ * Lives here rather than in a per-tick sweep because it is a response to a
+ * single hit, and the size of that hit exists nowhere else. It sits beside the
+ * shatter check for the same reason.
+ *
+ * The jump moves it along the path it is already on and never past the end:
+ * arriving at the core is the lifecycle system's decision to make, and a
+ * teleport that overshot the road would skip the leak check entirely.
+ */
+function maybePhase(world: World, slot: number, amount: number): void {
+  const enemies = world.enemies;
+  const typeIdx = enemies.typeIdx[slot] as number;
+  const table = world.rules.enemies;
+
+  if (((table.behaviour[typeIdx] as number) & BehaviourFlag.Phase) === 0) return;
+
+  const threshold = table.phaseDamageThreshold[typeIdx] as number;
+  if (threshold <= 0 || amount <= threshold) return;
+
+  const path = world.rules.pathById.get(enemies.pathId[slot] as number);
+  const limit = path === undefined ? Number.POSITIVE_INFINITY : path.totalLength;
+  const jumped = (enemies.pathDist[slot] as number) + (table.phaseDistance[typeIdx] as number);
+
+  enemies.pathDist[slot] = jumped >= limit ? limit : jumped;
+  /* A jump breaks whatever was holding it: a soldier cannot keep a grip on
+     something that is no longer there. */
+  enemies.flags[slot] = (enemies.flags[slot] as number) & ~EnemyFlag.Blocked;
+  enemies.blockedBy[slot] = -1;
+
+  emitBehaviour(
+    world.events,
+    enemies.ids[slot] as number,
+    BehaviourFlag.Phase,
+    enemies.x[slot] as number,
+    enemies.y[slot] as number,
   );
 }
 
@@ -299,7 +352,9 @@ function splitOnDeath(world: World, parent: number, typeIdx: number): void {
   const spawnPoint = enemies.spawnPoint[parent] as number;
 
   for (let i = 0; i < count; i++) {
-    const child = spawnEnemy(world, childType, spawnPoint);
+    /* Scaled by the parent's wave, not the current one: a Chitin Mother from
+       wave three should produce wave-three Broodlings however late they die. */
+    const child = spawnEnemy(world, childType, spawnPoint, waveIndex);
     if (child < 0) return;
 
     enemies.pathId[child] = pathId;

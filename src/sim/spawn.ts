@@ -14,7 +14,12 @@ import type { World } from './world.js';
  * Returns the slot, or -1 when the pool is full. A full pool drops the spawn
  * rather than growing, so callers treat -1 as "this enemy does not appear".
  */
-export function spawnEnemy(world: World, typeIdx: number, spawnPointIndex: number): number {
+export function spawnEnemy(
+  world: World,
+  typeIdx: number,
+  spawnPointIndex: number,
+  waveIndex = 0,
+): number {
   const table = world.rules.enemies;
   if (typeIdx < 0 || typeIdx >= table.ids.length) return -1;
 
@@ -25,15 +30,23 @@ export function spawnEnemy(world: World, typeIdx: number, spawnPointIndex: numbe
   if (slot < 0) return -1;
 
   const enemies = world.enemies;
-  const hp = table.hp[typeIdx] as number;
+  const scale = world.rules.scaling;
+  /* Passed in rather than read off the world, because a splitter's children
+     and a Carrier's drop must be scaled by the wave their parent belongs to,
+     not by whichever wave happens to be running when they appear. */
+  const hpScale = scale.hp * (1 + scale.hpGrowthPerWave * waveIndex);
+  /* Armour and ward grow more slowly than health, so a late enemy is tankier
+     without making an early damage type worthless (§9.2). */
+  const defenceScale = 1 + (hpScale - 1) * scale.defenceGrowthFraction;
+  const hp = (table.hp[typeIdx] as number) * hpScale;
 
   enemies.typeIdx[slot] = typeIdx;
   enemies.spawnPoint[slot] = spawnPointIndex;
   enemies.hp[slot] = hp;
   enemies.maxHp[slot] = hp;
   enemies.speed[slot] = table.speed[typeIdx] as number;
-  enemies.armour[slot] = table.armour[typeIdx] as number;
-  enemies.ward[slot] = table.ward[typeIdx] as number;
+  enemies.armour[slot] = (table.armour[typeIdx] as number) * defenceScale;
+  enemies.ward[slot] = (table.ward[typeIdx] as number) * defenceScale;
   enemies.overshield[slot] = table.overshield[typeIdx] as number;
   enemies.flags[slot] = (enemies.flags[slot] as number) | (table.flags[typeIdx] as number);
 

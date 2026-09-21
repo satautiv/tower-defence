@@ -5,7 +5,7 @@ import type { TuningDefinition } from '@content/schema/tuning';
 import { LEY_NODE_TYPES, STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
-import { EnemyFlag } from './flags.js';
+import { BehaviourFlag, EnemyFlag } from './flags.js';
 import { DAMAGE_INDEX } from './damage.js';
 import { resolveEffect } from './effects.js';
 import type { ResolvedEffect } from './effects.js';
@@ -47,6 +47,37 @@ export interface EnemyTable {
   readonly splitCount: Uint8Array;
   /** EnemyFlag bits implied by the enemy's traits. */
   readonly flags: Uint16Array;
+
+  /**
+   * BehaviourFlag bits, keyed by type rather than held per enemy (#29).
+   *
+   * Zero for most of the roster, which is what lets the behaviour system reject
+   * an ordinary Husk in one test rather than checking eight things about it.
+   */
+  readonly behaviour: Uint16Array;
+  /** World pixels. The reach of a heal, a shield, or either aura. */
+  readonly auraRadius: Float32Array;
+  /** How many allies a healer or shielder picks. */
+  readonly auraTargets: Uint8Array;
+  readonly healPerTick: Float32Array;
+  /** Overshield a shielder grants, and how often it refreshes. */
+  readonly shieldAmount: Float32Array;
+  /** Multiplier a Nullifier puts on a tower's rate of fire. 1 for everyone else. */
+  readonly towerFireRateMultiplier: Float32Array;
+  /** What a Standard Bearer gives its neighbours. Neutral at 1 and 0. */
+  readonly allySpeedMultiplier: Float32Array;
+  readonly allyArmourBonus: Float32Array;
+  /** Ticks a sapper holds a tower down for, and how long it winds up first. */
+  readonly disableTicks: Float32Array;
+  readonly telegraphTicks: Float32Array;
+  /** Single-hit damage that makes a Phase Stalker jump, and how far in pixels. */
+  readonly phaseDamageThreshold: Float32Array;
+  readonly phaseDistance: Float32Array;
+  /** Enemy index a carrier or spawner produces, or -1, how many, how often. */
+  readonly spawns: Int16Array;
+  readonly spawnCount: Uint8Array;
+  readonly spawnIntervalTicks: Float32Array;
+
   readonly indexOf: ReadonlyMap<string, number>;
 }
 
@@ -284,9 +315,25 @@ export interface HeroRules {
   readonly abilityEffects: ReadonlyArray<readonly ResolvedEffect[]>;
 }
 
+/**
+ * Wave scaling, resolved for the stage being played (docs/GAME_DESIGN.md §9.2).
+ *
+ * The region and difficulty parts are fixed for a run, so they are folded once
+ * here rather than recomputed at every spawn; only the per-wave term varies.
+ */
+export interface ScalingRules {
+  /** regionMult x difficultyMult — everything that does not vary by wave. */
+  readonly hp: number;
+  readonly hpGrowthPerWave: number;
+  readonly defenceGrowthFraction: number;
+  /** sqrt(regionMult) x sqrt(difficultyMult): later regions pay more, sublinearly. */
+  readonly bounty: number;
+}
+
 export interface Ruleset {
   /** Global combat and economy constants. */
   readonly tuning: TuningDefinition;
+  readonly scaling: ScalingRules;
   readonly towers: TowerTable;
   readonly enemies: EnemyTable;
   readonly statuses: StatusTable;
@@ -318,6 +365,24 @@ const TRAIT_FLAGS: Readonly<Record<string, number>> = {
   freeze_immune: EnemyFlag.FreezeImmune,
   directional_armour: EnemyFlag.DirectionalArmour,
 };
+
+/** Traits that map onto a behaviour the behaviour system carries out (#29). */
+const TRAIT_BEHAVIOURS: Readonly<Record<string, number>> = {
+  healer: BehaviourFlag.Healer,
+  shielder: BehaviourFlag.Shielder,
+  tower_slow_aura: BehaviourFlag.TowerSlowAura,
+  ally_haste_aura: BehaviourFlag.AllyHasteAura,
+  sapper: BehaviourFlag.Sapper,
+  carrier: BehaviourFlag.Carrier,
+  stationary_spawner: BehaviourFlag.StationarySpawner,
+  phase: BehaviourFlag.Phase,
+};
+
+function behaviourForTraits(traits: readonly string[]): number {
+  let mask = 0;
+  for (const trait of traits) mask |= TRAIT_BEHAVIOURS[trait] ?? 0;
+  return mask;
+}
 
 function flagsForTraits(traits: readonly string[]): number {
   let flags = 0;
@@ -351,6 +416,23 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
     splitsInto: new Int16Array(count).fill(-1),
     splitCount: new Uint8Array(count),
     flags: new Uint16Array(count),
+    behaviour: new Uint16Array(count),
+    auraRadius: new Float32Array(count),
+    auraTargets: new Uint8Array(count),
+    healPerTick: new Float32Array(count),
+    shieldAmount: new Float32Array(count),
+    /* Neutral defaults, so a system can multiply unconditionally rather than
+       branching on whether this enemy happens to carry an aura. */
+    towerFireRateMultiplier: new Float32Array(count).fill(1),
+    allySpeedMultiplier: new Float32Array(count).fill(1),
+    allyArmourBonus: new Float32Array(count),
+    disableTicks: new Float32Array(count),
+    telegraphTicks: new Float32Array(count),
+    phaseDamageThreshold: new Float32Array(count),
+    phaseDistance: new Float32Array(count),
+    spawns: new Int16Array(count).fill(-1),
+    spawnCount: new Uint8Array(count),
+    spawnIntervalTicks: new Float32Array(count),
     indexOf: new Map(ids.map((id, index) => [id, index])),
   };
 
@@ -371,13 +453,39 @@ function buildEnemyTable(registry: ContentRegistry): EnemyTable {
     table.evasion[i] = enemy.traitConfig.evasionChance ?? 0;
     table.splitCount[i] = enemy.traitConfig.splitCount ?? 0;
     table.flags[i] = flagsForTraits(enemy.traits);
+
+    const config = enemy.traitConfig;
+    table.behaviour[i] = behaviourForTraits(enemy.traits);
+    table.auraRadius[i] = (config.auraRadiusTiles ?? 0) * TILE_SIZE;
+    table.auraTargets[i] = config.auraTargets ?? 0;
+    table.healPerTick[i] = (config.healPerSecond ?? 0) / TICK_HZ;
+    /* A shielder's `overshield` is the pool it *grants*; on an enemy with the
+       overshield trait the same field is the pool it carries. One number, two
+       readings, decided by which trait is present. */
+    table.shieldAmount[i] = config.overshield ?? 0;
+    table.towerFireRateMultiplier[i] = config.towerFireRateMultiplier ?? 1;
+    table.allySpeedMultiplier[i] = config.allySpeedMultiplier ?? 1;
+    table.allyArmourBonus[i] = config.allyArmourBonus ?? 0;
+    table.disableTicks[i] = (config.disableSeconds ?? 0) * TICK_HZ;
+    table.telegraphTicks[i] = (config.telegraphSeconds ?? 0) * TICK_HZ;
+    table.phaseDamageThreshold[i] = config.phaseDamageThreshold ?? 0;
+    table.phaseDistance[i] = (config.phaseDistanceTiles ?? 0) * TILE_SIZE;
+    table.spawnCount[i] = config.spawnCount ?? 0;
+    table.spawnIntervalTicks[i] = (config.spawnIntervalSeconds ?? 0) * TICK_HZ;
+
+    /* A stationary spawner is stationary by its trait rather than by an author
+       remembering to write speed: 0. */
+    if ((table.behaviour[i] as number) & BehaviourFlag.StationarySpawner) table.speed[i] = 0;
   });
 
-  /* Resolved in a second pass: a splitter may name an enemy that appears later
-     in the sorted list, so every index has to exist first. */
+  /* Resolved in a second pass: a splitter or a carrier may name an enemy that
+     appears later in the sorted list, so every index has to exist first. */
   ids.forEach((id, i) => {
-    const into = registry.enemies.get(id)?.traitConfig.splitsInto;
-    if (into !== undefined) table.splitsInto[i] = table.indexOf.get(into) ?? -1;
+    const config = registry.enemies.get(id)?.traitConfig;
+    if (config?.splitsInto !== undefined) {
+      table.splitsInto[i] = table.indexOf.get(config.splitsInto) ?? -1;
+    }
+    if (config?.spawns !== undefined) table.spawns[i] = table.indexOf.get(config.spawns) ?? -1;
   });
 
   return table;
@@ -726,6 +834,33 @@ export interface RulesetOptions {
   /** Hero to take in, and the level the profile has it at. */
   heroId?: string;
   heroLevel?: number;
+  /**
+   * Difficulty multiplier on health and armour, 1 on Normal.
+   *
+   * A parameter rather than a stage property: the same stage is played on every
+   * difficulty, and which one is a run-time choice (#40).
+   */
+  difficultyMultiplier?: number;
+}
+
+/**
+ * Folds the region and difficulty halves of the scaling formula once.
+ *
+ * A region beyond the authored list falls back to the last one rather than
+ * throwing: content-lint is where an unauthored region should be caught, and a
+ * stage that loaded but scaled wrongly is easier to diagnose than one that
+ * refused to load at all.
+ */
+function buildScaling(tuning: TuningDefinition, region: number, difficulty: number): ScalingRules {
+  const multipliers = tuning.waveScaling.regionMultipliers;
+  const regionMult = multipliers[Math.min(Math.max(region, 1), multipliers.length) - 1] ?? 1;
+
+  return {
+    hp: regionMult * difficulty,
+    hpGrowthPerWave: tuning.waveScaling.hpGrowthPerWave,
+    defenceGrowthFraction: tuning.waveScaling.defenceGrowthFraction,
+    bounty: Math.sqrt(regionMult) * Math.sqrt(difficulty),
+  };
 }
 
 export function buildRuleset(
@@ -749,6 +884,7 @@ export function buildRuleset(
         ? null
         : buildHeroRules(registry, enemies, options.heroId, options.heroLevel ?? 1),
     tuning: registry.tuning,
+    scaling: buildScaling(registry.tuning, stage.region, options.difficultyMultiplier ?? 1),
     towers: buildTowerTable(registry),
     enemies,
     statuses: buildStatusTable(registry),
@@ -896,6 +1032,7 @@ const EMPTY_TUNING: TuningDefinition = {
   undoWindowSeconds: 3,
   previewArmourThreshold: 30,
   previewWardThreshold: 30,
+  waveScaling: { hpGrowthPerWave: 0, defenceGrowthFraction: 0.6, regionMultipliers: [1] },
   leyNodes: {
     flux: NO_LEY_BONUS,
     depth: NO_LEY_BONUS,
@@ -906,6 +1043,7 @@ const EMPTY_TUNING: TuningDefinition = {
 
 export const EMPTY_RULESET: Ruleset = {
   tuning: EMPTY_TUNING,
+  scaling: buildScaling(EMPTY_TUNING, 1, 1),
   towers: EMPTY_TOWERS,
   waves: EMPTY_WAVES,
   enemies: {
@@ -925,6 +1063,21 @@ export const EMPTY_RULESET: Ruleset = {
     splitsInto: new Int16Array(0),
     splitCount: new Uint8Array(0),
     flags: new Uint16Array(0),
+    behaviour: new Uint16Array(0),
+    auraRadius: new Float32Array(0),
+    auraTargets: new Uint8Array(0),
+    healPerTick: new Float32Array(0),
+    shieldAmount: new Float32Array(0),
+    towerFireRateMultiplier: new Float32Array(0),
+    allySpeedMultiplier: new Float32Array(0),
+    allyArmourBonus: new Float32Array(0),
+    disableTicks: new Float32Array(0),
+    telegraphTicks: new Float32Array(0),
+    phaseDamageThreshold: new Float32Array(0),
+    phaseDistance: new Float32Array(0),
+    spawns: new Int16Array(0),
+    spawnCount: new Uint8Array(0),
+    spawnIntervalTicks: new Float32Array(0),
     indexOf: new Map(),
   },
   statuses: {

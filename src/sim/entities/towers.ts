@@ -62,6 +62,15 @@ export class TowerPool extends EntityPool {
   /** Ticks remaining while a sapper holds it down. */
   readonly disabledUntil = new Int32Array(this.capacity);
 
+  /**
+   * What a Nullifier's aura is currently doing to this tower's rate of fire.
+   *
+   * 1 when nothing is suppressing it. Recomputed from nothing each tick by the
+   * behaviour system, so killing the Nullifier restores the tower on the very
+   * next tick rather than whenever some expiry happens to lapse (#29).
+   */
+  readonly auraFireRate = new Float32Array(this.capacity);
+
   constructor(capacity = MAX_TOWERS) {
     super(capacity);
   }
@@ -88,5 +97,6 @@ export class TowerPool extends EntityPool {
     this.plotId[slot] = 0;
     this.invested[slot] = 0;
     this.disabledUntil[slot] = 0;
+    this.auraFireRate[slot] = 1;
   }
 }

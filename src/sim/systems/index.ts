@@ -1,5 +1,6 @@
 import type { World } from '../world.js';
 import { drainCommandQueue } from './commands.js';
+import { behaviourSystem } from './behaviours.js';
 import { movementSystem } from './movement.js';
 import { economySystem } from '../economy.js';
 import { damageResolutionSystem } from './damage.js';
@@ -62,11 +63,22 @@ export const SYSTEMS: readonly SimSystem[] = [
    */
   { name: 'reactionSystem', run: reactionSystem },
 
-  /** 4. Advance path distance, fly straight, apply slows. */
+  /**
+   * 4. Enemy behaviours: auras, heals, shields, drops and spawns. #29
+   *
+   * Before movement so a haste aura is worth something on the tick it is
+   * computed, and before targeting and firing so a Nullifier's suppression is
+   * read by the towers it is suppressing rather than a tick late. Auras are
+   * recomputed from nothing here, which is what makes killing the source take
+   * effect immediately.
+   */
+  { name: 'behaviourSystem', run: behaviourSystem },
+
+  /** 5. Advance path distance, fly straight, apply slows. */
   { name: 'movementSystem', run: movementSystem },
 
   /**
-   * 5. Engage, block, fight, respawn, walk to rally.
+   * 6. Engage, block, fight, respawn, walk to rally.
    *
    * After movement, so a soldier decides what to block against where enemies
    * are *now* rather than where they were last tick — the blocking window is
@@ -76,7 +88,7 @@ export const SYSTEMS: readonly SimSystem[] = [
   { name: 'soldierSystem', run: soldierSystem },
 
   /**
-   * 6. Hero movement, auto-attack and ability cooldowns.
+   * 7. Hero movement, auto-attack and ability cooldowns.
    *
    * After the soldiers, because the hero shares their pool and their blocking
    * code: it has to see the engagement the soldier system just resolved for it
@@ -85,7 +97,7 @@ export const SYSTEMS: readonly SimSystem[] = [
   { name: 'heroSystem', run: heroSystem },
 
   /**
-   * 7. Towers pick targets. #13.
+   * 8. Towers pick targets. #13.
    *
    * Also rebuilds the spatial indexes, which has to happen after everything has
    * moved and before anything queries. Towers re-target only when their
@@ -93,14 +105,14 @@ export const SYSTEMS: readonly SimSystem[] = [
    */
   { name: 'targetingSystem', run: targetingSystem },
 
-  /** 8. Spawn projectiles, resolve instant beams, pulse auras. */
+  /** 9. Spawn projectiles, resolve instant beams, pulse auras. */
   { name: 'firingSystem', run: firingSystem },
 
-  /** 9. Advance projectiles, collide, queue on-hit damage. */
+  /** 10. Advance projectiles, collide, queue on-hit damage. */
   { name: 'projectileSystem', run: projectileSystem },
 
   /**
-   * 10. Lingering pools, fields, lava, burning ground.
+   * 11. Lingering pools, fields, lava, burning ground.
    *
    * After everything has moved and before damage resolves, so an enemy that
    * walked into a pool this tick burns for it this tick, and one that walked
@@ -109,7 +121,7 @@ export const SYSTEMS: readonly SimSystem[] = [
   { name: 'groundEffectSystem', run: groundEffectSystem },
 
   /**
-   * 11. Resolve the whole damage queue, then the deaths it caused. #14.
+   * 12. Resolve the whole damage queue, then the deaths it caused. #14.
    *
    * The single place damage is applied. Deaths are deferred until the queue has
    * drained, so nothing dies mid-pipeline and the result does not depend on
@@ -117,14 +129,14 @@ export const SYSTEMS: readonly SimSystem[] = [
    */
   { name: 'damageResolution', run: damageResolutionSystem },
 
-  /** 12. Bounty, Aether charge, wave-clear and early-call bonuses. #15. */
+  /** 13. Bounty, Aether charge, wave-clear and early-call bonuses. #15. */
   { name: 'economySystem', run: economySystem },
 
-  /** 13. Leak detection, lives, win and loss conditions. #16. */
+  /** 14. Leak detection, lives, win and loss conditions. #16. */
   { name: 'lifecycleSystem', run: lifecycleSystem },
 
   /**
-   * 14. The tick's output is complete.
+   * 15. The tick's output is complete.
    *
    * Deliberately does not clear the event buffer. At 2x and 3x speed several
    * ticks run per frame, and the view and audio layers drain once afterwards —
@@ -140,6 +152,7 @@ export const SYSTEM_ORDER: readonly string[] = [
   'waveSpawner',
   'statusSystem',
   'reactionSystem',
+  'behaviourSystem',
   'movementSystem',
   'soldierSystem',
   'heroSystem',

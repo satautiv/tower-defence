@@ -114,6 +114,28 @@ export class EnemyPool extends EntityPool {
   /** Standing in something that blocks the road outright, e.g. a Rift Seal. */
   readonly groundBlocked = new Uint8Array(this.capacity);
 
+  /**
+   * What a Standard Bearer's aura is currently worth to this enemy (#29).
+   *
+   * Recomputed from nothing every tick by the behaviour system, exactly as
+   * `groundSlow` is, and for the same reason: the acceptance criterion asks
+   * that auras "apply and remove cleanly on death and on range exit", and
+   * starting from neutral each tick is the only way to be certain of that
+   * without per-enemy bookkeeping that a death could leave behind.
+   */
+  readonly auraSpeed = new Float32Array(this.capacity);
+  readonly auraArmour = new Float32Array(this.capacity);
+
+  /**
+   * Next tick a periodic behaviour fires — a shield refresh, a carrier's drop,
+   * a sprout's spawn.
+   *
+   * One timer, because no enemy in the design carries two periodic behaviours.
+   * If one ever does, this becomes a small per-behaviour array rather than a
+   * second field nobody remembers to reset.
+   */
+  readonly behaviourReadyTick = new Int32Array(this.capacity);
+
   readonly meta: (EnemyMeta | null)[] = new Array<EnemyMeta | null>(this.capacity).fill(null);
 
   constructor(capacity = MAX_ENEMIES) {
@@ -149,6 +171,9 @@ export class EnemyPool extends EntityPool {
     this.statusSource[slot] = -1;
     this.groundSlow[slot] = 1;
     this.groundBlocked[slot] = 0;
+    this.auraSpeed[slot] = 1;
+    this.auraArmour[slot] = 0;
+    this.behaviourReadyTick[slot] = 0;
     this.meta[slot] = null;
 
     const base = slot * STATUS_COUNT;
