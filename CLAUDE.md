@@ -403,4 +403,8 @@ Scope discipline: **v1.0 ships Region 1 only** (10 stages). Regions 2–5 are M7
 - ADRs in `docs/adr/NNNN-title.md` for decisions that would be expensive to reverse, written when the decision is made
 - Comments explain *why*, never *what*
 - Systems are functions over the world — `movementSystem(world)`, not `world.movement.update()`
-- The repo owner's standing instruction: **commit and push completed work without asking.** Do not leave finished changes sitting in the working tree awaiting confirmation.
+- The repo owner's standing instruction: **take completed work all the way to `main` without
+  asking.** Commit, push, open the PR, wait for CI, and merge it — do not leave finished changes
+  sitting in the working tree, on a branch, or in an open PR awaiting confirmation. Green CI is
+  the gate, not a human reply. A red `verify` or `commits` check is still a stop: fix it and push
+  again rather than merging past it.
