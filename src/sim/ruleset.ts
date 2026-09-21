@@ -2,7 +2,7 @@ import { TICK_HZ, TILE_SIZE } from '@core/constants';
 import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
 import type { TuningDefinition } from '@content/schema/tuning';
-import { STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
+import { LEY_NODE_TYPES, STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
 import { EnemyFlag } from './flags.js';
@@ -201,8 +201,25 @@ export interface BuildPlot {
   readonly id: number;
   readonly x: number;
   readonly y: number;
-  /** Ley node type, or null. The bonus itself lands with #30. */
+  /** Ley node type for display, or null. */
   readonly leyNode: string | null;
+  /** Index into `LeyTable`, or -1. What the simulation actually reads. */
+  readonly leyNodeIdx: number;
+}
+
+/**
+ * The ley node bonuses, resolved (docs/GAME_DESIGN.md §5).
+ *
+ * Indexed by the position of the type in `LEY_NODE_TYPES`, so a tower carries
+ * a small integer rather than a string and the stat pipeline multiplies four
+ * numbers without ever asking which kind of node it is standing on.
+ */
+export interface LeyTable {
+  readonly ids: readonly string[];
+  readonly attackSpeed: Float32Array;
+  readonly range: Float32Array;
+  readonly statusStacks: Uint8Array;
+  readonly reactionDamage: Float32Array;
 }
 
 /**
@@ -282,6 +299,10 @@ export interface Ruleset {
   readonly pathById: ReadonlyMap<number, BakedPath>;
   readonly spawnPoints: readonly SpawnPoint[];
   readonly plots: readonly BuildPlot[];
+  readonly plotById: ReadonlyMap<number, BuildPlot>;
+  readonly ley: LeyTable;
+  /** Decorative ley seams, in world pixels. Read by the view, never by a tick. */
+  readonly leySeams: ReadonlyArray<ReadonlyArray<{ readonly x: number; readonly y: number }>>;
   /** Fraction of gold returned on sale, per tower id. */
   readonly towerRefund: ReadonlyMap<string, number>;
   readonly core: { readonly x: number; readonly y: number };
@@ -714,6 +735,13 @@ export function buildRuleset(
 ): Ruleset {
   const paths = stage.paths.map((path) => new BakedPath(path));
   const enemies = buildEnemyTable(registry);
+  const plots: BuildPlot[] = stage.plots.map((plot) => ({
+    id: plot.id,
+    x: plot.position.x * TILE_SIZE,
+    y: plot.position.y * TILE_SIZE,
+    leyNode: plot.leyNode ?? null,
+    leyNodeIdx: plot.leyNode === undefined ? -1 : LEY_NODE_TYPES.indexOf(plot.leyNode),
+  }));
 
   return {
     hero:
@@ -735,16 +763,44 @@ export function buildRuleset(
       pathId: spawn.pathId,
     })),
     towerRefund: new Map([...registry.towers.values()].map((t) => [t.id, t.sellRefund])),
-    plots: stage.plots.map((plot) => ({
-      id: plot.id,
-      x: plot.position.x * TILE_SIZE,
-      y: plot.position.y * TILE_SIZE,
-      leyNode: plot.leyNode ?? null,
-    })),
+    plots,
+    plotById: new Map(plots.map((plot) => [plot.id, plot])),
+    ley: buildLeyTable(registry.tuning),
+    leySeams: stage.leySeams.map((seam) =>
+      seam.map((point) => ({ x: point.x * TILE_SIZE, y: point.y * TILE_SIZE })),
+    ),
     core: { x: stage.core.x * TILE_SIZE, y: stage.core.y * TILE_SIZE },
     laneWidth: TILE_SIZE * 0.6,
     interactable: buildInteractable(stage),
   };
+}
+
+/**
+ * The ley bonuses, flattened in the order `LEY_NODE_TYPES` declares.
+ *
+ * Driven by that list rather than by the keys of the authored object, so a new
+ * node type added to the enum without a tuning entry is a compile error here
+ * instead of a plot that silently grants nothing.
+ */
+function buildLeyTable(tuning: TuningDefinition): LeyTable {
+  const count = LEY_NODE_TYPES.length;
+  const table: LeyTable = {
+    ids: LEY_NODE_TYPES,
+    attackSpeed: new Float32Array(count),
+    range: new Float32Array(count),
+    statusStacks: new Uint8Array(count),
+    reactionDamage: new Float32Array(count),
+  };
+
+  LEY_NODE_TYPES.forEach((type, i) => {
+    const bonus = tuning.leyNodes[type];
+    table.attackSpeed[i] = bonus.attackSpeed;
+    table.range[i] = bonus.range;
+    table.statusStacks[i] = bonus.statusStacks;
+    table.reactionDamage[i] = bonus.reactionDamage;
+  });
+
+  return table;
 }
 
 function buildInteractable(stage: StageDefinition): Interactable | null {
@@ -824,22 +880,32 @@ const EMPTY_TOWERS: TowerTable = {
   soldierStatusStacks: new Uint8Array(0),
 };
 
-export const EMPTY_RULESET: Ruleset = {
-  tuning: {
-    defenceHalfPoint: 50,
-    defenceCap: 200,
-    aetherPerKill: 1,
-    aetherPerReaction: 4,
-    aetherPerSecond: 0.5,
-    aetherMax: 100,
-    earlyCallGoldPerSecond: 1.5,
-    shatterMultiplier: 2.5,
-    shatterThreshold: 40,
-    twoStarLivesFraction: 0.6,
-    undoWindowSeconds: 3,
-    previewArmourThreshold: 30,
-    previewWardThreshold: 30,
+const NO_LEY_BONUS = { attackSpeed: 1, range: 1, statusStacks: 0, reactionDamage: 1 };
+
+const EMPTY_TUNING: TuningDefinition = {
+  defenceHalfPoint: 50,
+  defenceCap: 200,
+  aetherPerKill: 1,
+  aetherPerReaction: 4,
+  aetherPerSecond: 0.5,
+  aetherMax: 100,
+  earlyCallGoldPerSecond: 1.5,
+  shatterMultiplier: 2.5,
+  shatterThreshold: 40,
+  twoStarLivesFraction: 0.6,
+  undoWindowSeconds: 3,
+  previewArmourThreshold: 30,
+  previewWardThreshold: 30,
+  leyNodes: {
+    flux: NO_LEY_BONUS,
+    depth: NO_LEY_BONUS,
+    resonance: NO_LEY_BONUS,
+    surge: NO_LEY_BONUS,
   },
+};
+
+export const EMPTY_RULESET: Ruleset = {
+  tuning: EMPTY_TUNING,
   towers: EMPTY_TOWERS,
   waves: EMPTY_WAVES,
   enemies: {
@@ -905,6 +971,9 @@ export const EMPTY_RULESET: Ruleset = {
   pathById: new Map(),
   spawnPoints: [],
   plots: [],
+  plotById: new Map(),
+  ley: buildLeyTable(EMPTY_TUNING),
+  leySeams: [],
   towerRefund: new Map(),
   core: { x: 0, y: 0 },
   laneWidth: TILE_SIZE * 0.6,

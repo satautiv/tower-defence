@@ -144,16 +144,20 @@ describe('strategies play through the command queue', () => {
   /**
    * The sharpest finding the tool has produced, and not the one expected.
    *
-   * Greedy puts *all three* damage types on the board — and still triggers no
-   * reaction at all. Building different towers is not sufficient; they have to
-   * cover the same stretch of path. Which tower lands on which plot decides
-   * it, and filling plots in order does not arrange that by accident.
+   * Greedy puts several damage types on the board and still barely reacts:
+   * building different towers is not sufficient, they have to cover the same
+   * stretch of path, and filling plots in cost order does not arrange that by
+   * accident. It managed *zero* reactions until ley nodes landed (#30) — plot
+   * 2 on this stage is a Resonance node, and greedy takes it early, so the one
+   * reaction it now gets is the node dragging the laziest possible board into
+   * the mechanic. That is the node earning its place; it is not greedy
+   * learning to play, which `balanced` below still outscores eighty to one.
    */
-  it('greedy builds every type and still never reacts', () => {
+  it('greedy builds every type and barely reacts', () => {
     const result = runOnce(world(), greedy(), 1);
     const used = result.buildsByTower.filter((builds) => builds > 0);
     expect(used.length).toBeGreaterThan(1);
-    expect(result.reactionsTriggered).toBe(0);
+    expect(result.reactionsTriggered).toBeLessThan(5);
   });
 
   it('balanced spreads across the roster and triggers reactions', () => {

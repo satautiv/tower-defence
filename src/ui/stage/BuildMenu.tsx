@@ -86,6 +86,8 @@ export function BuildMenu({
   /* Mirrored through the horizontal, so the order the player reads left to
      right is the same either way round. */
   const flip = opensDownward(at.y) ? -1 : 1;
+  /* A property of the plot, so every option carries the same one. */
+  const leyNode = options[0]?.leyNode ?? null;
 
   return (
     <div className="ui-build" style={{ left: at.x, top: at.y }}>
@@ -96,15 +98,29 @@ export function BuildMenu({
         role="presentation"
       />
 
-      {/* A rejected build must say why. Silence reads as a frozen game — a
-          playtester paused to plan, clicked a tower, got nothing at all, and
-          thought it had hung. The `title` alone did not carry: a tooltip does
-          not exist on touch. */}
-      {locked && (
-        <div className="ui-build__locked" role="status">
-          Paused — resume to build
-        </div>
-      )}
+      {/* Both notices stack on the side of the plot the arc did *not* open
+          towards, because the arc's inner radius is only 96px and the cards
+          cover the middle: a label placed at the plot is read by nobody. */}
+      <div className={cx('ui-build__notices', flip < 0 && 'ui-build__notices--above')}>
+        {/* Named at the moment of choosing, because a ley node is a decision
+            about *which* tower goes here and the answer differs per node — a
+            Resonance node under a Flame Vent is a Scorch engine, under a
+            mortar it is nearly nothing (docs/GAME_DESIGN.md §5). The stats on
+            every card below already have the bonus folded in. */}
+        {leyNode !== null && (
+          <div className={cx('ui-build__ley', `ui-ley--${leyNode}`)}>{leyNode} node</div>
+        )}
+
+        {/* A rejected build must say why. Silence reads as a frozen game — a
+            playtester paused to plan, clicked a tower, got nothing at all, and
+            thought it had hung. The `title` alone did not carry: a tooltip does
+            not exist on touch. */}
+        {locked && (
+          <div className="ui-build__locked" role="status">
+            Paused — resume to build
+          </div>
+        )}
+      </div>
 
       {options.map((option, index) => {
         const { angle, radius } = arcLayout(count, index);

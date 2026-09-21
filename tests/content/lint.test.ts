@@ -89,6 +89,62 @@ describe('stage geometry', () => {
   });
 });
 
+/**
+ * The map authoring rules for ley nodes (docs/GAME_DESIGN.md §5, §13.2).
+ *
+ * Both ends of the band are gated, because both ends break the mechanic: with
+ * none, a stage cannot teach it; with every plot a node, the placement decision
+ * the mechanic exists to create disappears.
+ */
+describe('ley nodes', () => {
+  it('catches a stage with no ley nodes at all', () => {
+    const content = contentWith((c) => {
+      const stage = asRecord(c.stages[0]!.data);
+      for (const plot of stage.plots as Array<{ leyNode?: string }>) delete plot.leyNode;
+    });
+    expect(rulesFor(content)).toContain('ley-node-count');
+  });
+
+  it('catches a stage that turns every plot into a node', () => {
+    const content = contentWith((c) => {
+      const stage = asRecord(c.stages[0]!.data);
+      const plots = stage.plots as Array<{
+        id: number;
+        position: { x: number; y: number };
+        leyNode?: string;
+      }>;
+      for (let i = 2; i < 7; i++) {
+        plots.push({ id: i, position: { x: 4 + i * 2, y: 10 }, leyNode: 'depth' });
+      }
+    });
+    expect(rulesFor(content)).toContain('ley-node-count');
+  });
+
+  it('catches a seam running off the map', () => {
+    const content = contentWith((c) => {
+      asRecord(c.stages[0]!.data).leySeams = [
+        [
+          { x: 1, y: 1 },
+          { x: 900, y: 2 },
+        ],
+      ];
+    });
+    expect(rulesFor(content)).toContain('ley-seam-bounds');
+  });
+
+  it('accepts a seam that stays inside the map', () => {
+    const content = contentWith((c) => {
+      asRecord(c.stages[0]!.data).leySeams = [
+        [
+          { x: 1, y: 1 },
+          { x: 4, y: 4 },
+        ],
+      ];
+    });
+    expect(rulesFor(content)).not.toContain('ley-seam-bounds');
+  });
+});
+
 describe('stage economy', () => {
   it('catches starting gold that cannot afford the cheapest tower', () => {
     const content = contentWith((c) => {

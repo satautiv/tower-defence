@@ -27,6 +27,17 @@ export interface Diagnostic {
  */
 const MIN_AFFORDABLE_TOWERS = 4;
 
+/**
+ * Ley nodes per map, from the authoring rules (docs/GAME_DESIGN.md §5, §13.2).
+ *
+ * A band rather than a count, and a gate rather than a guideline: below it the
+ * secondary mechanic is absent from a stage that is supposed to teach it, and
+ * above it every interesting plot is a bonus plot, which is the same as none of
+ * them being one.
+ */
+const MIN_LEY_NODES = 2;
+const MAX_LEY_NODES = 4;
+
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
   Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -177,6 +188,34 @@ export function lintContent(
         }
       }
     }
+
+    const leyNodes = stage.plots.filter((plot) => plot.leyNode !== undefined).length;
+    if (leyNodes < MIN_LEY_NODES || leyNodes > MAX_LEY_NODES) {
+      add(
+        'ley-node-count',
+        stage.id,
+        `has ${leyNodes} ley node(s), outside the ${MIN_LEY_NODES}-${MAX_LEY_NODES} the map authoring rules allow`,
+      );
+    }
+
+    /* A seam nobody can see is decoration that failed at its one job, and a
+       seam running off the map is a straightforward authoring slip. */
+    stage.leySeams.forEach((seam, seamIndex) => {
+      seam.forEach((point, i) => {
+        if (
+          point.x < 0 ||
+          point.y < 0 ||
+          point.x > stage.widthTiles ||
+          point.y > stage.heightTiles
+        ) {
+          add(
+            'ley-seam-bounds',
+            stage.id,
+            `ley seam ${seamIndex} point ${i} at (${point.x}, ${point.y}) is off the map`,
+          );
+        }
+      });
+    });
 
     const cheapest = cheapestTowerCost(registry);
     if (Number.isFinite(cheapest)) {

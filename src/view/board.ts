@@ -2,6 +2,7 @@ import { Graphics } from 'pixi.js';
 import { TILE_SIZE } from '@core/constants';
 import { plotInfo, rangeOf, statIndexOf } from '@sim/index';
 import type { PlotInfo, World } from '@sim/index';
+import { LEY_COLOUR, PLOT_COLOUR } from './palette.js';
 import type { Layers } from './layers.js';
 
 /**
@@ -14,9 +15,18 @@ import type { Layers } from './layers.js';
  * redrawing is cheaper than the bookkeeping a diff would need — and cannot
  * drift out of sync with the simulation.
  */
-/** Teal, matching the ley marking rather than the gold of a build plot. */
+/** Teal, distinct from the gold of a build plot and from every node colour. */
 const RALLY_COLOUR = 0x5ce1e6;
 const FLAG_HEIGHT = 18;
+
+/**
+ * The seams themselves, in one colour whatever node sits on them.
+ *
+ * A seam says "Aether runs close here"; the node on it says what that is worth
+ * to a tower. Colouring the seam per node would put the specific claim on the
+ * decorative half and read as four unrelated rivers.
+ */
+const SEAM_COLOUR = 0x9d7bff;
 
 /** A pennant on a pole, so the flag reads as a flag at a glance. */
 function drawFlag(g: Graphics, x: number, y: number): void {
@@ -33,17 +43,47 @@ function drawFlag(g: Graphics, x: number, y: number): void {
 export class BoardView {
   private readonly plots = new Graphics();
   private readonly range = new Graphics();
+  private readonly seams = new Graphics();
   private plotCache: PlotInfo[] = [];
 
   constructor(layers: Layers) {
+    /* Under everything, with the path decals: a seam is something the ground
+       does, not something standing on it. */
+    layers.decals.addChild(this.seams);
     layers.plots.addChild(this.plots);
     layers.plots.addChild(this.range);
   }
 
-  /** Plot geometry is fixed for the stage, so it is laid out once. */
+  /** Plot and seam geometry are fixed for the stage, so they are laid out once. */
   syncPlots(world: World): void {
     this.plotCache = plotInfo(world);
+    this.drawSeams(world);
     this.drawPlots(-1);
+  }
+
+  /**
+   * The ley seams (docs/GAME_DESIGN.md §5).
+   *
+   * Two passes, wide and faint under narrow and bright, which reads as a glow
+   * without a shader or a blur filter — and so costs nothing on a phone. Drawn
+   * once per stage, not per frame: the seams never move.
+   */
+  private drawSeams(world: World): void {
+    const g = this.seams;
+    g.clear();
+
+    for (const seam of world.rules.leySeams) {
+      for (const pass of [
+        { width: 10, alpha: 0.12 },
+        { width: 3, alpha: 0.4 },
+      ]) {
+        const [head, ...rest] = seam;
+        if (head === undefined) continue;
+        g.moveTo(head.x, head.y);
+        for (const point of rest) g.lineTo(point.x, point.y);
+        g.stroke({ width: pass.width, color: SEAM_COLOUR, alpha: pass.alpha });
+      }
+    }
   }
 
   get plotPositions(): readonly PlotInfo[] {
@@ -98,9 +138,11 @@ export class BoardView {
 
     for (const plot of this.plotCache) {
       if (plot.occupiedBy >= 0) continue;
-      /* Ley nodes are marked before the player commits, because which tower
-         goes on one is the decision the mechanic exists to create. */
-      const colour = plot.leyNode === null ? 0xf2c14e : 0x5ce1e6;
+      /* Marked by *type*, before the player commits: which tower goes on which
+         node is the decision the mechanic exists to create, and a single colour
+         for all four would mean tapping every plot to find out which is which. */
+      const colour =
+        plot.leyNode === null ? PLOT_COLOUR : (LEY_COLOUR[plot.leyNode] ?? PLOT_COLOUR);
       const size = TILE_SIZE * 0.34;
 
       g.moveTo(plot.x, plot.y - size)
@@ -152,5 +194,6 @@ export class BoardView {
   destroy(): void {
     this.plots.destroy();
     this.range.destroy();
+    this.seams.destroy();
   }
 }

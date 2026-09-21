@@ -78,6 +78,8 @@ export interface TowerInfo {
   /** What it has actually done this stage. */
   kills: number;
   damageDealt: number;
+  /** The ley node under it, or null. Its bonus is already in `current`. */
+  leyNode: string | null;
 }
 
 export interface PowerOption {
@@ -118,7 +120,10 @@ export interface BuildOption {
   id: string;
   cost: number;
   affordable: boolean;
+  /** Already includes the ley bonus, when the options were asked for a plot. */
   stats: TierStats;
+  /** The node on the plot these options were built for, or null. */
+  leyNode: string | null;
 }
 
 export interface PlotInfo {
@@ -132,9 +137,20 @@ export interface PlotInfo {
 
 const TILE = 64;
 
-function statsAt(world: World, statIndex: number): TierStats {
+/**
+ * A tier's stats as they would actually be on a given plot.
+ *
+ * `ley` is the node index the tower stands on, or -1. Threading it through here
+ * rather than reading the raw tier table is what makes the panel and the
+ * upgrade preview agree with the simulation on a ley plot: a preview that
+ * quoted the unbonused number would understate every upgrade on the one plot
+ * the player is most deliberate about (#27, #30).
+ */
+function statsAt(world: World, statIndex: number, ley = -1): TierStats {
   const table = world.rules.towers;
-  const interval = table.fireIntervalTicks[statIndex] as number;
+  const bonus = world.rules.ley;
+  const attackSpeed = ley < 0 ? 1 : (bonus.attackSpeed[ley] as number);
+  const interval = (table.fireIntervalTicks[statIndex] as number) / attackSpeed;
   const damage = table.damage[statIndex] as number;
   const statusId = table.statusId[statIndex] as number;
   const mode = table.firingMode[statIndex] as number;
@@ -142,7 +158,8 @@ function statsAt(world: World, statIndex: number): TierStats {
 
   return {
     damage,
-    rangeTiles: (table.range[statIndex] as number) / TILE,
+    rangeTiles:
+      ((table.range[statIndex] as number) * (ley < 0 ? 1 : (bonus.range[ley] as number))) / TILE,
     fireRate: interval > 0 ? TICK_HZ / interval : 0,
     dps: interval > 0 ? damage * (TICK_HZ / interval) : 0,
     damageType: DAMAGE_BY_INDEX[table.damageType[statIndex] as number] ?? 'kinetic',
@@ -150,7 +167,9 @@ function statsAt(world: World, statIndex: number): TierStats {
       statusId < STATUS_BY_INDEX.length
         ? {
             id: STATUS_BY_INDEX[statusId] as string,
-            stacks: table.statusStacks[statIndex] as number,
+            stacks:
+              (table.statusStacks[statIndex] as number) +
+              (ley < 0 ? 0 : (bonus.statusStacks[ley] as number)),
           }
         : null,
     hitsAir: targets !== 0,
@@ -169,7 +188,8 @@ export function towerInfo(world: World, slot: number): TowerInfo | null {
   const typeIdx = world.towers.typeIdx[slot] as number;
   const tier = world.towers.tier[slot] as number;
   const specialisation = world.towers.specialisation[slot] as number;
-  const current = statsAt(world, statIndexOf(world, slot));
+  const ley = world.towers.leyNode[slot] as number;
+  const current = statsAt(world, statIndexOf(world, slot), ley);
 
   const nextCost = upgradeCost(world, slot);
   const upgrade: UpgradeOption | null =
@@ -179,7 +199,7 @@ export function towerInfo(world: World, slot: number): TowerInfo | null {
           cost: nextCost,
           affordable: canAfford(world, nextCost),
           before: current,
-          after: statsAt(world, typeIdx * TIER_SLOTS + tierSlot(tier + 1, specialisation)),
+          after: statsAt(world, typeIdx * TIER_SLOTS + tierSlot(tier + 1, specialisation), ley),
         };
 
   const specialisations: SpecialisationOption[] = [];
@@ -191,7 +211,7 @@ export function towerInfo(world: World, slot: number): TowerInfo | null {
       id: world.rules.towers.ids[typeIdx] ?? 'unknown',
       cost,
       affordable: canAfford(world, cost),
-      after: statsAt(world, typeIdx * TIER_SLOTS + tierSlot(3, branch)),
+      after: statsAt(world, typeIdx * TIER_SLOTS + tierSlot(3, branch), ley),
     });
   }
 
@@ -212,6 +232,7 @@ export function towerInfo(world: World, slot: number): TowerInfo | null {
     soldierCount: world.rules.towers.soldierCount[statIndexOf(world, slot)] as number,
     kills: world.towers.kills[slot] as number,
     damageDealt: world.towers.damageDealt[slot] as number,
+    leyNode: ley < 0 ? null : (world.rules.ley.ids[ley] ?? null),
   };
 }
 
@@ -245,7 +266,17 @@ export function undoSecondsRemaining(world: World): number {
   return Math.max(0, world.rules.tuning.undoWindowSeconds - elapsed);
 }
 
-export function buildOptions(world: World): BuildOption[] {
+/**
+ * What could be built, as it would be on this plot.
+ *
+ * The plot is optional only so a caller with no plot in hand still gets the
+ * plain roster. When one is given, the quoted stats are the ones the tower
+ * would actually have there — which on a ley plot is the entire point of
+ * marking the plot before the player commits (docs/GAME_DESIGN.md §5).
+ */
+export function buildOptions(world: World, plotId = -1): BuildOption[] {
+  const ley = world.rules.plotById.get(plotId)?.leyNodeIdx ?? -1;
+
   return world.rules.towers.ids.map((id, typeIdx) => {
     const statIndex = typeIdx * TIER_SLOTS;
     const cost = world.rules.towers.cost[statIndex] as number;
@@ -254,7 +285,8 @@ export function buildOptions(world: World): BuildOption[] {
       id,
       cost,
       affordable: canAfford(world, cost),
-      stats: statsAt(world, statIndex),
+      stats: statsAt(world, statIndex, ley),
+      leyNode: ley < 0 ? null : (world.rules.ley.ids[ley] ?? null),
     };
   });
 }

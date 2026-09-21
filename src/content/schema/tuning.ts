@@ -2,6 +2,26 @@ import { z } from 'zod';
 import { NonNegative, Positive } from './common.js';
 
 /**
+ * What a ley node grants the tower standing on it (docs/GAME_DESIGN.md §5).
+ *
+ * Four independent columns, of which each authored type fills exactly one and
+ * leaves the rest neutral. Expressed that way rather than as a tagged bonus so
+ * the stat pipeline multiplies four numbers unconditionally instead of
+ * branching on which node it is standing on — and so a fifth node type is a
+ * JSON edit rather than a new case in `applyTowerStats`.
+ */
+const LeyBonusSchema = z.object({
+  /** Multiplier on shots per second. */
+  attackSpeed: Positive.default(1),
+  /** Multiplier on reach. */
+  range: Positive.default(1),
+  /** Extra stacks on top of whatever this tower's hits already apply. */
+  statusStacks: z.number().int().nonnegative().default(0),
+  /** Multiplier on reactions this tower's hits set off. */
+  reactionDamage: Positive.default(1),
+});
+
+/**
  * Global combat and economy constants.
  *
  * The numbers that belong to no single tower or enemy but still decide how the
@@ -58,6 +78,20 @@ export const TuningSchema = z.object({
    */
   previewArmourThreshold: Positive,
   previewWardThreshold: Positive,
+
+  /**
+   * The ley node bonuses, one entry per type in `LEY_NODE_TYPES`.
+   *
+   * Every type is required rather than optional: a node a map can author but
+   * tuning has never heard of would be a plot that promises a bonus and grants
+   * nothing, which is the one failure the player cannot see.
+   */
+  leyNodes: z.object({
+    flux: LeyBonusSchema,
+    depth: LeyBonusSchema,
+    resonance: LeyBonusSchema,
+    surge: LeyBonusSchema,
+  }),
 });
 
 export type TuningDefinition = z.infer<typeof TuningSchema>;

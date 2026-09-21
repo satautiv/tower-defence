@@ -32,8 +32,6 @@ export const enum TowerFlag {
   Alive = 1 << 0,
   /** Disabled by a sapper; holds fire until the timer expires. */
   Disabled = 1 << 1,
-  /** Built on a ley node; carries that node's bonus. */
-  OnLeyNode = 1 << 2,
 }
 
 export const enum ProjectileFlag {

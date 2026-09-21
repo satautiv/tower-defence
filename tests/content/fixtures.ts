@@ -47,6 +47,12 @@ export function validContent(): RawContent {
         undoWindowSeconds: 3,
         previewArmourThreshold: 30,
         previewWardThreshold: 30,
+        leyNodes: {
+          flux: { attackSpeed: 1.25 },
+          depth: { range: 1.2 },
+          resonance: { statusStacks: 1 },
+          surge: { reactionDamage: 1.5 },
+        },
       },
     },
     statuses: {
@@ -118,8 +124,8 @@ export function validContent(): RawContent {
           ],
           spawnPoints: [{ id: 0, position: { x: 0, y: 8 }, pathId: 0 }],
           plots: [
-            { id: 0, position: { x: 4, y: 4 } },
-            { id: 1, position: { x: 10, y: 4 } },
+            { id: 0, position: { x: 4, y: 4 }, leyNode: 'flux' },
+            { id: 1, position: { x: 10, y: 4 }, leyNode: 'surge' },
           ],
           waves: [
             { autoStartDelaySeconds: 20, groups: [{ enemy: 'husk', count: 40, spawnPoint: 0 }] },

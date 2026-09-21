@@ -59,6 +59,30 @@ export const REACTION_COLOUR: Readonly<Record<string, number>> = {
   amplify: 0xffffff,
 };
 
+/**
+ * Build plots, and the ley nodes a few of them sit on (§5).
+ *
+ * Four types that grant four different things, so four colours: a player has to
+ * be able to read which node a plot carries *before* committing a tower to it,
+ * and a single teal marker for all of them would mean tapping each plot to find
+ * out. The rule here is that the four are tellable apart from each other and
+ * from an ordinary plot — nothing more.
+ *
+ * Deliberately **not** held to the reaction rule below. These are static board
+ * furniture on the plot layer, drawn before anything is built and covered by
+ * the tower afterwards; they never share a moment with a detonation the way a
+ * status pip does. Holding them to it would also be impossible — nine hues are
+ * already reserved, and four more at 30 degrees' clearance do not fit.
+ */
+export const PLOT_COLOUR = 0xf2c14e;
+
+export const LEY_COLOUR: Readonly<Record<string, number>> = {
+  flux: 0x4dd0e1,
+  depth: 0x8b7cff,
+  resonance: 0x3ddc84,
+  surge: 0xff4d94,
+};
+
 /** Hue in degrees, saturation and value, each 0-1 except hue. */
 export function toHsv(colour: number): { hue: number; saturation: number; value: number } {
   const r = ((colour >> 16) & 0xff) / 255;

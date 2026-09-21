@@ -75,7 +75,9 @@ function queueHit(
     towerSlot,
     flags,
     table.statusId[stats] as number,
-    table.statusStacks[stats] as number,
+    /* The tower's resolved count, not the tier's: a Resonance node has already
+       added its stack, and reading the table here would drop it. */
+    world.towers.statusStacks[towerSlot] as number,
   );
 }
 
@@ -268,7 +270,7 @@ function fireProjectile(
   projectiles.splashRadius[slot] = table.splashRadius[stats] as number;
   projectiles.armourPierce[slot] = table.armourPierce[stats] as number;
   projectiles.statusId[slot] = table.statusId[stats] as number;
-  projectiles.statusStacks[slot] = table.statusStacks[stats] as number;
+  projectiles.statusStacks[slot] = world.towers.statusStacks[towerSlot] as number;
   projectiles.sourceTower[slot] = towerSlot;
 
   const dx = lead.x - x;
