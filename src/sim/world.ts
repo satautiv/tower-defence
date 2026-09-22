@@ -279,15 +279,20 @@ export function createWorldForStage(
   seed: number,
   options: RulesetOptions = {},
 ): World {
+  const rules = buildRuleset(registry, stage, options);
+
   return new World(
     {
       seed,
       widthTiles: stage.widthTiles,
       heightTiles: stage.heightTiles,
-      startingGold: stage.startingGold,
+      /* Talents that land on the world rather than in a table are applied
+         here, once, so nothing during a tick has to know they exist (#37). */
+      startingGold: stage.startingGold + rules.talentWorld.startingGold,
       lives: stage.lives,
       totalWaves: stage.waves.length,
+      reactionPower: rules.talentWorld.reactionPower,
     },
-    buildRuleset(registry, stage, options),
+    rules,
   );
 }

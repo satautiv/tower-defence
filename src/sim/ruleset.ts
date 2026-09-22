@@ -14,6 +14,8 @@ import { DAMAGE_INDEX } from './damage.js';
 import { resolveEffect } from './effects.js';
 import type { ResolvedEffect } from './effects.js';
 import { BakedPath } from './path.js';
+import { flatFor, multiplierFor, totalTalents } from './talents.js';
+import type { TalentTotals } from './talents.js';
 
 /**
  * Authored content, resolved into flat numeric tables.
@@ -445,6 +447,20 @@ export interface Ruleset {
   readonly laneWidth: number;
   /** The map's one-shot lever, or null. */
   readonly interactable: Interactable | null;
+  /**
+   * What the talents came to for values the world owns rather than a table.
+   *
+   * Starting gold and reaction power live on the `World`, not in a resolved
+   * table, so they are carried here for `createWorldForStage` to apply. Every
+   * other talent is already folded into the numbers above.
+   */
+  readonly talentWorld: TalentWorldBonuses;
+}
+
+/** Talent totals that land on the world rather than in a table. */
+export interface TalentWorldBonuses {
+  readonly startingGold: number;
+  readonly reactionPower: number;
 }
 
 /** Traits that map directly onto a per-entity flag. */
@@ -1152,6 +1168,14 @@ export interface RulesetOptions {
    * The save system (#39) is what will pass real progress.
    */
   progressStageId?: string;
+  /**
+   * Ranks taken in the Warden Talent tree, by node id (#37).
+   *
+   * Folded into the flat tables here so no system reads a talent during a
+   * tick, exactly as unlocks, perks and ley nodes are. A tick reads
+   * `towers.damage[i]` as it always did, and the bonus is already in it.
+   */
+  talents?: Readonly<Record<string, number>>;
 }
 
 /**
@@ -1174,6 +1198,125 @@ function buildScaling(tuning: TuningDefinition, region: number, difficulty: numb
   };
 }
 
+/**
+ * Folds the talent totals into the resolved tables.
+ *
+ * The one place a talent becomes a number. Each stat is a line rather than a
+ * branch, and a stat the catalogue does not name never reaches here at all —
+ * `content:lint` refuses one, so a node that would pay nothing cannot be
+ * authored in the first place.
+ */
+function applyTalents(
+  tables: {
+    towers: TowerTable;
+    reactions: ReactionTable;
+    powers: PowerTable;
+    hero: HeroRules | null;
+    refund: Map<string, number>;
+  },
+  totals: TalentTotals,
+): void {
+  const { towers, reactions, powers, hero, refund } = tables;
+
+  scaleAll(towers.damage, multiplierFor(totals, 'towerDamage'));
+  scaleAll(towers.range, multiplierFor(totals, 'towerRange'));
+  scaleAll(towers.soldierHp, multiplierFor(totals, 'soldierHp'));
+
+  /* Cost is authored negative — -3%/rank is cheaper — and rounded, because a
+     price is whole gold and a tower costing 97.4 would show as 97 and charge
+     97.4. */
+  const cost = multiplierFor(totals, 'buildCost');
+  if (cost !== 1) {
+    for (let i = 0; i < towers.cost.length; i++) {
+      towers.cost[i] = Math.round((towers.cost[i] as number) * cost);
+    }
+  }
+
+  const rally = flatFor(totals, 'rallyRange');
+  if (rally !== 0) {
+    for (let i = 0; i < towers.rallyRange.length; i++) {
+      /* Zero means "not a garrison", so it stays zero: handing a Flame Vent a
+         rally range would make it look like one to everything that checks. */
+      const current = towers.rallyRange[i] as number;
+      if (current > 0) towers.rallyRange[i] = current + rally * TILE_SIZE;
+    }
+  }
+
+  const extraRefund = flatFor(totals, 'sellRefund');
+  if (extraRefund !== 0) {
+    for (const [id, fraction] of refund) {
+      /* Capped at the full price: a refund above 1 makes build-and-sell a
+         money printer. */
+      refund.set(id, Math.min(1, fraction + extraRefund));
+    }
+  }
+
+  /* Cooldowns are stored in ticks and authored in seconds. Never below one
+     tick, or a power would fire every frame. */
+  const reactionOff = Math.round(flatFor(totals, 'reactionCooldown') * TICK_HZ);
+  if (reactionOff !== 0) {
+    for (let i = 0; i < reactions.cooldownTicks.length; i++) {
+      reactions.cooldownTicks[i] = Math.max(
+        1,
+        (reactions.cooldownTicks[i] as number) + reactionOff,
+      );
+    }
+  }
+
+  const powerCooldown = multiplierFor(totals, 'powerCooldown');
+  if (powerCooldown !== 1) {
+    for (let i = 0; i < powers.cooldownTicks.length; i++) {
+      powers.cooldownTicks[i] = Math.max(
+        1,
+        Math.round((powers.cooldownTicks[i] as number) * powerCooldown),
+      );
+    }
+  }
+
+  if (hero !== null) {
+    const abilityCooldown = multiplierFor(totals, 'heroAbilityCooldown');
+    if (abilityCooldown !== 1) {
+      for (let i = 0; i < hero.abilityCooldownTicks.length; i++) {
+        hero.abilityCooldownTicks[i] = Math.max(
+          1,
+          Math.round((hero.abilityCooldownTicks[i] as number) * abilityCooldown),
+        );
+      }
+    }
+    const respawnOff = Math.round(flatFor(totals, 'heroRespawn') * TICK_HZ);
+    if (respawnOff !== 0) {
+      /* `respawnTicks` is readonly because nothing during a tick may change it.
+         This runs before the stage exists. */
+      (hero as { respawnTicks: number }).respawnTicks = Math.max(1, hero.respawnTicks + respawnOff);
+    }
+  }
+}
+
+function scaleAll(values: Float32Array, factor: number): void {
+  if (factor === 1) return;
+  for (let i = 0; i < values.length; i++) values[i] = (values[i] as number) * factor;
+}
+
+/**
+ * The tuning values a talent changes, as a copy.
+ *
+ * The registry's tuning is shared by every stage in the process — the balance
+ * simulator builds dozens of rulesets from one registry — so it is copied
+ * rather than edited. Mutating it would leak one player's talents into the
+ * next ruleset built.
+ */
+function applyTuningTalents(tuning: TuningDefinition, totals: TalentTotals): TuningDefinition {
+  const perSecond = flatFor(totals, 'aetherRegen');
+  const perReaction = flatFor(totals, 'aetherPerReaction');
+  if (perSecond === 0 && perReaction === 0) return tuning;
+
+  return {
+    ...tuning,
+    aetherPerSecond: Math.max(0, tuning.aetherPerSecond + perSecond),
+    aetherPerReaction: Math.max(0, tuning.aetherPerReaction + perReaction),
+  };
+}
+
 export function buildRuleset(
   registry: ContentRegistry,
   stage: StageDefinition,
@@ -1189,18 +1332,28 @@ export function buildRuleset(
     leyNodeIdx: plot.leyNode === undefined ? -1 : LEY_NODE_TYPES.indexOf(plot.leyNode),
   }));
 
+  const talents = totalTalents(registry.talents.values(), options.talents ?? {});
+
+  const hero =
+    options.heroId === undefined
+      ? null
+      : buildHeroRules(registry, enemies, options.heroId, options.heroLevel ?? 1);
+  const towers = buildTowerTable(registry, options.progressStageId ?? stage.id);
+  const reactions = buildReactionTable(registry);
+  const powers = buildPowerTable(registry, enemies);
+  const refund = new Map([...registry.towers.values()].map((t) => [t.id, t.sellRefund]));
+
+  applyTalents({ towers, reactions, powers, hero, refund }, talents);
+
   return {
-    hero:
-      options.heroId === undefined
-        ? null
-        : buildHeroRules(registry, enemies, options.heroId, options.heroLevel ?? 1),
-    tuning: registry.tuning,
+    hero,
+    tuning: applyTuningTalents(registry.tuning, talents),
     scaling: buildScaling(registry.tuning, stage.region, options.difficultyMultiplier ?? 1),
-    towers: buildTowerTable(registry, options.progressStageId ?? stage.id),
+    towers,
     enemies,
     statuses: buildStatusTable(registry),
-    reactions: buildReactionTable(registry),
-    powers: buildPowerTable(registry, enemies),
+    reactions,
+    powers,
     waves: buildWaveTable(stage, enemies),
     paths,
     pathById: new Map(paths.map((path) => [path.id, path])),
@@ -1209,7 +1362,7 @@ export function buildRuleset(
       y: spawn.position.y * TILE_SIZE,
       pathId: spawn.pathId,
     })),
-    towerRefund: new Map([...registry.towers.values()].map((t) => [t.id, t.sellRefund])),
+    towerRefund: refund,
     plots,
     plotById: new Map(plots.map((plot) => [plot.id, plot])),
     ley: buildLeyTable(registry.tuning),
@@ -1219,6 +1372,10 @@ export function buildRuleset(
     core: { x: stage.core.x * TILE_SIZE, y: stage.core.y * TILE_SIZE },
     laneWidth: TILE_SIZE * 0.6,
     interactable: buildInteractable(stage),
+    talentWorld: {
+      startingGold: Math.round(flatFor(talents, 'startingGold')),
+      reactionPower: multiplierFor(talents, 'reactionPower'),
+    },
   };
 }
 
@@ -1376,6 +1533,7 @@ const EMPTY_TUNING: TuningDefinition = {
 };
 
 export const EMPTY_RULESET: Ruleset = {
+  talentWorld: { startingGold: 0, reactionPower: 1 },
   tuning: EMPTY_TUNING,
   scaling: buildScaling(EMPTY_TUNING, 1, 1),
   towers: EMPTY_TOWERS,
