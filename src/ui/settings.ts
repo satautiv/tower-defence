@@ -41,11 +41,10 @@ export const SettingsSchema = z.object({
   /**
    * The hero's level, 1 to 10, earned across the campaign (§11).
    *
-   * Lives in the profile because it is progress rather than preference, and
-   * levels come from stage completions rather than from anything inside a run.
-   * It sits here for now rather than in its own file: the save system (#39)
-   * may fold this key into a larger profile, and the format is already the one
-   * it will use.
+   * Superseded by `app/profile.ts`, which owns hero levels per hero id as #39
+   * folded this key into the larger profile. Kept in the schema so a file
+   * written by an older build still parses and its level is still read; the
+   * profile is what writes one now.
    */
   heroLevel: z.number().int().min(1).max(10).default(1),
   /**
@@ -104,7 +103,6 @@ interface SettingsState extends Settings {
   setSpeed: (speed: GameSpeed) => void;
   setVolume: (volume: number) => void;
   setMuted: (muted: boolean) => void;
-  setHeroLevel: (level: number) => void;
   setTargetMode: (towerId: string, mode: number) => void;
 }
 
@@ -151,15 +149,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setTargetMode: (towerId, mode) => {
     if (get().targetModes[towerId] === mode) return;
     set({ targetModes: { ...get().targetModes, [towerId]: mode } });
-    persist(SettingsSchema.parse(get()));
-  },
-
-  /* Only ever upward: a level is earned, and a later stage cleared at a lower
-     level must not take one away. */
-  setHeroLevel: (level) => {
-    const clamped = Math.min(10, Math.max(1, Math.round(level)));
-    if (clamped <= get().heroLevel) return;
-    set({ heroLevel: clamped });
     persist(SettingsSchema.parse(get()));
   },
 }));

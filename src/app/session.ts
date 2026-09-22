@@ -8,6 +8,7 @@ import type { CommandQueue, StageResult, StagePhase, World } from '@sim/index';
 import { stageResult } from '@sim/index';
 import type { RulesetOptions } from '@sim/index';
 import { useSettings } from '@ui/settings';
+import { progressFor, useProfile } from './profile.js';
 
 /**
  * The hero this stage may take, if any.
@@ -73,9 +74,25 @@ export class GameSession {
     if (stage === undefined) return null;
 
     const heroId = unlockedHero(stageId);
+    const profile = useProfile.getState().profile;
+
     return new GameSession(stage, seed, {
       ...(heroId === undefined ? {} : { heroId }),
-      heroLevel: useSettings.getState().heroLevel,
+      /* The profile owns hero levels now. The settings value is read as a
+         fallback so a player who has one from an older build keeps it; nothing
+         writes it any more. */
+      heroLevel:
+        (heroId === undefined ? undefined : profile.heroLevels[heroId]) ??
+        useSettings.getState().heroLevel,
+      /**
+       * The roster the player has earned, rather than the stage's own id.
+       *
+       * This is what #36 left as a placeholder: `progressStageId` defaulted to
+       * the stage being played, which is right on a first run and wrong on a
+       * replay, where it would hand back the roster the player had at the time
+       * instead of the one they have now.
+       */
+      progressStageId: progressFor(profile, stageId),
     });
   }
 

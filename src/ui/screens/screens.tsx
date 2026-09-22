@@ -6,6 +6,7 @@ import { compareStageIds } from '@content/stages';
 import { Button, Panel } from '../components/index.js';
 import { text } from '../text.js';
 import { useUiStore } from '../store.js';
+import { stageRecord, useProfile } from '@app/profile';
 
 /**
  * Screen shells.
@@ -78,6 +79,7 @@ export function StageSelectScreen(): ReactElement {
   const navigate = useUiStore((state) => state.navigate);
   const selectStage = useUiStore((state) => state.selectStage);
   const goBack = useUiStore((state) => state.goBack);
+  const profile = useProfile((state) => state.profile);
 
   const play = (stageId: string): void => {
     selectStage(stageId);
@@ -88,9 +90,9 @@ export function StageSelectScreen(): ReactElement {
      and every region after — appear by existing. Sorted by `compareStageIds`
      because string order puts 1-10 before 1-5, which is exactly the bug a
      campaign list must not have.
-     Every stage is playable: which ones a player has *earned* is the save
-     system's to say (#39), and gating them behind stars nobody records yet
-     would lock the region to its first stage. */
+     Every stage stays playable. #39 records what has been earned and this
+     shows it, but *gating* the campaign on it belongs with the region map
+     (#37), which is where a locked stage has somewhere to say why. */
   const stages = [...loadContent().stages.values()]
     .filter((stage) => stage.region === 1)
     .sort((a, b) => compareStageIds(a.id, b.id));
@@ -99,11 +101,29 @@ export function StageSelectScreen(): ReactElement {
     <div className="ui-screen" data-testid="screen-stage-select">
       <Panel title="Emberfall Ridge">
         <div className="ui-stages">
-          {stages.map((stage) => (
-            <Button key={stage.id} variant="primary" onClick={() => play(stage.id)}>
-              {stage.id} &middot; {text(stage.nameKey)}
-            </Button>
-          ))}
+          {stages.map((stage) => {
+            const record = stageRecord(profile, stage.id);
+            return (
+              <Button
+                key={stage.id}
+                variant="primary"
+                className="ui-stage"
+                onClick={() => play(stage.id)}
+              >
+                <span className="ui-stage__name">
+                  {stage.id} &middot; {text(stage.nameKey)}
+                </span>
+                <span
+                  className="ui-stage__stars"
+                  aria-label={`${record.stars} of 3 stars`}
+                  data-testid={`stars-${stage.id}`}
+                >
+                  {'\u2605'.repeat(record.stars)}
+                  {'\u2606'.repeat(3 - record.stars)}
+                </span>
+              </Button>
+            );
+          })}
         </div>
       </Panel>
       <Button variant="ghost" onClick={goBack}>

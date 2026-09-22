@@ -37,6 +37,7 @@ import type {
   World,
 } from '@sim/index';
 import { GameSession } from '@app/session';
+import { useProfile } from '@app/profile';
 import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
 import { EffectsView } from '@view/effects';
@@ -124,6 +125,7 @@ function applyPreferredSpeed(session: GameSession): void {
 }
 
 export function InStageScreen(): ReactElement {
+  const recordResult = useProfile((state) => state.recordResult);
   const navigate = useUiStore((state) => state.navigate);
   const openPanel = useUiStore((state) => state.openPanel);
   const closePanel = useUiStore((state) => state.closePanel);
@@ -197,6 +199,13 @@ export function InStageScreen(): ReactElement {
   previewRef.current = previewRadius;
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  /* The poll below is set up once, so anything it reads has to come through a
+     ref rather than be captured from this render. */
+  /* One record per run. Cleared by Retry, which begins a new one. */
+  const recordedRef = useRef(false);
+  const stageIdRef = useRef(selectedStageId);
+  stageIdRef.current = selectedStageId;
+
   const finishedRef = useRef(result !== null);
   finishedRef.current = result !== null;
   const enemyPickRef = useRef<EnemyPick | null>(null);
@@ -459,8 +468,19 @@ export function InStageScreen(): ReactElement {
 
       /* Kept in the stage rather than routed to a screen of its own: leaving
          would tear the renderer down, and Retry would have to build it again. */
-      if (session.world.finished) {
-        setResult((shown) => shown ?? session.result());
+      if (session.world.finished && !recordedRef.current) {
+        /* Guarded by a ref rather than by `result`, and recorded out here
+           rather than inside the updater below. A state updater must be pure —
+           StrictMode double-invokes it in development — and a run recorded
+           from inside one is counted twice. Found by playing a stage in a
+           browser and reading back a profile that said two attempts. */
+        recordedRef.current = true;
+        const finished = session.result();
+        /* Recorded on the tick the stage ends rather than when the player
+           dismisses the results, so closing the tab on the victory screen
+           still keeps the run. */
+        if (stageIdRef.current !== null) recordResult(stageIdRef.current, finished);
+        setResult((shown) => shown ?? finished);
       }
     }, 100);
     return () => clearInterval(id);
@@ -540,6 +560,8 @@ export function InStageScreen(): ReactElement {
     audioRef.current?.reset();
     closePanel();
     clearSelection();
+    /* A new run is a new thing to record. */
+    recordedRef.current = false;
     setResult(null);
   }, [closePanel, clearSelection]);
 

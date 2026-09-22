@@ -803,3 +803,23 @@ abbr.ui-wave__threat {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--s-2);
 }
+
+/* A campaign entry carries its name and what has been earned on it (#39).
+   The row is made a flex container here rather than on `.ui-button`, which
+   every button in the game uses and none of the others wants reflowed. */
+.ui-stage {
+  display: flex;
+  align-items: center;
+}
+
+.ui-stage__name {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.ui-stage__stars {
+  flex: 0 0 auto;
+  margin-left: var(--s-2);
+  letter-spacing: 0.1em;
+  color: var(--c-gold);
+}
