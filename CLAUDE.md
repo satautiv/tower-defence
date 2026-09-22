@@ -21,6 +21,10 @@ done** and described below. **M2's code is finished, #34 — the map editor — 
 ten stages are authored: Region 1 is playable start to finish.** What remains open on #34 is
 the decor tool and in-editor playtest, and on #36 the two criteria that need people.
 
+**M3 has started: #39 — the save system — is done.** Progress persists, a run survives a
+backgrounding, and unlock gating reads what the player has actually cleared. #37 (talents and
+the region map) is unblocked by it.
+
 Two issues stay open for things code cannot close. #30 wants editor support for placing nodes,
 which is **#34**. That and #27 both also want a check on a real phone, which is the same check
 #20 and #55 are waiting on.
@@ -129,6 +133,53 @@ the median lives it finishes with runs 20 · 20 · 14 · 7 · 17 · 5 · 10 · 5
 from lives (§12.4), so that is the curve that matters — but it does mean the authored bands are
 not yet doing much work, and #50 should set them from measured play rather than from my guess.
 Clear times run 4.1 to 8.6 minutes against §12.2's 4-to-6, so 1-9 and 1-10 are long.
+
+**The save system (#39) is in, and it is two separate concerns sharing one
+format.** The profile (`src/app/profile.ts`, localStorage) holds stars, best times, attempts
+and hero levels; the session snapshot (`src/app/sessionSnapshot.ts`, IndexedDB) holds a whole
+serialised `World`. `src/core/savefile.ts` is the envelope, the migration chain from v1 and the
+validation, extracted from the prototype `ui/settings.ts` had been carrying — its own comment
+asked for that fold, and all sixteen of its tests pass untouched.
+
+**A pool serialises itself, and the part that matters is what reflection cannot see.** The typed
+arrays are found by reflection, the same rule `clear` and `hashWorld` use, because a
+hand-written list is something a new field gets left off. But `nextId`, the live count and the
+slot allocator's free list are private *and the determinism hash folds none of them* — a
+snapshot that dropped them would restore to a **matching fingerprint** and then hand the next
+spawn a slot and an id it should not have. So `tests/determinism/snapshot.test.ts` advances both
+worlds a thousand ticks after restoring: the run has to stay identical, not merely start that
+way. Dropping `nextId`, dropping a pool, and dropping one array from the reflection were each
+tried deliberately, and each fails the suite.
+
+**base64 is ours (`src/core/base64.ts`)** because `btoa` is a DOM global and `Buffer` is Node's,
+and the thing being encoded is built in `sim/`, which may touch neither.
+
+**Two findings from building it, both from running the game rather than the tests.** First, the
+snapshot fixture's first draft passed every assertion while holding **zero live enemies, zero
+projectiles and an RNG still sitting on its seed** — four pools proven by an empty world. It
+asserts its own richness now. Related and worth knowing beyond #39: **Region 1 never advances
+the RNG at all**, because it is consumed only by path branching and chance-based effects and ten
+stages have neither. Second, **a run was recorded twice**: the recording sat inside a `setResult`
+state updater, and a React updater must be pure — StrictMode double-invokes it, so one play
+wrote `attempts: 2`.
+
+**Resuming has to know the saved run before the session exists.** `GameSession.forStage` mints a
+seed from the clock, so a world built first and restored into second carries a seed the snapshot
+does not match — and the snapshot's own guard refuses it, correctly. The canvas waits for that
+read and the session is built from the saved run's seed. Found by resuming in a browser and
+reading the refusal.
+
+**Unlock gating now reads real progress.** `progressFor` takes the later of what the player has
+cleared and what they are playing: a first run of 1-6 offers the Barracks 1-6 introduces, and a
+replay of 1-1 after finishing the region keeps all eight towers. That closes the placeholder #36
+left. Gating the *campaign list* on stars is deliberately not done here — it belongs with the
+region map (#37), which is where a locked stage has somewhere to say why.
+
+**An import is all or nothing**, and a bundle keeps each file's own envelope so an old profile
+still runs its own migrations. Clearing wipes the adapters rather than known keys, so the
+`profile.unreadable` backup goes too. **One gap stated rather than papered over:** a content edit
+that changes a stat without changing any array's length is not detected, so such a run resumes
+against the new numbers — closing it needs a content fingerprint, which belongs with #59.
 
 **The map editor (#34) is in, and it lives in `src/editor/`, not `tools/map-editor/`.**
 TECH_DESIGN §13.1 names that directory and in the same breath calls the thing *"a browser
