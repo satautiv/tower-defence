@@ -161,5 +161,6 @@
       }
     }
   ],
-  "sellRefund": 0.7
+  "sellRefund": 0.7,
+  "unlockedByStage": "1-2"
 }

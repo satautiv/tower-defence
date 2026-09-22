@@ -19,6 +19,7 @@ import {
   tick,
   towerIndex,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * Enemy behaviours (#29, docs/GAME_DESIGN.md §9).
@@ -33,7 +34,7 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed);
+const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed, FULL_ROSTER);
 
 /** An enemy parked where it is put, with health to spare. */
 function place(world: World, id: string, x: number, y: number): number {

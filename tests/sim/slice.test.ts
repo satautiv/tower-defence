@@ -15,6 +15,7 @@ import {
   upgradeTower,
 } from '@sim/index';
 import type { StageResult, World } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * The M1 slice, played end to end.
@@ -30,7 +31,7 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const world = (seed: number): World => createWorldForStage(registry, stage, seed);
+const world = (seed: number): World => createWorldForStage(registry, stage, seed, FULL_ROSTER);
 
 interface PlayOptions {
   /** Call every wave the moment the previous one clears. */

@@ -153,12 +153,18 @@ export function summarise(
  * - `single:*` is a probe of one tower, not a statement about the stage. A
  *   single tower failing to solo a stage is **what pillar P1 wants**; one
  *   succeeding is the violation, and gets its own finding below.
+ * - `greedy` buys the dearest tower it can afford, which leaves it with
+ *   nine towers where a round-robin board has fifteen. That is not a careless
+ *   player, it is an under-built one, and Region 1 (#36) is where it started
+ *   to matter: holding it to the band forced every stage to be trivial for a
+ *   board that fills its plots. It is still the board pillar P1 is measured
+ *   on, and it still raises a finding when it never wins at all.
  *
- * Both are still measured and reported. They just do not fail a build for
+ * All three are measured and reported. They just do not fail a build for
  * being what they are.
  */
 function bandApplies(strategy: string): boolean {
-  return strategy !== 'rush' && !strategy.startsWith('single:');
+  return strategy !== 'rush' && strategy !== 'greedy' && !strategy.startsWith('single:');
 }
 
 export function findings(summary: Summary): Finding[] {
@@ -171,6 +177,23 @@ export function findings(summary: Summary): Finding[] {
       message:
         `win rate ${pct(summary.winRate)} is outside the authored band ` +
         `${pct(summary.target.minWinRate)}–${pct(summary.target.maxWinRate)}`,
+    });
+  }
+
+  /**
+   * A board that never wins is still worth saying out loud.
+   *
+   * `greedy` no longer fails a build, so without this its collapse would be
+   * silent — and "the under-built board cannot clear this stage at all" is
+   * exactly the kind of drift the simulator exists to catch.
+   */
+  if (summary.strategy === 'greedy' && summary.runs > 0 && summary.winRate <= 0.05) {
+    out.push({
+      severity: 'warn',
+      code: 'greedy-never-wins',
+      message:
+        `the dearest-affordable board wins ${pct(summary.winRate)} — a player who ` +
+        'under-builds has no line through this stage at all',
     });
   }
 

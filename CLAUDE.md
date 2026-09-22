@@ -17,10 +17,9 @@ perks, which #32's substrate now makes authorable — `perks` and `perkConfig` a
 not only a branch's, so a T3 perk is a JSON edit rather than code. **#24 (soldiers), #25
 (hero), #26 (Warden Powers), #27 (targeting and the tower panel), #29 (enemy behaviours), #30
 (ley lines), #31 (ground effects), #32 (tier 4/5 specialisations) and #33 (bosses) are all
-done** and described below. **M2's code is finished, and #34 — the map editor — is in.** What
-is left before Region 1 is playable is **#36** (the ten stages), which is also what gives the
-bosses a stage to stand in. What remains open on #34 is the decor tool and in-editor playtest,
-which are conveniences rather than blockers.
+done** and described below. **M2's code is finished, #34 — the map editor — is in, and #36's
+ten stages are authored: Region 1 is playable start to finish.** What remains open on #34 is
+the decor tool and in-editor playtest, and on #36 the two criteria that need people.
 
 Two issues stay open for things code cannot close. #30 wants editor support for placing nodes,
 which is **#34**. That and #27 both also want a check on a real phone, which is the same check
@@ -85,6 +84,51 @@ the map went untargetable through it until `CanBurrow` made it an enemy's proper
 telegraph hues against a 30° floor leaves almost no slack**, so they are spaced evenly rather
 than chosen for flavour; picking by feel put suppression and sapping 25° apart, which is the
 pair a player most needs to tell apart.
+
+**Region 1 (#36) is ten stages, and the campaign runs.** Each one introduces exactly one new
+thing, which §12.2 demands and which is the constraint that shaped the order: Arcane Spire at
+1-2 against Ward, air on its own lane at 1-3, Tesla at 1-4, the hero at 1-5, the Barracks at
+1-6, the Alchemist's Still at 1-7 against armour, the Mortar at 1-8, the elites at 1-9, Grendrix
+at 1-10. The spec asked for the last three towers at 1-6/1-8/1-10; they are at 1-6/1-7/1-8
+instead, because handing a player a new tower on the boss stage is not a lesson.
+
+**`tests/content/region1.test.ts` is §12.3 as a test rather than as prose.** Plot counts, ley
+node counts, a premium plot that covers two separate stretches of road, a plot that only a long
+reach makes worth taking, an interactable per map, the wave budget per stage, and a flyer lane
+that does not trace the road — all *measured* against the stage rather than asserted, so they
+survive someone dragging a plot. It found one violation immediately: **stage 1-1 sent its Rift
+Bats down the ground spawn**, so a board covering the road covered the air for free. 1-1 now has
+a lane of its own.
+
+**Unlocks belong to the player, not to the stage.** `unlockedByStage` had been authored and
+validated since #23 and read by nothing. It is resolved in `buildRuleset` from
+`RulesetOptions.progressStageId`, which defaults to the stage being played — *not* gated on the
+stage's own id, because that would take the roster away again the moment someone replayed 1-1
+for a better score. The save system (#39) is what will pass real progress. `placeTower` refuses
+a locked tower as well as the menu hiding it, since a command can come from a replay or the
+simulator.
+
+**That change broke the balance simulator, which is the point of it being in the ruleset.** The
+strategies iterated the whole roster and spent their turn on towers the stage had not unlocked,
+reporting stages as unwinnable when the scripted player was standing still. They check
+`unlocked` now, and `defaultStrategies` no longer offers a `single:` board for a tower nobody
+could build.
+
+**Two findings from tuning, both recorded rather than fixed.** First: **every stage starts from
+an empty board and zero gold**, so a later stage can ramp further but its opening waves must
+still be survivable with two tier-1 towers. The first draft front-loaded Bulwark Golems into
+wave three of 1-7 and the whole back half lost at wave 2–5. Second, and the one to point #50 at:
+**`greedy` now wins 0% of every stage from 1-2 onward.** Buying the dearest affordable tower
+leaves it with nine towers where `balanced` has fifteen, and holding it to the band forced every
+stage to be trivial for a board that fills its plots. It is exempt from the band now, like
+`rush` — measured, reported, and given its own `greedy-never-wins` finding so the exemption
+cannot make it silent.
+
+**The difficulty curve is in lives left, not win rate.** `balanced` clears all ten at 100%, and
+the median lives it finishes with runs 20 · 20 · 14 · 7 · 17 · 5 · 10 · 5 · 1 · 3. Stars come
+from lives (§12.4), so that is the curve that matters — but it does mean the authored bands are
+not yet doing much work, and #50 should set them from measured play rather than from my guess.
+Clear times run 4.1 to 8.6 minutes against §12.2's 4-to-6, so 1-9 and 1-10 are long.
 
 **The map editor (#34) is in, and it lives in `src/editor/`, not `tools/map-editor/`.**
 TECH_DESIGN §13.1 names that directory and in the same breath calls the thing *"a browser

@@ -24,6 +24,7 @@ import {
   towerIndex,
   towerInfo,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * Ley nodes (#30, docs/GAME_DESIGN.md §5).
@@ -38,7 +39,7 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed);
+const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed, FULL_ROSTER);
 
 /** Stage 1-1 authors exactly these two, which the content lint holds it to. */
 const RESONANCE_PLOT = 2;

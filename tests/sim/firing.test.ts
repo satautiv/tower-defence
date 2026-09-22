@@ -22,12 +22,13 @@ import {
   tick,
   towerIndex,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed);
+const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed, FULL_ROSTER);
 
 /**
  * The seed roster has no mortar or tesla coil yet (#23), so the shared stat

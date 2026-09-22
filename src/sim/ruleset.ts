@@ -4,6 +4,7 @@ import type { StageDefinition } from '@content/schema/stage';
 import type { TowerTier } from '@content/schema/tower';
 import type { TuningDefinition } from '@content/schema/tuning';
 import type { EnemyDefinition, EnemyPhase } from '@content/schema/enemy';
+import { stageAtLeast } from '@content/stages';
 import { LEY_NODE_TYPES, STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
@@ -226,6 +227,15 @@ export interface TowerTable {
    * both. A choice whose options are unnamed is not a choice.
    */
   readonly branchIds: readonly string[];
+  /**
+   * Whether this stage may build each tower, resolved from `unlockedByStage`.
+   *
+   * On the ruleset rather than checked in the interface, because the interface
+   * is not the only thing that builds towers: the balance simulator dispatches
+   * the same commands, and a simulator that ignored unlocks would report every
+   * early stage against a board no player could have (#36).
+   */
+  readonly unlocked: Uint8Array;
   /** Each tower's display key, indexed by `typeIdx`. */
   readonly nameKeys: readonly string[];
   /** Each branch's display key, indexed `typeIdx * 2 + branch`. */
@@ -852,7 +862,7 @@ function applyPerks(table: TowerTable, i: number, tier: TowerTier): void {
   table.markTicks[i] = (config.markSeconds ?? 0) * TICK_HZ;
 }
 
-function buildTowerTable(registry: ContentRegistry): TowerTable {
+function buildTowerTable(registry: ContentRegistry, stageId: string): TowerTable {
   const ids = [...registry.towers.keys()].sort();
   const slots = ids.length * TIER_SLOTS;
 
@@ -872,6 +882,12 @@ function buildTowerTable(registry: ContentRegistry): TowerTable {
   const table: TowerTable = {
     ids,
     branchIds,
+    /* A tower with no `unlockedByStage` is available from the first stage,
+       which is why this starts full and only ever clears entries. */
+    unlocked: Uint8Array.from(ids, (id) => {
+      const needs = registry.towers.get(id)?.unlockedByStage;
+      return needs === undefined || stageAtLeast(stageId, needs) ? 1 : 0;
+    }),
     nameKeys,
     branchNameKeys,
     indexOf: new Map(ids.map((id, index) => [id, index])),
@@ -1122,6 +1138,20 @@ export interface RulesetOptions {
    * difficulty, and which one is a run-time choice (#40).
    */
   difficultyMultiplier?: number;
+  /**
+   * How far the player has got, which is what decides the roster (#36).
+   *
+   * A parameter and not a property of the stage being played, for the same
+   * reason difficulty is: unlocks belong to the *player*, so replaying 1-1
+   * after clearing 1-8 must still offer everything 1-8 offered. Gating on the
+   * stage's own id would take the roster away again, which is the bug this
+   * field exists to make impossible.
+   *
+   * Defaults to the stage being played, which is what the balance simulator
+   * wants — the board a player arriving here for the first time would have.
+   * The save system (#39) is what will pass real progress.
+   */
+  progressStageId?: string;
 }
 
 /**
@@ -1166,7 +1196,7 @@ export function buildRuleset(
         : buildHeroRules(registry, enemies, options.heroId, options.heroLevel ?? 1),
     tuning: registry.tuning,
     scaling: buildScaling(registry.tuning, stage.region, options.difficultyMultiplier ?? 1),
-    towers: buildTowerTable(registry),
+    towers: buildTowerTable(registry, options.progressStageId ?? stage.id),
     enemies,
     statuses: buildStatusTable(registry),
     reactions: buildReactionTable(registry),
@@ -1266,6 +1296,7 @@ const EMPTY_WAVES: WaveTable = {
 const EMPTY_TOWERS: TowerTable = {
   ids: [],
   branchIds: [],
+  unlocked: new Uint8Array(0),
   nameKeys: [],
   branchNameKeys: [],
   indexOf: new Map(),

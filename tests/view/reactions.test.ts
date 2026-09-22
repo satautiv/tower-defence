@@ -21,6 +21,7 @@ import {
   spawnEnemy,
   targetingSystem,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * Whether a reaction can be seen (docs/GAME_DESIGN.md §4.5).
@@ -87,7 +88,7 @@ describe('every reaction looks different', () => {
 
 describe('the feed turns reactions into bursts', () => {
   it('raises a burst where the reaction happened', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world, 640, 320);
 
     const feed = new ReactionFeed();
@@ -104,7 +105,7 @@ describe('the feed turns reactions into bursts', () => {
    * that merely happened nearby would teach them the wrong thing.
    */
   it('sizes the burst to the reaction`s authored radius', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     const feed = new ReactionFeed();
@@ -116,7 +117,7 @@ describe('the feed turns reactions into bursts', () => {
   });
 
   it('gives a reaction with no radius something to draw', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     const slot = spawnEnemy(world, enemyIndex(world, 'husk'), 0);
     /* Amplify has no radius of its own; it happens to one enemy. */
     applyStatus(world, slot, STATUS_INDEX.unravel, 1);
@@ -130,7 +131,7 @@ describe('the feed turns reactions into bursts', () => {
   });
 
   it('uses the style belonging to the reaction that fired', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     const feed = new ReactionFeed();
@@ -140,7 +141,7 @@ describe('the feed turns reactions into bursts', () => {
   });
 
   it('ignores every other kind of event', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     spawnEnemy(world, enemyIndex(world, 'husk'), 0);
 
     const feed = new ReactionFeed();
@@ -151,7 +152,7 @@ describe('the feed turns reactions into bursts', () => {
 
 describe('bursts age and are recycled', () => {
   const feedWithOne = (): ReactionFeed => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
     const feed = new ReactionFeed();
     feed.consume(world, name);
@@ -177,7 +178,7 @@ describe('bursts age and are recycled', () => {
    * mid-wave allocation is a stutter the player feels.
    */
   it('caps how many are in flight and reports what it dropped', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     for (let i = 0; i < 200; i++) detonate(world, 400 + i * 200, 400);
 
     const feed = new ReactionFeed();
@@ -191,7 +192,7 @@ describe('bursts age and are recycled', () => {
     const feed = feedWithOne();
     for (let frame = 0; frame < 200; frame++) feed.advance();
 
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     for (let i = 0; i < 64; i++) detonate(world, 400 + i * 200, 400);
     feed.consume(world, name);
 
@@ -223,7 +224,7 @@ describe('bursts age and are recycled', () => {
 
 describe('the first of each reaction names itself', () => {
   it('labels a reaction the first time it happens', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     const feed = new ReactionFeed();
@@ -245,7 +246,7 @@ describe('the first of each reaction names itself', () => {
     const seen: number[] = [];
 
     for (let round = 0; round < 6; round++) {
-      const world = createWorldForStage(registry, stage, 1);
+      const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
       detonate(world);
       feed.consume(world, name);
       /* Counted per round and then retired, so each entry is what that round
@@ -260,11 +261,11 @@ describe('the first of each reaction names itself', () => {
   it('labels a different reaction on its own first occurrence', () => {
     const feed = new ReactionFeed();
 
-    const first = createWorldForStage(registry, stage, 1);
+    const first = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(first);
     feed.consume(first, name);
 
-    const second = createWorldForStage(registry, stage, 1);
+    const second = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     const slot = spawnEnemy(second, enemyIndex(second, 'husk'), 0);
     applyStatus(second, slot, STATUS_INDEX.chill, 1);
     applyStatus(second, slot, STATUS_INDEX.charge, 1);
@@ -279,7 +280,7 @@ describe('the first of each reaction names itself', () => {
   });
 
   it('takes its colour from the reaction it names', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     const feed = new ReactionFeed();
@@ -288,7 +289,7 @@ describe('the first of each reaction names itself', () => {
   });
 
   it('fades away on its own', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     const feed = new ReactionFeed();
@@ -304,7 +305,7 @@ describe('the damage floats where it happened', () => {
    * says a player must never need a wiki to answer.
    */
   it('shows what the reaction dealt', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     const feed = new ReactionFeed();
@@ -316,7 +317,7 @@ describe('the damage floats where it happened', () => {
   });
 
   it('takes the reaction`s colour, like the burst', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     const feed = new ReactionFeed();
@@ -327,7 +328,7 @@ describe('the damage floats where it happened', () => {
   /* Superconduct strips armour instead of dealing damage. A floating "0"
      would say something false about what just happened. */
   it('shows nothing for a reaction that deals no damage', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     const slot = spawnEnemy(world, enemyIndex(world, 'husk'), 0);
     applyStatus(world, slot, STATUS_INDEX.chill, 1);
     applyStatus(world, slot, STATUS_INDEX.charge, 1);
@@ -341,7 +342,7 @@ describe('the damage floats where it happened', () => {
   });
 
   it('keeps going up as it ages, then leaves', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     const feed = new ReactionFeed();
@@ -351,7 +352,7 @@ describe('the damage floats where it happened', () => {
   });
 
   it('caps how many can pile up at once', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     for (let i = 0; i < 100; i++) detonate(world, 400 + i * 200, 400);
 
     const feed = new ReactionFeed();
@@ -370,12 +371,12 @@ describe('a restarted stage starts over', () => {
   it('announces the first reaction again after a reset', () => {
     const feed = new ReactionFeed();
 
-    const before = createWorldForStage(registry, stage, 1);
+    const before = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(before);
     feed.consume(before, name);
     feed.reset();
 
-    const after = createWorldForStage(registry, stage, 1);
+    const after = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(after);
     feed.consume(after, name);
 
@@ -383,7 +384,7 @@ describe('a restarted stage starts over', () => {
   });
 
   it('drops everything in flight', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     const feed = new ReactionFeed();
@@ -397,14 +398,14 @@ describe('a restarted stage starts over', () => {
   });
 
   it('returns the bursts to the pool rather than losing them', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     for (let i = 0; i < 64; i++) detonate(world, 400 + i * 200, 400);
 
     const feed = new ReactionFeed();
     feed.consume(world, name);
     feed.reset();
 
-    const again = createWorldForStage(registry, stage, 1);
+    const again = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     for (let i = 0; i < 64; i++) detonate(again, 400 + i * 200, 400);
     feed.consume(again, name);
 
@@ -477,7 +478,7 @@ describe('floating text stacks instead of overlapping', () => {
   });
 
   it('stacks the names raised by simultaneous reactions', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     /* Three reactions in nearly the same place, in one frame. */
     detonate(world, 500);
     detonate(world, 505);
@@ -492,7 +493,7 @@ describe('floating text stacks instead of overlapping', () => {
   });
 
   it('stacks the damage numbers too', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world, 500);
     detonate(world, 505);
 

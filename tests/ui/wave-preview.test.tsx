@@ -12,6 +12,7 @@ import { UI_POLL_HZ } from '@ui/hooks/useThrottledValue';
 import { SpriteIcon } from '@ui/stage/SpriteIcon';
 import { WavePreview } from '@ui/stage/WavePreview';
 import { enemyName } from '@ui/text';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * The wave preview panel (#28). Layout is the Playwright pass's job (#53);
@@ -146,7 +147,7 @@ describe('against a real stage', () => {
     const registry = buildRegistry(readContentFromDisk());
     const stage = registry.stages.get('1-1');
     if (stage === undefined) throw new Error('stage 1-1 missing');
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
 
     render(
       <WavePreview read={() => nextWave(world)} atlas={null} nameOf={enemyName} onCall={vi.fn()} />,

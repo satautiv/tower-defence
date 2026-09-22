@@ -12,6 +12,7 @@ import {
   spawnEnemy,
   targetingSystem,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * The director, against a fake context.
@@ -135,7 +136,7 @@ describe('unlocking', () => {
    * that way — which presents as a game with no sound and no error anywhere.
    */
   it('makes no sound before a gesture unlocks it', () => {
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     expect(audio.ready).toBe(false);
@@ -167,7 +168,7 @@ describe('unlocking', () => {
         throw new Error('no audio for you');
       },
     });
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(world);
 
     expect(() => refusing.unlock()).not.toThrow();
@@ -184,7 +185,7 @@ describe('reactions reach the speaker', () => {
     context = new FakeContext();
     audio = directorWith(context);
     audio.unlock();
-    world = createWorldForStage(registry, stage, 1);
+    world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
   });
 
   it('sounds a stinger when a reaction fires', () => {
@@ -230,7 +231,7 @@ describe('a chain does not become a wall of noise', () => {
     const audio = directorWith(context);
     audio.unlock();
 
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     for (let i = 0; i < 40; i++) detonate(world, 400 + i * 200);
     audio.consume(world, 0);
 
@@ -247,7 +248,7 @@ describe('a chain does not become a wall of noise', () => {
 
     let sounded = 0;
     for (let frame = 0; frame < 6; frame++) {
-      const world = createWorldForStage(registry, stage, 1);
+      const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
       detonate(world);
       audio.consume(world, frame * MIN_INTERVAL_MS);
       sounded = context.started.length;
@@ -260,12 +261,12 @@ describe('a chain does not become a wall of noise', () => {
     const audio = directorWith(context);
     audio.unlock();
 
-    const first = createWorldForStage(registry, stage, 1);
+    const first = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(first);
     audio.consume(first, 0);
     audio.reset();
 
-    const second = createWorldForStage(registry, stage, 1);
+    const second = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     detonate(second);
     audio.consume(second, 1);
     expect(context.started).toHaveLength(2);

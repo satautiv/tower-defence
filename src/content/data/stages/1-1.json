@@ -57,6 +57,14 @@
         "y": 8
       },
       "pathId": 0
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 0,
+        "y": 1
+      },
+      "pathId": 0
     }
   ],
   "plots": [
@@ -254,7 +262,7 @@
           "count": 5,
           "intervalSeconds": 0.5,
           "delaySeconds": 0.0,
-          "spawnPoint": 0
+          "spawnPoint": 1
         }
       ],
       "clearBonus": 24
@@ -274,7 +282,7 @@
           "count": 4,
           "intervalSeconds": 0.6,
           "delaySeconds": 5,
-          "spawnPoint": 0
+          "spawnPoint": 1
         }
       ],
       "clearBonus": 27
@@ -327,7 +335,7 @@
           "count": 6,
           "intervalSeconds": 0.5,
           "delaySeconds": 4,
-          "spawnPoint": 0
+          "spawnPoint": 1
         }
       ],
       "clearBonus": 36
@@ -354,7 +362,7 @@
           "count": 6,
           "intervalSeconds": 0.5,
           "delaySeconds": 8,
-          "spawnPoint": 0
+          "spawnPoint": 1
         }
       ],
       "clearBonus": 39

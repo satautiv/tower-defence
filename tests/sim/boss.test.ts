@@ -22,6 +22,7 @@ import {
   targetingSystem,
   towerIndex,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * Bosses (#33, docs/GAME_DESIGN.md §10).
@@ -36,7 +37,7 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed);
+const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed, FULL_ROSTER);
 
 /** A boss standing at a known distance along the road, at full health. */
 function bossAt(world: World, pathDistance: number, id = 'grendrix'): number {

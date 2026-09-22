@@ -795,3 +795,11 @@ abbr.ui-wave__threat {
 .ui-boss__marker--passed {
   background: var(--c-text-dim);
 }
+
+/* The campaign list. A column of ten on a phone, two abreast where there is
+   room — a region is browsed, not scrolled past. */
+.ui-stages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s-2);
+}

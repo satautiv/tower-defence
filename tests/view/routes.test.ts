@@ -9,6 +9,7 @@ import type { BakedPath, World } from '@sim/index';
 import { createLayerStack } from '@view/layers';
 import type { Layers } from '@view/layers';
 import { RouteView, describeRoutes, incomingWave } from '@view/routes';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * The player plans every placement off this drawing, so what matters is that it
@@ -22,7 +23,7 @@ if (base === undefined) throw new Error('stage 1-1 missing');
 const stage: StageDefinition = base;
 
 const worldFor = (definition: StageDefinition): World =>
-  createWorldForStage(registry, definition, 1);
+  createWorldForStage(registry, definition, 1, FULL_ROSTER);
 
 const points = (list: [number, number][]): { x: number; y: number }[] =>
   list.map(([x, y]) => ({ x, y }));
@@ -65,10 +66,12 @@ const forked: StageDefinition = {
       branches: [],
     },
   ],
+  /* Ids carry on from whatever 1-1 already has, which is a road spawn and a
+     flyer lane, so this fixture keeps adding rather than colliding (#36). */
   spawnPoints: [
     ...stage.spawnPoints,
-    { id: 1, position: { x: 10, y: 0 }, pathId: 2 },
-    { id: 2, position: { x: 0, y: 8 }, pathId: 0 },
+    { id: 2, position: { x: 10, y: 0 }, pathId: 2 },
+    { id: 3, position: { x: 0, y: 8 }, pathId: 0 },
   ],
 };
 
@@ -85,10 +88,12 @@ const group = (enemy: string, spawnPoint: number): Wave['groups'][number] => ({
  * The forked map attacked from two fronts: walkers from the top spawn first,
  * then flyers from the left, then walkers from the left.
  */
+/* The second front is spawn 2: ids 0 and 1 are 1-1's own road head and flyer
+   lane, which `forked` builds on rather than replaces (#36). */
 const twoFronts: StageDefinition = {
   ...forked,
   waves: [
-    { ...template, groups: [group('riftling', 1)] },
+    { ...template, groups: [group('riftling', 2)] },
     { ...template, groups: [group('rift_bat', 0)] },
     { ...template, groups: [group('husk', 0)] },
   ],
@@ -144,13 +149,35 @@ function setup(definition: StageDefinition): { world: World; layers: Layers; vie
   return { world, layers, view };
 }
 
+/** Distance from a point to a line segment, for the flyer lane. */
+function distanceToSegment(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSq = dx * dx + dy * dy;
+  const t =
+    lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSq));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
 describe('which routes are drawn', () => {
-  it('draws the one road of stage 1-1, from its spawn to the core', () => {
+  /* 1-1 has one road and two spawns: the ground spawn at its head and the
+     flyer lane §12.3 requires, which does not trace the road (#36). */
+  it('draws the one road of stage 1-1, and both the places enemies come from', () => {
     const world = worldFor(stage);
     const routes = describeRoutes(world);
 
     expect(routes.ground.map((ground) => ground.path.id)).toEqual([0]);
-    expect(routes.spawns).toEqual([{ x: 0, y: 8 * TILE_SIZE }]);
+    expect(routes.spawns).toEqual([
+      { x: 0, y: 8 * TILE_SIZE },
+      { x: 0, y: 1 * TILE_SIZE },
+    ]);
     expect(routes.core).toEqual(world.rules.core);
   });
 
@@ -158,9 +185,12 @@ describe('which routes are drawn', () => {
   it('includes every branch and every spawn, each path once', () => {
     const routes = describeRoutes(worldFor(forked));
     expect(routes.ground.map((ground) => ground.path.id).sort()).toEqual([0, 1, 2]);
-    expect(routes.spawns).toHaveLength(3);
-    /* Walkers from either left spawn can take path 0. */
-    expect(routes.ground.find((ground) => ground.path.id === 0)?.spawnIndices).toEqual([0, 2]);
+    /* 1-1's road spawn and flyer lane, plus the two this fixture adds. */
+    expect(routes.spawns).toHaveLength(4);
+    /* Walkers from either left spawn can take path 0 — and so, nominally, can
+       the flyer lane, which is assigned to path 0 because a spawn must name
+       one even when what leaves it flies. */
+    expect(routes.ground.find((ground) => ground.path.id === 0)?.spawnIndices).toEqual([0, 1, 3]);
   });
 
   /** Rift Bats fly straight from the spawn to the core, ignoring the road. */
@@ -169,10 +199,12 @@ describe('which routes are drawn', () => {
     const [lane, ...rest] = describeRoutes(world).flyers;
 
     expect(rest).toHaveLength(0);
+    /* From the flyer lane, not the road's head: §12.3 wants the air to arrive
+       somewhere a board covering the road does not already reach (#36). */
     expect(lane).toMatchObject({
-      spawnIndex: 0,
+      spawnIndex: 1,
       fromX: 0,
-      fromY: 8 * TILE_SIZE,
+      fromY: 1 * TILE_SIZE,
       toX: world.rules.core.x,
       toY: world.rules.core.y,
     });
@@ -193,7 +225,9 @@ describe('which routes are drawn', () => {
     const path = world.rules.pathById.get(0);
     if (lane === undefined || path === undefined) throw new Error('fixture');
 
-    expect(lane.markY).toBe(8 * TILE_SIZE);
+    /* Measured against the road rather than pinned to a coordinate: the point
+       is the clearance, and a literal here would only re-assert wherever the
+       lane happens to run today. */
     expect(distanceToPath(path, lane.markX, lane.markY)).toBeGreaterThanOrEqual(3 * TILE_SIZE);
   });
 });
@@ -202,8 +236,8 @@ describe('flow arrows', () => {
   it('only ever sit on a route', () => {
     const { world, layers, view } = setup(stage);
     const path = world.rules.pathById.get(0);
-    if (path === undefined) throw new Error('fixture');
-    const laneY = 8 * TILE_SIZE;
+    const lane = describeRoutes(world).flyers[0];
+    if (path === undefined || lane === undefined) throw new Error('fixture');
 
     for (const now of [0, 333, 750, 1200]) {
       view.render(world, now);
@@ -211,7 +245,11 @@ describe('flow arrows', () => {
       expect(arrows.length).toBeGreaterThan(0);
       for (const arrow of arrows) {
         const onRoad = distanceToPath(path, arrow.x, arrow.y) < 1;
-        const onLane = Math.abs(arrow.y - laneY) < 1;
+        /* The lane is a straight line from its spawn to the core, and since
+           #36 it is a diagonal rather than a copy of the road — so this is
+           measured against the segment instead of against one coordinate. */
+        const onLane =
+          distanceToSegment(arrow.x, arrow.y, lane.fromX, lane.fromY, lane.toX, lane.toY) < 1;
         expect(onRoad || onLane).toBe(true);
       }
     }
@@ -302,11 +340,21 @@ describe('flow arrows', () => {
 describe('the next wave', () => {
   it('is read from the wave table: walkers first on 1-1, flyers before wave five', () => {
     const world = worldFor(stage);
-    expect(incomingWave(world)).toEqual({ index: 0, walkersFrom: [true], flyersFrom: [false] });
+    /* Two spawns since #36: the road's head and the flyer lane. Wave one
+       walks in from the road and leaves the lane quiet. */
+    expect(incomingWave(world)).toEqual({
+      index: 0,
+      walkersFrom: [true, false],
+      flyersFrom: [false, false],
+    });
 
-    /* Wave five is Rift Bats alone. */
+    /* Wave five is Rift Bats alone, and they come down the lane. */
     world.wave.index = 3;
-    expect(incomingWave(world)).toEqual({ index: 4, walkersFrom: [false], flyersFrom: [true] });
+    expect(incomingWave(world)).toEqual({
+      index: 4,
+      walkersFrom: [false, false],
+      flyersFrom: [false, true],
+    });
   });
 
   it('is nothing once the last wave has started', () => {
@@ -318,7 +366,7 @@ describe('the next wave', () => {
   it('pulses only the spawn it comes from', () => {
     const { world, layers, view } = setup(twoFronts);
     view.render(world, 0);
-    expect(pulsing(layers)).toEqual([1]);
+    expect(pulsing(layers)).toEqual([2]);
 
     startWave(world, 0);
     view.render(world, 16);
@@ -419,6 +467,6 @@ describe('the next wave', () => {
 
     world.reset();
     view.render(world, 16);
-    expect(pulsing(layers)).toEqual([1]);
+    expect(pulsing(layers)).toEqual([2]);
   });
 });

@@ -1,0 +1,364 @@
+{
+  "id": "1-2",
+  "nameKey": "stage.1_2.name",
+  "region": 1,
+  "widthTiles": 30,
+  "heightTiles": 17,
+  "startingGold": 620,
+  "lives": 20,
+  "core": {
+    "x": 29,
+    "y": 5
+  },
+  "paths": [
+    {
+      "id": 0,
+      "points": [
+        {
+          "x": 0,
+          "y": 4
+        },
+        {
+          "x": 8,
+          "y": 4
+        },
+        {
+          "x": 8,
+          "y": 12
+        },
+        {
+          "x": 18,
+          "y": 12
+        },
+        {
+          "x": 18,
+          "y": 5
+        },
+        {
+          "x": 29,
+          "y": 5
+        }
+      ],
+      "branches": []
+    }
+  ],
+  "spawnPoints": [
+    {
+      "id": 0,
+      "position": {
+        "x": 0,
+        "y": 4
+      },
+      "pathId": 0
+    }
+  ],
+  "plots": [
+    {
+      "id": 0,
+      "position": {
+        "x": 4,
+        "y": 2
+      }
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 4,
+        "y": 7
+      }
+    },
+    {
+      "id": 2,
+      "position": {
+        "x": 11,
+        "y": 9
+      }
+    },
+    {
+      "id": 3,
+      "position": {
+        "x": 6,
+        "y": 14
+      }
+    },
+    {
+      "id": 4,
+      "position": {
+        "x": 12,
+        "y": 15
+      }
+    },
+    {
+      "id": 5,
+      "position": {
+        "x": 15,
+        "y": 9
+      },
+      "leyNode": "flux"
+    },
+    {
+      "id": 6,
+      "position": {
+        "x": 21,
+        "y": 9
+      }
+    },
+    {
+      "id": 7,
+      "position": {
+        "x": 15,
+        "y": 3
+      }
+    },
+    {
+      "id": 8,
+      "position": {
+        "x": 21,
+        "y": 2
+      },
+      "leyNode": "depth"
+    },
+    {
+      "id": 9,
+      "position": {
+        "x": 25,
+        "y": 8
+      }
+    },
+    {
+      "id": 10,
+      "position": {
+        "x": 25,
+        "y": 2
+      }
+    },
+    {
+      "id": 11,
+      "position": {
+        "x": 11,
+        "y": 6
+      }
+    },
+    {
+      "id": 12,
+      "position": {
+        "x": 2,
+        "y": 9
+      }
+    },
+    {
+      "id": 13,
+      "position": {
+        "x": 18,
+        "y": 15
+      }
+    }
+  ],
+  "leySeams": [
+    [
+      {
+        "x": 13,
+        "y": 9
+      },
+      {
+        "x": 17,
+        "y": 9
+      },
+      {
+        "x": 21,
+        "y": 5
+      }
+    ]
+  ],
+  "waves": [
+    {
+      "autoStartDelaySeconds": 25,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "riftling",
+          "count": 6,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 22,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "riftling",
+          "count": 8,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "husk",
+          "count": 2,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 6,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 22,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 7,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "riftling",
+          "count": 10,
+          "intervalSeconds": 0.6,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 8,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "riftling",
+          "count": 6,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 5,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 15,
+      "groups": [
+        {
+          "enemy": "phase_stalker",
+          "count": 3,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 10,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "phase_stalker",
+          "count": 2,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 8,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "riftling",
+          "count": 14,
+          "intervalSeconds": 0.5,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "phase_stalker",
+          "count": 4,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "husk",
+          "count": 8,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 6,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 30,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 12,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "phase_stalker",
+          "count": 4,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 10,
+          "spawnPoint": 0
+        }
+      ]
+    }
+  ],
+  "interactable": {
+    "id": "watchfire_vent",
+    "nameKey": "interactable.watchfire_vent.name",
+    "position": {
+      "x": 13,
+      "y": 12
+    },
+    "cost": 80,
+    "effect": "ignite_vent",
+    "radiusTiles": 2,
+    "durationSeconds": 8,
+    "damagePerSecond": 30,
+    "damageType": "pyro",
+    "blocks": false,
+    "statusApplied": {
+      "status": "scorch",
+      "stacks": 2
+    }
+  },
+  "minPlotSpacingTiles": 1,
+  "balance": {
+    "minWinRate": 0.85,
+    "maxWinRate": 1
+  }
+}

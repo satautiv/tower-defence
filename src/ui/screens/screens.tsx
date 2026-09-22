@@ -1,7 +1,10 @@
 /// <reference types="vite/client" />
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
+import { loadContent } from '@content/load';
+import { compareStageIds } from '@content/stages';
 import { Button, Panel } from '../components/index.js';
+import { text } from '../text.js';
 import { useUiStore } from '../store.js';
 
 /**
@@ -81,12 +84,27 @@ export function StageSelectScreen(): ReactElement {
     navigate('inStage');
   };
 
+  /* Read from the content rather than listed here, so #36's ten stages —
+     and every region after — appear by existing. Sorted by `compareStageIds`
+     because string order puts 1-10 before 1-5, which is exactly the bug a
+     campaign list must not have.
+     Every stage is playable: which ones a player has *earned* is the save
+     system's to say (#39), and gating them behind stars nobody records yet
+     would lock the region to its first stage. */
+  const stages = [...loadContent().stages.values()]
+    .filter((stage) => stage.region === 1)
+    .sort((a, b) => compareStageIds(a.id, b.id));
+
   return (
     <div className="ui-screen" data-testid="screen-stage-select">
       <Panel title="Emberfall Ridge">
-        <Button variant="primary" onClick={() => play('1-1')}>
-          1-1
-        </Button>
+        <div className="ui-stages">
+          {stages.map((stage) => (
+            <Button key={stage.id} variant="primary" onClick={() => play(stage.id)}>
+              {stage.id} &middot; {text(stage.nameKey)}
+            </Button>
+          ))}
+        </div>
       </Panel>
       <Button variant="ghost" onClick={goBack}>
         Back

@@ -20,6 +20,7 @@ import {
   towerIndex,
   towerInfo,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * What the tower panel reads (#27, design pillar P2: readable depth).
@@ -34,7 +35,7 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed);
+const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed, FULL_ROSTER);
 
 function pointAt(world: World, pathDistance: number): { x: number; y: number } {
   const sample = { x: 0, y: 0, dirX: 0, dirY: 0 };

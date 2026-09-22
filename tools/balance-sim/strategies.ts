@@ -67,8 +67,20 @@ function costOf(world: World, typeIdx: number): number {
   return world.rules.towers.cost[typeIdx * 7] as number;
 }
 
-function affordable(world: World, typeIdx: number): boolean {
-  return world.resources.gold >= costOf(world, typeIdx);
+/**
+ * Whether a strategy may build this tower right now.
+ *
+ * Unlocks are checked here and not only in the interface, because the whole
+ * value of these numbers rests on the simulator building the board a *player*
+ * could build. A strategy that spent its turn on a tower the stage has not
+ * unlocked reports a stage as unwinnable when the real answer is that the
+ * scripted player was standing still (#36).
+ */
+function buildable(world: World, typeIdx: number): boolean {
+  return (
+    (world.rules.towers.unlocked[typeIdx] as number) === 1 &&
+    world.resources.gold >= costOf(world, typeIdx)
+  );
 }
 
 /**
@@ -107,7 +119,7 @@ export function greedy(): Strategy {
       let bestCost = -1;
       for (let typeIdx = 0; typeIdx < world.rules.towers.ids.length; typeIdx++) {
         const cost = costOf(world, typeIdx);
-        if (affordable(world, typeIdx) && cost > bestCost) {
+        if (buildable(world, typeIdx) && cost > bestCost) {
           best = typeIdx;
           bestCost = cost;
         }
@@ -141,7 +153,7 @@ export function balanced(): Strategy {
          afford this time is not skipped forever. */
       for (let i = 0; i < count; i++) {
         const typeIdx = (next + i) % count;
-        if (!affordable(world, typeIdx)) continue;
+        if (!buildable(world, typeIdx)) continue;
         buildTower(world.commands, plot, typeIdx);
         next = (typeIdx + 1) % count;
         return;
@@ -173,7 +185,7 @@ export function rush(): Strategy {
       let bestCost = Number.POSITIVE_INFINITY;
       for (let typeIdx = 0; typeIdx < world.rules.towers.ids.length; typeIdx++) {
         const cost = costOf(world, typeIdx);
-        if (affordable(world, typeIdx) && cost < bestCost) {
+        if (buildable(world, typeIdx) && cost < bestCost) {
           best = typeIdx;
           bestCost = cost;
         }
@@ -203,7 +215,7 @@ export function singleType(towerId: string): Strategy {
 
       const plot = firstEmptyPlot(world);
       if (plot < 0) return upgradeSomething(world);
-      if (affordable(world, typeIdx)) buildTower(world.commands, plot, typeIdx);
+      if (buildable(world, typeIdx)) buildTower(world.commands, plot, typeIdx);
     },
   };
 }
@@ -240,6 +252,7 @@ export function cheapestTowerId(world: World): string {
   let best = '';
   let bestCost = Number.POSITIVE_INFINITY;
   world.rules.towers.ids.forEach((id, typeIdx) => {
+    if ((world.rules.towers.unlocked[typeIdx] as number) !== 1) return;
     const cost = costOf(world, typeIdx);
     if (cost < bestCost) {
       best = id;
@@ -251,5 +264,11 @@ export function cheapestTowerId(world: World): string {
 
 /** Every strategy worth running when none is named, in reporting order. */
 export function defaultStrategies(world: World): Strategy[] {
-  return [greedy(), balanced(), rush(), ...world.rules.towers.ids.map((id) => singleType(id))];
+  /* A single-tower board for a tower this stage has not unlocked is not a
+     board anyone could play, so it is not reported: it would fail its band
+     every time and say nothing about the stage. */
+  const single = world.rules.towers.ids
+    .filter((_, typeIdx) => (world.rules.towers.unlocked[typeIdx] as number) === 1)
+    .map((id) => singleType(id));
+  return [greedy(), balanced(), rush(), ...single];
 }

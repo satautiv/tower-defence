@@ -9,6 +9,7 @@ import type { Draft } from '@editor/draft';
 import { coverageOf } from '@editor/coverage';
 import { exportStage, importStage } from '@editor/io';
 import { validateDraft } from '@editor/validate';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * The acceptance criterion, whole (#34).
@@ -80,7 +81,7 @@ describe('a stage authored in the editor is a stage the game can play', () => {
     const stage = round.draft;
     if (stage === null) throw new Error('the exported stage did not come back');
 
-    const world = createWorldForStage(registry, stage, 1);
+    const world = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     const result = runOnce(world, balanced(), 1);
 
     expect(result.won, `ended on wave ${result.wavesCleared}`).toBe(true);
@@ -97,7 +98,7 @@ describe('a stage authored in the editor is a stage the game can play', () => {
     if (stage === null) throw new Error('the exported stage did not come back');
 
     for (const seed of [2, 3, 4]) {
-      const world = createWorldForStage(registry, stage, seed);
+      const world = createWorldForStage(registry, stage, seed, FULL_ROSTER);
       expect(runOnce(world, balanced(), seed).won, `seed ${seed}`).toBe(true);
     }
   });

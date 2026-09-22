@@ -13,6 +13,7 @@ import {
   enemyNear,
   spawnEnemy,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * Reading an enemy (#28: while paused, the player can read enemy stats). What
@@ -24,7 +25,7 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const freshWorld = (): World => createWorldForStage(registry, stage, 1);
+const freshWorld = (): World => createWorldForStage(registry, stage, 1, FULL_ROSTER);
 
 function spawn(world: World, id: string): { slot: number; entityId: number } {
   const slot = spawnEnemy(world, enemyIndex(world, id), 0);
