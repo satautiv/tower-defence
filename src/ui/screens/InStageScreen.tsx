@@ -38,6 +38,15 @@ import type {
 } from '@sim/index';
 import { GameSession } from '@app/session';
 import { useProfile } from '@app/profile';
+import {
+  clearSession,
+  readSession,
+  resumeInto,
+  sessionMatches,
+  writeSession,
+} from '@app/sessionSnapshot';
+import type { SavedSession } from '@app/sessionSnapshot';
+import { platform } from '@platform/index';
 import type { GameView } from '@view/app';
 import { BoardView } from '@view/board';
 import { EffectsView } from '@view/effects';
@@ -202,6 +211,18 @@ export function InStageScreen(): ReactElement {
   /* The poll below is set up once, so anything it reads has to come through a
      ref rather than be captured from this render. */
   /* One record per run. Cleared by Retry, which begins a new one. */
+  /**
+   * The saved run, or null for none. `undefined` while it is still being read.
+   *
+   * The canvas is not mounted until this settles, because the session is built
+   * inside `onReady` and needs the saved run's seed to be resumable at all.
+   * Reading a key out of IndexedDB is fast; a frame or two of empty board is
+   * cheaper than a resume that cannot work.
+   */
+  const [savedRun, setSavedRun] = useState<SavedSession | null | undefined>(undefined);
+  const savedRunRef = useRef<SavedSession | null>(null);
+  savedRunRef.current = savedRun ?? null;
+
   const recordedRef = useRef(false);
   const stageIdRef = useRef(selectedStageId);
   stageIdRef.current = selectedStageId;
@@ -209,6 +230,42 @@ export function InStageScreen(): ReactElement {
   const finishedRef = useRef(result !== null);
   finishedRef.current = result !== null;
   const enemyPickRef = useRef<EnemyPick | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void readSession().then((saved) => {
+      if (live) setSavedRun(saved);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  /**
+   * The last reliable moment to write.
+   *
+   * A backgrounded page on a phone may never run code again, so `pause` is
+   * where the run is saved — not a timer, and not the results screen. The
+   * write is fire-and-forget because there may be no time to await it.
+   */
+  useEffect(() => {
+    const lifecycle = platform().lifecycle;
+    return lifecycle.subscribe((event) => {
+      const session = sessionRef.current;
+      const stageId = stageIdRef.current;
+      if (event !== 'pause' || session === null || stageId === null) return;
+      /* A finished stage has nothing worth resuming, and saving one would put
+         the player back on a results screen they had already dismissed. */
+      if (session.world.finished) {
+        void clearSession();
+        return;
+      }
+      void writeSession(session.world, stageId, Date.now()).catch((error: unknown) =>
+        console.warn('Could not save the run in progress.', error),
+      );
+      openPanelById('pause');
+    });
+  }, [openPanelById]);
 
   /**
    * The one route into the world, so it is also the one place the pause holds.
@@ -326,10 +383,34 @@ export function InStageScreen(): ReactElement {
     (view: GameView) => {
       viewRef.current = view;
 
-      const session = GameSession.forStage(selectedStageId ?? '1-1');
+      const stageId = selectedStageId ?? '1-1';
+      /**
+       * A run interrupted by a backgrounding is rebuilt from its own seed.
+       *
+       * This has to happen before the session exists, not after: `forStage`
+       * mints a seed from the clock, so a world built first and restored into
+       * second would carry a seed the snapshot does not match — and the
+       * snapshot's own guard would refuse it, correctly. Found by resuming a
+       * run in a browser and reading the refusal.
+       */
+      const saved = savedRunRef.current;
+      const resuming = saved !== null && sessionMatches(saved, stageId) ? saved : null;
+
+      const session = GameSession.forStage(stageId, resuming?.snapshot.seed);
       if (session === null) return;
       sessionRef.current = session;
       applyPreferredSpeed(session);
+
+      if (resuming !== null) {
+        if (resumeInto(session.world, resuming, stageId)) {
+          /* Held on the pause menu rather than dropped straight back into a
+             wave that was halfway to the core when the phone rang
+             (docs/TECH_DESIGN.md §14). */
+          openPanelById('pause');
+        } else {
+          void clearSession();
+        }
+      }
 
       const routes = new RouteView(view.layers);
       routes.sync(session.world);
@@ -476,6 +557,8 @@ export function InStageScreen(): ReactElement {
            browser and reading back a profile that said two attempts. */
         recordedRef.current = true;
         const finished = session.result();
+        /* Nothing left to resume. */
+        void clearSession();
         /* Recorded on the tick the stage ends rather than when the player
            dismisses the results, so closing the tab on the victory screen
            still keeps the run. */
@@ -676,7 +759,7 @@ export function InStageScreen(): ReactElement {
       className={`ui-screen ui-screen--stage${paused ? ' ui-screen--paused' : ''}`}
       data-testid="screen-in-stage"
     >
-      {!unsupported && (
+      {!unsupported && savedRun !== undefined && (
         <GameCanvas
           onReady={handleReady}
           onUnsupported={() => setUnsupported(true)}
