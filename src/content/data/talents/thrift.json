@@ -1,0 +1,13 @@
+{
+  "id": "thrift",
+  "nameKey": "talent.thrift.name",
+  "descriptionKey": "talent.thrift.desc",
+  "branch": "foundry",
+  "maxRanks": 5,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "buildCost",
+    "perRank": -0.012,
+    "mode": "multiplier"
+  }
+}

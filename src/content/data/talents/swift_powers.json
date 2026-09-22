@@ -1,0 +1,13 @@
+{
+  "id": "swift_powers",
+  "nameKey": "talent.swift_powers.name",
+  "descriptionKey": "talent.swift_powers.desc",
+  "branch": "dominion",
+  "maxRanks": 5,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "powerCooldown",
+    "perRank": -0.015,
+    "mode": "multiplier"
+  }
+}

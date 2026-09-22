@@ -1,7 +1,7 @@
 import { TICK_HZ } from '../../src/core/constants.js';
 import type { ContentRegistry } from '../../src/content/loader.js';
 import type { StageDefinition } from '../../src/content/schema/stage.js';
-import type { World } from '../../src/sim/index.js';
+import type { RulesetOptions, World } from '../../src/sim/index.js';
 import { SimEventKind, createWorldForStage, stageResult, tick } from '../../src/sim/index.js';
 import { DECISION_INTERVAL } from './strategies.js';
 import type { Strategy } from './strategies.js';
@@ -137,6 +137,15 @@ export interface BatchOptions extends RunOptions {
   runs: number;
   /** First seed. Runs use `seedStart .. seedStart + runs - 1`. */
   seedStart?: number;
+  /**
+   * Ruleset options the batch is played under — talents, hero, difficulty.
+   *
+   * Added for #37, which has to compare a fully-talented board against a
+   * zero-talent one; until then the simulator could only ever build a world
+   * with nothing equipped, so the one question the talent cap asks could not
+   * be put to it.
+   */
+  rules?: RulesetOptions;
 }
 
 /**
@@ -153,7 +162,7 @@ export function runBatch(
   options: BatchOptions,
 ): RunResult[] {
   const seedStart = options.seedStart ?? 1;
-  const world = createWorldForStage(registry, stage, seedStart);
+  const world = createWorldForStage(registry, stage, seedStart, options.rules);
 
   const results: RunResult[] = [];
   for (let i = 0; i < options.runs; i++) {

@@ -1,0 +1,14 @@
+{
+  "id": "guild_charter",
+  "nameKey": "talent.guild_charter.name",
+  "descriptionKey": "talent.guild_charter.desc",
+  "branch": "foundry",
+  "maxRanks": 2,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "sellRefund",
+    "perRank": 0.02,
+    "mode": "flat"
+  },
+  "requires": ["salvage"]
+}

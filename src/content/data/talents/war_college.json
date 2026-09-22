@@ -1,0 +1,13 @@
+{
+  "id": "war_college",
+  "nameKey": "talent.war_college.name",
+  "descriptionKey": "talent.war_college.desc",
+  "branch": "command",
+  "maxRanks": 5,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "heroAbilityCooldown",
+    "perRank": -0.015,
+    "mode": "multiplier"
+  }
+}

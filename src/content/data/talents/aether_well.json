@@ -1,0 +1,13 @@
+{
+  "id": "aether_well",
+  "nameKey": "talent.aether_well.name",
+  "descriptionKey": "talent.aether_well.desc",
+  "branch": "conduction",
+  "maxRanks": 3,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "aetherRegen",
+    "perRank": 0.03,
+    "mode": "flat"
+  }
+}

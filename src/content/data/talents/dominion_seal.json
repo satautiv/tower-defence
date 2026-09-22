@@ -1,0 +1,14 @@
+{
+  "id": "dominion_seal",
+  "nameKey": "talent.dominion_seal.name",
+  "descriptionKey": "talent.dominion_seal.desc",
+  "branch": "dominion",
+  "maxRanks": 1,
+  "starCostPerRank": 5,
+  "modifier": {
+    "stat": "startingGold",
+    "perRank": 20.0,
+    "mode": "flat"
+  },
+  "requires": ["tithe"]
+}

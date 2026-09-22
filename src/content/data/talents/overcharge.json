@@ -1,0 +1,14 @@
+{
+  "id": "overcharge",
+  "nameKey": "talent.overcharge.name",
+  "descriptionKey": "talent.overcharge.desc",
+  "branch": "dominion",
+  "maxRanks": 2,
+  "starCostPerRank": 4,
+  "modifier": {
+    "stat": "powerCooldown",
+    "perRank": -0.02,
+    "mode": "multiplier"
+  },
+  "requires": ["rapid_channel"]
+}

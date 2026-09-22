@@ -1,0 +1,14 @@
+{
+  "id": "tempered",
+  "nameKey": "talent.tempered.name",
+  "descriptionKey": "talent.tempered.desc",
+  "branch": "foundry",
+  "maxRanks": 3,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "towerDamage",
+    "perRank": 0.012,
+    "mode": "multiplier"
+  },
+  "requires": ["foundry_edge"]
+}

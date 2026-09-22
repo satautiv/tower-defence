@@ -1,0 +1,14 @@
+{
+  "id": "conduit",
+  "nameKey": "talent.conduit.name",
+  "descriptionKey": "talent.conduit.desc",
+  "branch": "dominion",
+  "maxRanks": 3,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "aetherRegen",
+    "perRank": 0.02,
+    "mode": "flat"
+  },
+  "requires": ["ley_tap"]
+}

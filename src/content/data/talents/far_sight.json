@@ -1,0 +1,14 @@
+{
+  "id": "far_sight",
+  "nameKey": "talent.far_sight.name",
+  "descriptionKey": "talent.far_sight.desc",
+  "branch": "foundry",
+  "maxRanks": 3,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "towerRange",
+    "perRank": 0.008,
+    "mode": "multiplier"
+  },
+  "requires": ["long_sight"]
+}

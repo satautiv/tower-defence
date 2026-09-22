@@ -1,0 +1,13 @@
+{
+  "id": "war_chest",
+  "nameKey": "talent.war_chest.name",
+  "descriptionKey": "talent.war_chest.desc",
+  "branch": "dominion",
+  "maxRanks": 5,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "startingGold",
+    "perRank": 8.0,
+    "mode": "flat"
+  }
+}

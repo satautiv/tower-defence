@@ -1,0 +1,14 @@
+{
+  "id": "wardens_banner",
+  "nameKey": "talent.wardens_banner.name",
+  "descriptionKey": "talent.wardens_banner.desc",
+  "branch": "command",
+  "maxRanks": 1,
+  "starCostPerRank": 5,
+  "modifier": {
+    "stat": "rallyRange",
+    "perRank": 0.5,
+    "mode": "flat"
+  },
+  "requires": ["forward_camp"]
+}

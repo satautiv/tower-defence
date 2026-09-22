@@ -1,0 +1,13 @@
+{
+  "id": "long_sight",
+  "nameKey": "talent.long_sight.name",
+  "descriptionKey": "talent.long_sight.desc",
+  "branch": "foundry",
+  "maxRanks": 5,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "towerRange",
+    "perRank": 0.008,
+    "mode": "multiplier"
+  }
+}

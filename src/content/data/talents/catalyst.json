@@ -1,0 +1,14 @@
+{
+  "id": "catalyst",
+  "nameKey": "talent.catalyst.name",
+  "descriptionKey": "talent.catalyst.desc",
+  "branch": "conduction",
+  "maxRanks": 3,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "reactionPower",
+    "perRank": 0.02,
+    "mode": "multiplier"
+  },
+  "requires": ["cascade"]
+}

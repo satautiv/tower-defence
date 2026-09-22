@@ -1,0 +1,13 @@
+{
+  "id": "standing_orders",
+  "nameKey": "talent.standing_orders.name",
+  "descriptionKey": "talent.standing_orders.desc",
+  "branch": "command",
+  "maxRanks": 3,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "rallyRange",
+    "perRank": 0.25,
+    "mode": "flat"
+  }
+}

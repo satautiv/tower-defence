@@ -93,6 +93,9 @@ export class GameSession {
        * instead of the one they have now.
        */
       progressStageId: progressFor(profile, stageId),
+      /* The ranks the player bought. Resolved into the flat tables by
+         `buildRuleset`, so nothing below here knows a talent exists (#37). */
+      talents: profile.talents,
     });
   }
 

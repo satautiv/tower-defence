@@ -1,0 +1,14 @@
+{
+  "id": "conflux",
+  "nameKey": "talent.conflux.name",
+  "descriptionKey": "talent.conflux.desc",
+  "branch": "conduction",
+  "maxRanks": 1,
+  "starCostPerRank": 5,
+  "modifier": {
+    "stat": "reactionCooldown",
+    "perRank": -0.06,
+    "mode": "flat"
+  },
+  "requires": ["detonation"]
+}

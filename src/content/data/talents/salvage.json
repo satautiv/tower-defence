@@ -1,0 +1,13 @@
+{
+  "id": "salvage",
+  "nameKey": "talent.salvage.name",
+  "descriptionKey": "talent.salvage.desc",
+  "branch": "foundry",
+  "maxRanks": 5,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "sellRefund",
+    "perRank": 0.015,
+    "mode": "flat"
+  }
+}

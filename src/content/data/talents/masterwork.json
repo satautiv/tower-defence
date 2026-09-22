@@ -1,0 +1,14 @@
+{
+  "id": "masterwork",
+  "nameKey": "talent.masterwork.name",
+  "descriptionKey": "talent.masterwork.desc",
+  "branch": "foundry",
+  "maxRanks": 2,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "towerDamage",
+    "perRank": 0.02,
+    "mode": "multiplier"
+  },
+  "requires": ["tempered"]
+}

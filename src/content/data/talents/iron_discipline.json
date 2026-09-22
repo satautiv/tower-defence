@@ -1,0 +1,14 @@
+{
+  "id": "iron_discipline",
+  "nameKey": "talent.iron_discipline.name",
+  "descriptionKey": "talent.iron_discipline.desc",
+  "branch": "command",
+  "maxRanks": 2,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "soldierHp",
+    "perRank": 0.03,
+    "mode": "multiplier"
+  },
+  "requires": ["veterancy"]
+}

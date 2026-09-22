@@ -21,9 +21,9 @@ done** and described below. **M2's code is finished, #34 — the map editor — 
 ten stages are authored: Region 1 is playable start to finish.** What remains open on #34 is
 the decor tool and in-editor playtest, and on #36 the two criteria that need people.
 
-**M3 has started: #39 — the save system — is done.** Progress persists, a run survives a
-backgrounding, and unlock gating reads what the player has actually cleared. #37 (talents and
-the region map) is unblocked by it.
+**M3: #39 (the save system) and #37 (meta-progression) are both done.** Progress persists, a
+run survives a backgrounding, unlock gating reads what the player has cleared, and the Warden
+Talent tree is authored, spendable and wired into play.
 
 Two issues stay open for things code cannot close. #30 wants editor support for placing nodes,
 which is **#34**. That and #27 both also want a check on a real phone, which is the same check
@@ -180,6 +180,46 @@ still runs its own migrations. Clearing wipes the adapters rather than known key
 `profile.unreadable` backup goes too. **One gap stated rather than papered over:** a content edit
 that changes a stat without changing any array's length is not detected, so such a run resumes
 against the new numbers — closing it needs a content fingerprint, which belongs with #59.
+
+**The Warden Talent tree (#37) is live, and it added no system.** Talents take the same bargain
+unlocks, perks and ley nodes take: `RulesetOptions.talents` is folded into the flat tables by
+`buildRuleset`, so **no system knows a talent exists** — a tick reads `towers.damage[i]` as it
+always did and the bonus is already in it. Fourteen stats, all onto machinery that already
+existed; `powerSlots` is deliberately absent because §14.1's capstone needs a loadout limit the
+game does not have.
+
+**The stat vocabulary is a Zod enum in the schema, not a string.** That is #26's tightening
+applied again, and for the same reason: a loose field lets a node be authored against a stat
+nothing applies, so the player buys a rank that pays nothing — the Gilded Alembic failure.
+`tests/sim/talents.test.ts` drives **every** stat in the vocabulary through `buildRuleset` and
+asserts a number moved; adding a `powerSlots` stat nothing applies fails with "powerSlots is in
+the schema but nothing applies it".
+
+**§14.1 contradicts itself, and the cap wins.** It gives sample nodes (+10%/rank reaction
+damage over five ranks) *and* a +35% cap; one node cannot be +50% inside a +35% budget. Authored
+at the sample numbers and measured, the tree took stage 1-9's median lives from **1 to 17** and
+turned 1-4 from a loss into a 100% clear. Retuned to roughly half it reads 20→20, 7→15, 10→15,
+1→4, 3→10 with win rate 100% on both sides: it widens the margin and never flips a loss into a
+win, which is what "smooths the curve for players who struggle" means.
+
+**A confound worth remembering when measuring anything against a stage.** The first comparison
+forced the full roster, so `balanced` on 1-4 was round-robining eight towers instead of the four
+a player has there — spreading thin and losing with *no talents at all*. Measured with the roster
+a real player holds, the baseline reproduces the documented medians exactly (20 · 7 · 10 · 1 · 3),
+which is how you know a comparison is apples to apples.
+
+**Two ordering bugs the forty nodes exposed that three had hidden.** `branchNodes` sorted
+prerequisites with a pairwise comparator, and "a before b when b requires a" is not transitive
+across a chain — four-deep chains put a prerequisite below its dependent and `Array.sort` was
+free to pick any such order. It sorts by depth now. And the authored descriptions stated the
+total at full rank while the screen offered the next rank, so a node read "returns 0.5 Aether"
+directly above "Next rank: 0.25 more". Descriptions are per-rank now.
+
+**Stages are not gated on stars, deliberately.** #37's unlock chain is about towers, heroes,
+powers and specialisations; nothing in the design gates stage *access*, and locking the region to
+its first stage would take the remaining playtests (#19, #36) away from the people who still have
+to run them. The region map shows what has been earned — stars, clears, best times — and opens
+everything.
 
 **The map editor (#34) is in, and it lives in `src/editor/`, not `tools/map-editor/`.**
 TECH_DESIGN §13.1 names that directory and in the same breath calls the thing *"a browser

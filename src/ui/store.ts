@@ -22,7 +22,7 @@ import { create } from 'zustand';
  * in production and the screen itself is never bundled.
  */
 export type Screen =
-  'splash' | 'menu' | 'regionMap' | 'stageSelect' | 'inStage' | 'settings' | 'editor';
+  'splash' | 'menu' | 'regionMap' | 'stageSelect' | 'inStage' | 'talents' | 'settings' | 'editor';
 
 export type PanelId = 'towerInfo' | 'wavePreview' | 'buildMenu' | 'pause';
 
