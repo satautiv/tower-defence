@@ -6,7 +6,7 @@ import { compareStageIds } from '@content/stages';
 import { Button, Panel } from '../components/index.js';
 import { text } from '../text.js';
 import { useUiStore } from '../store.js';
-import { stageRecord, totalStars, useProfile } from '@app/profile';
+import { campaignSummary, stageRecord, totalStars, useProfile } from '@app/profile';
 import { clearAllSaveData, exportFileName, exportSaveData, importSaveData } from '@app/saveData';
 
 /**
@@ -58,18 +58,53 @@ export function MenuScreen(): ReactElement {
   );
 }
 
+/** Seconds as m:ss, the way the results screen already reads a clock. */
+export function formatClock(seconds: number): string {
+  const whole = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(whole / 60);
+  return `${minutes}:${String(whole % 60).padStart(2, '0')}`;
+}
+
+/** Stage ids of one region, in the order a campaign runs them. */
+function regionStageIds(region: number): string[] {
+  return [...loadContent().stages.values()]
+    .filter((stage) => stage.region === region)
+    .sort((a, b) => compareStageIds(a.id, b.id))
+    .map((stage) => stage.id);
+}
+
 export function RegionMapScreen(): ReactElement {
   const navigate = useUiStore((state) => state.navigate);
   const goBack = useUiStore((state) => state.goBack);
+  const profile = useProfile((state) => state.profile);
+
+  const summary = campaignSummary(profile, regionStageIds(1));
 
   return (
     <div className="ui-screen" data-testid="screen-region-map">
       <Panel title="Regions">
-        <Button variant="primary" onClick={() => navigate('stageSelect')}>
-          Emberfall Ridge
+        <Button
+          variant="primary"
+          className="ui-stage"
+          onClick={() => navigate('stageSelect')}
+          data-testid="region-1"
+        >
+          <span className="ui-stage__name">Emberfall Ridge</span>
+          <span className="ui-stage__stars" data-testid="region-1-stars">
+            {summary.stars} / {summary.maxStars} &#9733;
+          </span>
         </Button>
+        <p className="ui-muted" data-testid="region-1-progress">
+          {summary.cleared} of {summary.total} stages cleared
+          {summary.complete ? ` · best run ${formatClock(summary.bestTotalSeconds)}` : ''}
+        </p>
+
         <Button disabled>The Sunken Reliquary — locked</Button>
+        {/* Regions 2-5 are M7 content (#58). The lock is real and the region
+            does not exist yet, which is why it says so rather than pretending
+            to a star count. */}
       </Panel>
+
       <Button variant="ghost" onClick={goBack}>
         Back
       </Button>
@@ -98,10 +133,18 @@ export function StageSelectScreen(): ReactElement {
   const stages = [...loadContent().stages.values()]
     .filter((stage) => stage.region === 1)
     .sort((a, b) => compareStageIds(a.id, b.id));
+  const regionSummary = campaignSummary(
+    profile,
+    stages.map((stage) => stage.id),
+  );
 
   return (
     <div className="ui-screen" data-testid="screen-stage-select">
       <Panel title="Emberfall Ridge">
+        <p className="ui-muted" data-testid="region-total">
+          {regionSummary.stars} of {regionSummary.maxStars} stars &middot; {regionSummary.cleared}{' '}
+          of {regionSummary.total} cleared
+        </p>
         <div className="ui-stages">
           {stages.map((stage) => {
             const record = stageRecord(profile, stage.id);
@@ -115,6 +158,13 @@ export function StageSelectScreen(): ReactElement {
                 <span className="ui-stage__name">
                   {stage.id} &middot; {text(stage.nameKey)}
                 </span>
+                {/* The best clear, which §13 calls "no reward, pure pride" —
+                    so it sits beside the stars rather than above them. */}
+                {record.bestTimeSeconds !== undefined && (
+                  <span className="ui-stage__time" data-testid={`best-${stage.id}`}>
+                    {formatClock(record.bestTimeSeconds)}
+                  </span>
+                )}
                 <span
                   className="ui-stage__stars"
                   aria-label={`${record.stars} of 3 stars`}

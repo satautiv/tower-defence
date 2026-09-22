@@ -137,6 +137,49 @@ export function totalStars(profile: Profile): number {
   return total;
 }
 
+/**
+ * What a set of stages adds up to, for the region map.
+ *
+ * Takes the stage ids rather than reading content, so it stays pure and a test
+ * can ask about a region that does not exist yet. `maxStars` is three per stage
+ * today; §12.4 makes it eleven once difficulties (#40) and the challenge modes
+ * (§13) land, and this is the one place that will need to know.
+ */
+export interface CampaignSummary {
+  readonly stars: number;
+  readonly maxStars: number;
+  readonly cleared: number;
+  readonly total: number;
+  /** Sum of the best clear of every stage won, in seconds. */
+  readonly bestTotalSeconds: number;
+  /** Whether every stage has been cleared at all. */
+  readonly complete: boolean;
+}
+
+export const STARS_PER_STAGE = 3;
+
+export function campaignSummary(profile: Profile, stageIds: readonly string[]): CampaignSummary {
+  let stars = 0;
+  let cleared = 0;
+  let bestTotalSeconds = 0;
+
+  for (const stageId of stageIds) {
+    const record = stageRecord(profile, stageId);
+    stars += record.stars;
+    if (record.cleared) cleared++;
+    bestTotalSeconds += record.bestTimeSeconds ?? 0;
+  }
+
+  return {
+    stars,
+    maxStars: stageIds.length * STARS_PER_STAGE,
+    cleared,
+    total: stageIds.length,
+    bestTotalSeconds,
+    complete: stageIds.length > 0 && cleared === stageIds.length,
+  };
+}
+
 /** The furthest stage ever cleared, or undefined before the first win. */
 export function highestCleared(profile: Profile): string | undefined {
   let highest: string | undefined;

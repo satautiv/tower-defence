@@ -920,3 +920,13 @@ abbr.ui-wave__threat {
   color: var(--c-text-muted);
   font-size: var(--t-sm);
 }
+
+/* A stage's best clear, beside its stars rather than above them: §13 calls the
+   speedrun clock "no reward, pure pride", so it reads as an aside. */
+.ui-stage__time {
+  flex: 0 0 auto;
+  margin-left: var(--s-2);
+  color: var(--c-text-muted);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+}
