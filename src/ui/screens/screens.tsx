@@ -1,12 +1,13 @@
 /// <reference types="vite/client" />
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { loadContent } from '@content/load';
 import { compareStageIds } from '@content/stages';
 import { Button, Panel } from '../components/index.js';
 import { text } from '../text.js';
 import { useUiStore } from '../store.js';
-import { stageRecord, useProfile } from '@app/profile';
+import { stageRecord, totalStars, useProfile } from '@app/profile';
+import { clearAllSaveData, exportFileName, exportSaveData, importSaveData } from '@app/saveData';
 
 /**
  * Screen shells.
@@ -135,6 +136,54 @@ export function StageSelectScreen(): ReactElement {
 
 export function SettingsScreen(): ReactElement {
   const goBack = useUiStore((state) => state.goBack);
+  const profile = useProfile((state) => state.profile);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const stars = totalStars(profile);
+  const cleared = Object.values(profile.stages).filter((record) => record.cleared).length;
+
+  /* A download rather than a copy box: a save is a file, and a player moving
+     one to another device wants something they can put in a folder. */
+  const save = (): void => {
+    const blob = new Blob([exportSaveData()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = exportFileName(new Date().toISOString());
+    link.click();
+    /* Revoked on the next turn of the loop: revoking it immediately races the
+       download on some browsers. */
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setNotice('Save exported.');
+  };
+
+  const load = async (file: File): Promise<void> => {
+    try {
+      const imported = importSaveData(await file.text());
+      const parts = [
+        imported.profile === null ? null : 'progress',
+        imported.settings === null ? null : 'settings',
+      ].filter((part) => part !== null);
+      setNotice(`Restored ${parts.join(' and ')}.`);
+    } catch (error) {
+      /* Named rather than swallowed: a player who picks the wrong file needs to
+         know nothing happened to the save they still have. */
+      setNotice(
+        error instanceof Error
+          ? `That file could not be read (${error.message}). Nothing has changed.`
+          : 'That file could not be read. Nothing has changed.',
+      );
+    }
+  };
+
+  const wipe = (): void => {
+    void clearAllSaveData().then(() => {
+      setConfirmingClear(false);
+      setNotice('All saved data has been cleared.');
+    });
+  };
 
   return (
     <div className="ui-screen" data-testid="screen-settings">
@@ -143,6 +192,64 @@ export function SettingsScreen(): ReactElement {
           Audio, graphics and accessibility options arrive with #46 and #47.
         </p>
       </Panel>
+
+      <Panel title="Saved data">
+        <p className="ui-muted" data-testid="save-summary">
+          {cleared} {cleared === 1 ? 'stage' : 'stages'} cleared &middot; {stars}{' '}
+          {stars === 1 ? 'star' : 'stars'}
+        </p>
+
+        <div className="ui-savedata">
+          <Button variant="primary" onClick={save}>
+            Export save
+          </Button>
+          <Button variant="primary" onClick={() => fileRef.current?.click()}>
+            Import save
+          </Button>
+          {/* Off-screen rather than hidden: a display:none input cannot be
+              opened by a click on some browsers. */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="ui-visually-hidden"
+            data-testid="import-file"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              /* Cleared so picking the same file twice fires again. */
+              event.target.value = '';
+              if (file !== undefined) void load(file);
+            }}
+          />
+        </div>
+
+        {confirmingClear ? (
+          <div className="ui-savedata">
+            <p className="ui-muted">
+              This erases every star, every best time and the run in progress. It cannot be undone.
+            </p>
+            <Button variant="danger" onClick={wipe} data-testid="clear-confirm">
+              Erase everything
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirmingClear(false)}>
+              Keep my save
+            </Button>
+          </div>
+        ) : (
+          <div className="ui-savedata">
+            <Button variant="ghost" onClick={() => setConfirmingClear(true)}>
+              Clear saved data
+            </Button>
+          </div>
+        )}
+
+        {notice !== null && (
+          <p className="ui-notice" role="status" data-testid="save-notice">
+            {notice}
+          </p>
+        )}
+      </Panel>
+
       <Button variant="ghost" onClick={goBack}>
         Back
       </Button>

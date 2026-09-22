@@ -113,6 +113,11 @@ export function setSettingsStorage(adapter: () => SaveAdapter): void {
   store = adapter;
 }
 
+/** Writes a whole settings file, for an import that replaces all of it (#39). */
+export function persistSettings(settings: Settings): void {
+  persist(settings);
+}
+
 function persist(settings: Settings): void {
   /* A failed write costs the player a preference, never the game: note it
      and carry on with the setting applied for this visit. */

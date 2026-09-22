@@ -195,6 +195,17 @@ export function setProfileStorage(adapter: () => SaveAdapter): void {
   store = adapter;
 }
 
+/**
+ * The adapter the profile lives in, for the save-data tools (#39).
+ *
+ * Exposed rather than letting them reach for `platform()` themselves: there is
+ * one seam for where a profile is stored, and a second one would be a second
+ * thing for a test to remember to redirect.
+ */
+export function profileAdapter(): SaveAdapter {
+  return store();
+}
+
 function persist(profile: Profile): void {
   /* A failed write costs the player a record, never the run in progress: note
      it and carry on with the profile applied for this visit. */
