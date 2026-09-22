@@ -4,6 +4,8 @@ export { tick, advance } from './tick.js';
 export { SYSTEMS, SYSTEM_ORDER } from './systems/index.js';
 export type { SimSystem } from './systems/index.js';
 export { hashWorld } from './hash.js';
+export { captureWorld, restoreWorld, snapshotKeys, SNAPSHOT_VERSION } from './snapshot.js';
+export type { WorldSnapshot } from './snapshot.js';
 export { buildRuleset, EMPTY_RULESET } from './ruleset.js';
 export type {
   Ruleset,

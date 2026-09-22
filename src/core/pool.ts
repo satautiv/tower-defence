@@ -1,3 +1,6 @@
+import { SaveBagError } from './serialise.js';
+import type { BagReader, BagWriter } from './serialise.js';
+
 /**
  * Object pooling.
  *
@@ -132,5 +135,49 @@ export class SlotAllocator {
 
   get capacity(): number {
     return this.max;
+  }
+
+  /**
+   * Writes the state `alloc` and `free` will consult next (#39).
+   *
+   * The free list and the high-water mark are why this exists: they decide
+   * which slot the next spawn lands in, and a restore that rebuilt them by
+   * guessing would put the next enemy somewhere else. The world would still
+   * *look* right and every later tick would diverge.
+   *
+   * Generations go too. They are how a stale index is recognised, and a
+   * counter that restarted at zero would make an old index look current again.
+   */
+  capture(write: BagWriter, prefix: string): void {
+    write.view(`${prefix}freeSlots`, this.freeSlots);
+    write.view(`${prefix}generations`, this.generations);
+    write.num(`${prefix}freeCount`, this.freeCount);
+    write.num(`${prefix}highWater`, this.highWater);
+  }
+
+  restore(read: BagReader, prefix: string): void {
+    read.into(`${prefix}freeSlots`, this.freeSlots);
+    read.into(`${prefix}generations`, this.generations);
+    const freeCount = read.num(`${prefix}freeCount`);
+    const highWater = read.num(`${prefix}highWater`);
+
+    /* Checked rather than trusted: these two index the free list, and a saved
+       pair outside the pool's bounds would have `alloc` reading past the end of
+       an array on the first spawn after a load. */
+    if (highWater < 0 || highWater > this.max) {
+      throw new SaveBagError(
+        `${prefix}highWater`,
+        `${prefix}highWater ${highWater} is out of range`,
+      );
+    }
+    if (freeCount < 0 || freeCount > highWater) {
+      throw new SaveBagError(
+        `${prefix}freeCount`,
+        `${prefix}freeCount ${freeCount} is out of range`,
+      );
+    }
+
+    this.freeCount = freeCount;
+    this.highWater = highWater;
   }
 }
