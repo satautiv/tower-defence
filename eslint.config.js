@@ -15,6 +15,9 @@ import tseslint from 'typescript-eslint';
 /** Libraries that only ever belong in the view, ui or audio layers. */
 const RENDER_LIBS = ['pixi.js', 'pixi.js/*', 'react', 'react-dom', 'react/*', 'howler', 'zustand'];
 
+const EDITOR_IS_DEV_ONLY =
+  'The map editor is dev-only and must never be statically imported: that would put it in the production bundle, which the 500 kB gate sums whether or not anyone loads it. Reach it with a dynamic import inside an import.meta.env.DEV branch (#34).';
+
 /**
  * Import patterns that reach a layer, whether by alias or by relative path.
  *
@@ -106,6 +109,7 @@ export default tseslint.config(
                 ...layer('audio'),
                 ...layer('platform'),
                 ...layer('app'),
+                ...layer('editor'),
               ],
               message:
                 'core/ is the bottom of the dependency stack and must not import from any other layer.',
@@ -138,6 +142,7 @@ export default tseslint.config(
                 ...layer('audio'),
                 ...layer('platform'),
                 ...layer('app'),
+                ...layer('editor'),
               ],
               message:
                 'sim/ may only import from core/ and content/schema/. It emits SimEvents; it never calls out.',
@@ -162,8 +167,39 @@ export default tseslint.config(
               group: [...layer('app')],
               message: 'Presentation layers must not import from app/; app/ wires them together.',
             },
+            {
+              group: [...layer('editor')],
+              message: EDITOR_IS_DEV_ONLY,
+            },
           ],
         },
+      ],
+    },
+  },
+
+  /*
+   * ---- Nothing that ships may depend on the editor. ----
+   *
+   * It may read anything — it is a tool built on the game — but a production
+   * layer importing it would drag it into the bundle, which is the one thing
+   * that must not happen (#34). The route reaches it through a dynamic import
+   * inside an `import.meta.env.DEV` branch, which Rollup drops along with the
+   * whole screen; a static import anywhere would defeat that silently.
+   *
+   * A separate block, and deliberately only for the files the blocks above do
+   * not already cover: two blocks setting `no-restricted-imports` for the same
+   * file do not merge, the later one replaces the earlier. Adding `.tsx` to
+   * the presentation block above instead would have widened a rule that has
+   * never applied to `.tsx` — and `InStageScreen.tsx` imports `@app/session`
+   * today, so that is a real gap but not this issue's to close.
+   */
+  {
+    files: ['src/**/*.tsx', 'src/app/**/*.ts', 'src/content/**/*.ts'],
+    ignores: ['src/editor/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: [...layer('editor')], message: EDITOR_IS_DEV_ONLY }] },
       ],
     },
   },

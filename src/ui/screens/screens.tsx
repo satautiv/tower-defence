@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { Button, Panel } from '../components/index.js';
@@ -42,6 +43,10 @@ export function MenuScreen(): ReactElement {
           Campaign
         </Button>
         <Button onClick={() => navigate('settings')}>Settings</Button>
+        {/* The only way into the editor, and it is not here in a production
+            build: the condition is a literal after substitution, so this
+            button and the screen behind it are both dropped (#34). */}
+        {import.meta.env.DEV && <Button onClick={() => navigate('editor')}>Editor</Button>}
       </nav>
     </div>
   );

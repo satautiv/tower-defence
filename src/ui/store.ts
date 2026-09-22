@@ -16,7 +16,13 @@ import { create } from 'zustand';
  * `UI_STATE_KEYS` below pins this down, and a test fails if the shape grows.
  */
 
-export type Screen = 'splash' | 'menu' | 'regionMap' | 'stageSelect' | 'inStage' | 'settings';
+/**
+ * `editor` is reachable only in a dev build (#34). It is in the union because
+ * the store is typed, not because a player can get there — `Router` refuses it
+ * in production and the screen itself is never bundled.
+ */
+export type Screen =
+  'splash' | 'menu' | 'regionMap' | 'stageSelect' | 'inStage' | 'settings' | 'editor';
 
 export type PanelId = 'towerInfo' | 'wavePreview' | 'buildMenu' | 'pause';
 

@@ -17,9 +17,10 @@ perks, which #32's substrate now makes authorable — `perks` and `perkConfig` a
 not only a branch's, so a T3 perk is a JSON edit rather than code. **#24 (soldiers), #25
 (hero), #26 (Warden Powers), #27 (targeting and the tower panel), #29 (enemy behaviours), #30
 (ley lines), #31 (ground effects), #32 (tier 4/5 specialisations) and #33 (bosses) are all
-done** and described below. **M2's code is finished.** What is left before Region 1 is
-playable is the tooling and the content it serves: **#34** (map editor) then **#36** (the ten
-stages), which is also what gives the bosses a stage to stand in.
+done** and described below. **M2's code is finished, and #34 — the map editor — is in.** What
+is left before Region 1 is playable is **#36** (the ten stages), which is also what gives the
+bosses a stage to stand in. What remains open on #34 is the decor tool and in-editor playtest,
+which are conveniences rather than blockers.
 
 Two issues stay open for things code cannot close. #30 wants editor support for placing nodes,
 which is **#34**. That and #27 both also want a check on a real phone, which is the same check
@@ -84,6 +85,54 @@ the map went untargetable through it until `CanBurrow` made it an enemy's proper
 telegraph hues against a 30° floor leaves almost no slack**, so they are spaced evenly rather
 than chosen for flavour; picking by feel put suppression and sapping 25° apart, which is the
 pair a player most needs to tell apart.
+
+**The map editor (#34) is in, and it lives in `src/editor/`, not `tools/map-editor/`.**
+TECH_DESIGN §13.1 names that directory and in the same breath calls the thing *"a browser
+route, dev-only"*, and those cannot both be true — a browser route has to sit where Vite
+resolves it, where the aliases work and where the ESLint layer boundaries reach it. The
+directory now holds a README saying so.
+
+**The rule that shaped everything else: nothing that ships may import it.** `bundle-budget`
+sums every emitted chunk whether or not a player loads it — its own caveat says so — so a
+lazily-loaded editor would still cost the 500 kB gate. The route reaches it through a dynamic
+`import()` inside an `import.meta.env.DEV` branch, which Rollup drops along with the whole
+screen: **the production bundle is byte-for-byte what it was before the editor existed, 64.9%
+of budget.** `eslint.config.js` forbids a static import from every shipping layer and
+`tests/guardrails.test.ts` proves the rule fires, because a guardrail nobody re-checks is worse
+than none.
+
+Adding that rule found a real one: a new ESLint block setting `no-restricted-imports` for files
+an existing block already covered **replaced** it rather than merging, silently disabling every
+layer boundary in the project. The guardrail tests caught it on the first run. The editor ban is
+folded into each layer's own rule instead. A second finding, left alone deliberately: the
+presentation-layer rule is scoped to `*.ts` and has never applied to `*.tsx`, and
+`InStageScreen.tsx` imports `@app/session` today. That is a real gap and not #34's to close.
+
+**The draft is a `StageDefinition`, not an authoring model.** Every edit in `draft.ts` returns a
+new one, so undo is a stack of whole stages and React decides what to redraw by identity.
+`validate.ts` reimplements no rule — it parses with `StageSchema` and calls `lintContent` with
+the draft substituted into a copy of the real registry, which is the only way the cross-file
+rules work at all, and is what makes *"exported stages pass content:lint every time"* true by
+construction rather than by hope. Locale misses are reported apart from lint and do not fail a
+draft: #36 writes a stage and its English in the same commit.
+
+**Coverage is measured along the road, not over the map** — a corner no tower reaches is
+scenery, a tile of road no tower reaches is a hole every enemy walks through. It takes the reach
+being asked about, because "is this covered" has no answer independent of what is standing
+there: a Sniper Nest reaches 14 tiles and an Alchemist's Still 6.
+
+`tests/editor/playable.test.ts` is the acceptance criterion whole: it authors a stage through
+the editor's model, sends it out through the exporter and back through the importer — the round
+trip a real file takes — and hands it to the **balance simulator to win**, on four seeds. Valid
+is a lint run and complete is a parse, but *playable* is only ever proven by playing it, and
+#36 is about to author ten stages this way.
+
+Two traps, both found by running it. **`.ui-overlay` sets `pointer-events: none` and every
+control opts back in** — the editor did not, so every click fell through to the div underneath
+and the whole tool looked perfect and did nothing, while all sixteen happy-dom tests passed.
+happy-dom does not implement `pointer-events`, so no unit test could have caught it. And
+**there was no way to set a stage's name key at all**, which only surfaced when the first
+exported file came out named after the default.
 
 **Bosses (#33) are live, and a phase is another row of the enemy table.** That is the whole
 framework: `EnemyTable` grows extra rows for a boss's later phases, appended *after* every
@@ -389,6 +438,7 @@ Planning artefacts:
 | `docs/PLAYTEST-REACTIONS.md` | How to run #62, the reaction gate — the next thing blocking M2 |
 | `docs/adr/0004-reaction-readability.md` | What the first gate session found, and what was changed because of it |
 | `docs/TECH_DESIGN.md` | The technical spec — stack, architecture, per-system design, tooling, roadmap |
+| `tools/map-editor/README.md` | Why the editor is in `src/editor/` and not there |
 
 The implementation roadmap lives entirely in **GitHub issues #3–#60** (`gh issue list`), grouped under milestones M0–M7. Issues #1 and #2 are the closed planning issues and hold the same content as the two docs.
 

@@ -17,6 +17,7 @@ export default defineConfig({
       '@audio': alias('audio'),
       '@platform': alias('platform'),
       '@app': alias('app'),
+      '@editor': alias('editor'),
     },
   },
   build: {

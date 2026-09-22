@@ -1,0 +1,159 @@
+/* The stage editor (#34). Dev-only, so this never reaches a player: it is
+   laid out for density on a desktop rather than for the game's own look. */
+
+/* `.ui-overlay` turns pointer events off so clicks fall through to the game
+   board, and every control inside it opts back in. The editor has no board
+   under it and needs the whole surface, so it opts in once here — without
+   this every click lands on the div underneath and the editor looks perfect
+   and does nothing. Found by clicking it; happy-dom does not implement
+   `pointer-events`, so no unit test could have caught it. */
+.ed {
+  pointer-events: auto;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: var(--t-sm);
+}
+.ed__bar,
+.ed__mapbar,
+.ed__waveshead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--c-border);
+}
+.ed__id {
+  width: 8ch;
+}
+.ed__key {
+  width: 20ch;
+}
+.ed__tools {
+  display: flex;
+  gap: var(--s-1);
+}
+.ed__tool--on {
+  background: var(--c-accent, #2f9e8f);
+  color: var(--c-text);
+}
+.ed__file input {
+  width: 14ch;
+}
+.ed__note {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  background: var(--c-surface-raised);
+}
+.ed__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.ed__map {
+  flex: 1;
+  overflow: auto;
+  padding: var(--s-3);
+}
+.ed__side {
+  width: 320px;
+  overflow: auto;
+  border-left: 1px solid var(--c-border);
+}
+.ed__panel {
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--c-border);
+}
+.ed__panel h2 {
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-muted);
+}
+.ed__ok {
+  color: var(--c-success);
+}
+.ed__warn {
+  color: var(--c-warning);
+}
+.ed__bad {
+  margin: 0;
+  padding-left: var(--s-4);
+  color: var(--c-danger);
+}
+
+/* The map. Everything is drawn in tiles and scaled by the viewBox, so a
+   click divides by one number to find the tile under it. */
+.ed-canvas {
+  background: var(--c-surface);
+  cursor: crosshair;
+}
+.ed-path {
+  stroke: var(--c-border-strong);
+}
+.ed-coverage {
+  pointer-events: none;
+}
+.ed-waypoint {
+  fill: var(--c-text-dim);
+}
+.ed-plot {
+  fill: var(--c-warning);
+}
+.ed-plot--ley {
+  fill: var(--c-ley, #5ce1e6);
+}
+.ed-spawn {
+  fill: var(--c-danger);
+}
+.ed-core {
+  fill: var(--c-success);
+}
+/* One highlight for every kind of thing, so "what is selected" is one rule to
+   read rather than four that could drift apart. */
+.ed-selected {
+  stroke: var(--c-text);
+  stroke-width: 0.12;
+}
+
+.ed__waves {
+  border-top: 1px solid var(--c-border);
+}
+.ed__wave {
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--c-border);
+}
+.ed__wave header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: center;
+}
+.ed__totals,
+.ed__floor {
+  color: var(--c-text-muted);
+  font-family: var(--f-numeric);
+  font-variant-numeric: tabular-nums;
+}
+.ed__wave table {
+  border-collapse: collapse;
+  margin-top: var(--s-2);
+}
+.ed__wave th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--c-text-muted);
+}
+.ed__wave td,
+.ed__wave th {
+  padding: 2px var(--s-2);
+}
+.ed__wave input[type='number'] {
+  width: 7ch;
+}
