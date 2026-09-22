@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { Overlay } from './Overlay.js';
 import { Router } from './Router.js';
 import { loadSettings } from './settings.js';
+import { loadProfile } from '@app/profile';
 
 /**
  * Composition root for the DOM side.
@@ -12,10 +13,11 @@ import { loadSettings } from './settings.js';
  * renderer alive behind every menu.
  */
 export function App(): ReactElement {
-  /* Read once, early: the splash screen gives it time to land before a stage
-     needs the speed. */
+  /* Read once, early: the splash screen gives both time to land before a
+     stage needs the speed or the campaign screen needs its stars. */
   useEffect(() => {
     void loadSettings();
+    void loadProfile();
   }, []);
 
   return (

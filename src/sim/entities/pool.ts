@@ -1,4 +1,5 @@
 import { SlotAllocator } from '@core/pool';
+import type { BagReader, BagWriter } from '@core/serialise';
 
 /**
  * Shared slot bookkeeping for the structure-of-arrays entity pools.
@@ -114,5 +115,51 @@ export abstract class EntityPool {
    * values from its previous occupant — a bug that shows up as an enemy
    * spawning with the last one's remaining health.
    */
+  /**
+   * Writes every piece of state this pool owns (#39).
+   *
+   * The typed arrays are found by reflection, for the same reason `clear` and
+   * `hashWorld` find them that way: a hand-written list is something a new
+   * field gets left off, and the failure would be a save that restores a world
+   * missing one column with nothing to say so.
+   *
+   * What reflection cannot see is written explicitly. `nextId` and `live` are
+   * private numbers, and the slot allocator is an object rather than an array —
+   * yet all three decide what happens on the next `alloc`. The determinism
+   * fingerprint folds `count` and `watermark` but not `nextId` nor the free
+   * list, so a save that dropped them would restore to a matching hash and then
+   * diverge on the next spawn. That is precisely the bug this shape prevents.
+   */
+  capture(write: BagWriter, prefix: string): void {
+    for (const key of Object.keys(this).sort()) {
+      const value = (this as unknown as Record<string, unknown>)[key];
+      if (ArrayBuffer.isView(value)) write.view(`${prefix}${key}`, value);
+    }
+    write.num(`${prefix}nextId`, this.nextId);
+    write.num(`${prefix}live`, this.live);
+    this.slots.capture(write, `${prefix}slots.`);
+  }
+
+  restore(read: BagReader, prefix: string): void {
+    for (const key of Object.keys(this).sort()) {
+      const value = (this as unknown as Record<string, unknown>)[key];
+      if (ArrayBuffer.isView(value)) read.into(`${prefix}${key}`, value);
+    }
+    this.nextId = read.num(`${prefix}nextId`);
+    this.live = read.num(`${prefix}live`);
+    this.slots.restore(read, `${prefix}slots.`);
+  }
+
+  /** The keys `capture` writes, so a test can prove nothing escaped it. */
+  saveKeys(prefix: string): string[] {
+    const keys: string[] = [];
+    const probe: BagWriter = {
+      num: (key) => keys.push(key),
+      view: (key) => keys.push(key),
+    };
+    this.capture(probe, prefix);
+    return keys;
+  }
+
   protected abstract resetSlot(slot: number): void;
 }

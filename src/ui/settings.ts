@@ -4,6 +4,8 @@ import { GAME_SPEEDS } from '@core/constants';
 import type { GameSpeed } from '@core/constants';
 import { platform } from '@platform/index';
 import type { SaveAdapter } from '@platform/index';
+import { parseSaveFile, serializeSaveFile, zodParser } from '@core/savefile';
+import type { Migrations } from '@core/savefile';
 
 /**
  * The player's settings, kept between visits.
@@ -39,11 +41,10 @@ export const SettingsSchema = z.object({
   /**
    * The hero's level, 1 to 10, earned across the campaign (§11).
    *
-   * Lives in the profile because it is progress rather than preference, and
-   * levels come from stage completions rather than from anything inside a run.
-   * It sits here for now rather than in its own file: the save system (#39)
-   * may fold this key into a larger profile, and the format is already the one
-   * it will use.
+   * Superseded by `app/profile.ts`, which owns hero levels per hero id as #39
+   * folded this key into the larger profile. Kept in the schema so a file
+   * written by an older build still parses and its level is still read; the
+   * profile is what writes one now.
    */
   heroLevel: z.number().int().min(1).max(10).default(1),
   /**
@@ -62,18 +63,18 @@ export type Settings = z.infer<typeof SettingsSchema>;
 export const DEFAULT_SETTINGS: Settings = SettingsSchema.parse({});
 
 /** Each entry upgrades data written at that version to the next. Empty until v2. */
-export type Migrations = Readonly<Record<number, (data: unknown) => unknown>>;
 export const MIGRATIONS: Migrations = {};
 
-export class SettingsError extends Error {
-  constructor(message: string, cause?: unknown) {
-    super(message, { cause });
-    this.name = 'SettingsError';
-  }
-}
+/**
+ * Settings are read through the shared save-file machinery, not their own copy
+ * of it. This file prototyped that format; `core/savefile.ts` is where it now
+ * lives, so the profile and the session snapshot read a save exactly the way
+ * settings do.
+ */
+export { SaveFileError as SettingsError } from '@core/savefile';
 
 export function serializeSettings(settings: Settings): string {
-  return JSON.stringify({ version: SETTINGS_VERSION, data: settings });
+  return serializeSaveFile(SETTINGS_VERSION, settings);
 }
 
 /**
@@ -88,31 +89,12 @@ export function parseSettings(
   migrations: Migrations = MIGRATIONS,
   current: number = SETTINGS_VERSION,
 ): Settings {
-  let file: unknown;
-  try {
-    file = JSON.parse(raw);
-  } catch (error) {
-    throw new SettingsError('settings are not valid JSON', error);
-  }
-
-  const envelope = z.object({ version: z.number().int().positive(), data: z.unknown() });
-  const parsed = envelope.safeParse(file);
-  if (!parsed.success) throw new SettingsError('settings have no version', parsed.error);
-
-  let { version, data } = parsed.data;
-  if (version > current) {
-    throw new SettingsError(`settings are from a newer build (v${version}, this is v${current})`);
-  }
-  while (version < current) {
-    const migrate = migrations[version];
-    if (migrate === undefined) throw new SettingsError(`no migration from settings v${version}`);
-    data = migrate(data);
-    version++;
-  }
-
-  const settings = SettingsSchema.safeParse(data);
-  if (!settings.success) throw new SettingsError('settings failed validation', settings.error);
-  return settings.data;
+  return parseSaveFile(raw, {
+    label: 'settings',
+    version: current,
+    migrations,
+    parse: zodParser(SettingsSchema),
+  });
 }
 
 interface SettingsState extends Settings {
@@ -121,7 +103,6 @@ interface SettingsState extends Settings {
   setSpeed: (speed: GameSpeed) => void;
   setVolume: (volume: number) => void;
   setMuted: (muted: boolean) => void;
-  setHeroLevel: (level: number) => void;
   setTargetMode: (towerId: string, mode: number) => void;
 }
 
@@ -130,6 +111,11 @@ let store: () => SaveAdapter = () => platform().profile;
 
 export function setSettingsStorage(adapter: () => SaveAdapter): void {
   store = adapter;
+}
+
+/** Writes a whole settings file, for an import that replaces all of it (#39). */
+export function persistSettings(settings: Settings): void {
+  persist(settings);
 }
 
 function persist(settings: Settings): void {
@@ -168,15 +154,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setTargetMode: (towerId, mode) => {
     if (get().targetModes[towerId] === mode) return;
     set({ targetModes: { ...get().targetModes, [towerId]: mode } });
-    persist(SettingsSchema.parse(get()));
-  },
-
-  /* Only ever upward: a level is earned, and a later stage cleared at a lower
-     level must not take one away. */
-  setHeroLevel: (level) => {
-    const clamped = Math.min(10, Math.max(1, Math.round(level)));
-    if (clamped <= get().heroLevel) return;
-    set({ heroLevel: clamped });
     persist(SettingsSchema.parse(get()));
   },
 }));
