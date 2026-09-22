@@ -87,6 +87,50 @@ describe('core/ sits at the bottom of the stack', () => {
   });
 });
 
+/**
+ * The map editor is dev-only (#34).
+ *
+ * The bundle gate sums every emitted chunk, so a static import from anything
+ * that ships would put the whole editor in the payload whether or not a player
+ * ever opens it. The route reaches it through a dynamic import inside an
+ * `import.meta.env.DEV` branch, which Rollup drops entirely — and this is what
+ * stops someone undoing that with an innocent-looking import.
+ */
+describe('nothing that ships depends on the editor', () => {
+  it.each([
+    ['src/ui/probe.tsx', '@editor/EditorScreen'],
+    ['src/ui/probe.ts', '@editor/draft'],
+    ['src/app/probe.ts', '@editor/coverage'],
+    ['src/sim/probe.ts', '@editor/draft'],
+    ['src/core/probe.ts', '@editor/draft'],
+    ['src/view/probe.ts', '@editor/coverage'],
+  ])('rejects %s importing %s', async (filePath, specifier) => {
+    const rules = await rulesTriggeredBy(
+      `import { thing } from '${specifier}';\nexport const t = thing;\n`,
+      filePath,
+    );
+    expect(rules).toContain('no-restricted-imports');
+  });
+
+  /* The editor is allowed to import itself, or it could not be written. */
+  it('lets the editor import its own modules', async () => {
+    const rules = await rulesTriggeredBy(
+      `import { emptyDraft } from '@editor/draft';\nexport const d = emptyDraft;\n`,
+      'src/editor/probe.tsx',
+    );
+    expect(rules).not.toContain('no-restricted-imports');
+  });
+
+  /* It is a tool built on the game, so it reads the game freely. */
+  it('lets the editor read the simulation and the content', async () => {
+    const rules = await rulesTriggeredBy(
+      `import { buildRuleset } from '@sim/index';\nexport const r = buildRuleset;\n`,
+      'src/editor/probe.ts',
+    );
+    expect(rules).not.toContain('no-restricted-imports');
+  });
+});
+
 describe('presentation layers stay downstream', () => {
   it('blocks ui/ from importing the app layer', async () => {
     const rules = await rulesTriggeredBy(
