@@ -22,6 +22,7 @@ import {
   tierSlot,
   towerIndex,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * Tier-4 and tier-5 branch perks (#32, docs/GAME_DESIGN.md §8.2–8.5).
@@ -36,7 +37,7 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed);
+const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed, FULL_ROSTER);
 
 /** Builds a tower and takes it straight to a named branch's first rung. */
 function branch(world: World, towerId: string, branchIndex: 0 | 1, x = 500, y = 500): number {

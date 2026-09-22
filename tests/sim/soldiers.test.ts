@@ -19,6 +19,7 @@ import {
   tick,
   towerIndex,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * Soldiers and blocking (#24, docs/TECH_DESIGN.md §7.7).
@@ -36,7 +37,7 @@ if (stage === undefined) throw new Error('stage 1-1 missing');
 const garrison = registry.towers.get('wardens_barracks')?.tiers[0].garrison;
 if (garrison === undefined) throw new Error('the barracks has no garrison');
 
-const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed);
+const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed, FULL_ROSTER);
 
 /** A barracks standing beside the path, at a known distance along it. */
 function barracksAt(world: World, pathDistance: number): number {

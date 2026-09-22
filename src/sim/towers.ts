@@ -89,6 +89,11 @@ export function placeTower(
   plotId = 0,
 ): number {
   if (typeIdx < 0 || typeIdx >= world.rules.towers.ids.length) return -1;
+  /* Refused here rather than only hidden in the build menu, because the menu
+     is not the only way in: a command can be dispatched by a replay, a test or
+     the balance simulator's scripted player, and a stage's roster has to mean
+     the same thing to all of them (#36). */
+  if ((world.rules.towers.unlocked[typeIdx] as number) !== 1) return -1;
 
   const slot = world.towers.alloc();
   if (slot < 0) return -1;

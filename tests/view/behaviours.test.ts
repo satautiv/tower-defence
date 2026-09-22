@@ -13,6 +13,7 @@ import {
 import type { World } from '@sim/index';
 import { BehaviourFeed, behaviourColour } from '@view/behaviours';
 import { BEHAVIOUR_COLOUR, separation } from '@view/palette';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * The telegraph half of #29 (design pillar P4).
@@ -26,7 +27,7 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const freshWorld = (): World => createWorldForStage(registry, stage, 1);
+const freshWorld = (): World => createWorldForStage(registry, stage, 1, FULL_ROSTER);
 
 function place(world: World, id: string, x: number, y: number): number {
   const slot = spawnEnemy(world, enemyIndex(world, id), 0);

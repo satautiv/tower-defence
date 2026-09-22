@@ -1,0 +1,481 @@
+{
+  "id": "1-7",
+  "nameKey": "stage.1_7.name",
+  "region": 1,
+  "widthTiles": 30,
+  "heightTiles": 17,
+  "startingGold": 860,
+  "lives": 20,
+  "core": {
+    "x": 29,
+    "y": 4
+  },
+  "paths": [
+    {
+      "id": 0,
+      "points": [
+        {
+          "x": 0,
+          "y": 9
+        },
+        {
+          "x": 5,
+          "y": 9
+        },
+        {
+          "x": 5,
+          "y": 2
+        },
+        {
+          "x": 14,
+          "y": 2
+        },
+        {
+          "x": 14,
+          "y": 11
+        },
+        {
+          "x": 22,
+          "y": 11
+        },
+        {
+          "x": 22,
+          "y": 4
+        },
+        {
+          "x": 29,
+          "y": 4
+        }
+      ],
+      "branches": []
+    }
+  ],
+  "spawnPoints": [
+    {
+      "id": 0,
+      "position": {
+        "x": 0,
+        "y": 9
+      },
+      "pathId": 0
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 0,
+        "y": 16
+      },
+      "pathId": 0
+    }
+  ],
+  "plots": [
+    {
+      "id": 0,
+      "position": {
+        "x": 2,
+        "y": 5
+      }
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 9,
+        "y": 6
+      }
+    },
+    {
+      "id": 2,
+      "position": {
+        "x": 9,
+        "y": 13
+      }
+    },
+    {
+      "id": 3,
+      "position": {
+        "x": 2,
+        "y": 14
+      }
+    },
+    {
+      "id": 4,
+      "position": {
+        "x": 11,
+        "y": 16
+      }
+    },
+    {
+      "id": 5,
+      "position": {
+        "x": 18,
+        "y": 8
+      },
+      "leyNode": "surge"
+    },
+    {
+      "id": 6,
+      "position": {
+        "x": 18,
+        "y": 15
+      }
+    },
+    {
+      "id": 7,
+      "position": {
+        "x": 10,
+        "y": 1.5
+      }
+    },
+    {
+      "id": 8,
+      "position": {
+        "x": 25,
+        "y": 9
+      }
+    },
+    {
+      "id": 9,
+      "position": {
+        "x": 25,
+        "y": 1
+      }
+    },
+    {
+      "id": 10,
+      "position": {
+        "x": 19,
+        "y": 2
+      }
+    },
+    {
+      "id": 11,
+      "position": {
+        "x": 28,
+        "y": 12
+      }
+    },
+    {
+      "id": 12,
+      "position": {
+        "x": 14,
+        "y": 7
+      },
+      "leyNode": "resonance"
+    },
+    {
+      "id": 13,
+      "position": {
+        "x": 5,
+        "y": 16
+      }
+    },
+    {
+      "id": 14,
+      "position": {
+        "x": 22,
+        "y": 16
+      }
+    }
+  ],
+  "leySeams": [
+    [
+      {
+        "x": 16,
+        "y": 8
+      },
+      {
+        "x": 20,
+        "y": 8
+      }
+    ],
+    [
+      {
+        "x": 12,
+        "y": 7
+      },
+      {
+        "x": 16,
+        "y": 7
+      }
+    ]
+  ],
+  "waves": [
+    {
+      "autoStartDelaySeconds": 28,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "riftling",
+          "count": 5,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 24,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 5,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 22,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 6,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "rift_bat",
+          "count": 2,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 1
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 22,
+      "clearBonus": 20,
+      "groups": [
+        {
+          "enemy": "ironclad_revenant",
+          "count": 2,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "riftling",
+          "count": 6,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 6,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 7,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "rift_bat",
+          "count": 4,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 5,
+          "spawnPoint": 1
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "ironclad_revenant",
+          "count": 3,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "husk",
+          "count": 5,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 5,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 20,
+      "groups": [
+        {
+          "enemy": "bulwark_golem",
+          "count": 1,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "riftling",
+          "count": 7,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 6,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "shieldwright",
+          "count": 1,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "husk",
+          "count": 6,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 4,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "ironclad_revenant",
+          "count": 3,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "rift_bat",
+          "count": 5,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 6,
+          "spawnPoint": 1
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "bulwark_golem",
+          "count": 1,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "shieldwright",
+          "count": 2,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 6,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "chitin_mother",
+          "count": 2,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "mite",
+          "count": 10,
+          "intervalSeconds": 0.3,
+          "delaySeconds": 6,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "bulwark_golem",
+          "count": 1,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "ironclad_revenant",
+          "count": 3,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 8,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 50,
+      "groups": [
+        {
+          "enemy": "bulwark_golem",
+          "count": 1,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "shieldwright",
+          "count": 2,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 6,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "rift_bat",
+          "count": 5,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 10,
+          "spawnPoint": 1
+        }
+      ]
+    }
+  ],
+  "interactable": {
+    "id": "slagpipe",
+    "nameKey": "interactable.slagpipe.name",
+    "position": {
+      "x": 14,
+      "y": 6
+    },
+    "cost": 80,
+    "effect": "ignite_vent",
+    "radiusTiles": 2,
+    "durationSeconds": 8,
+    "damagePerSecond": 30,
+    "damageType": "pyro",
+    "blocks": false,
+    "statusApplied": {
+      "status": "scorch",
+      "stacks": 2
+    }
+  },
+  "minPlotSpacingTiles": 1,
+  "balance": {
+    "minWinRate": 0.7,
+    "maxWinRate": 1
+  }
+}

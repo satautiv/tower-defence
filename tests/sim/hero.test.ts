@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { TICK_HZ, TILE_SIZE } from '@core/constants';
 import { buildRegistry } from '@content/loader';
 import { readContentFromDisk } from '../../tools/content/io.js';
-import { stageAtLeast } from '@app/session';
+import { stageAtLeast } from '@content/stages';
 import type { World } from '@sim/index';
 import {
   DAMAGE_INDEX,
@@ -23,6 +23,7 @@ import {
   spawnEnemy,
   tick,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * The hero (#25, docs/GAME_DESIGN.md §11).
@@ -103,7 +104,7 @@ describe('deploying', () => {
   });
 
   it('deploys none when the stage takes no hero', () => {
-    const none = createWorldForStage(registry, stage, 1);
+    const none = createWorldForStage(registry, stage, 1, FULL_ROSTER);
     advance(none, 60);
     expect(none.heroSlot).toBe(-1);
     expect(heroInfo(none)).toBeNull();

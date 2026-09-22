@@ -286,19 +286,27 @@ export function undoSecondsRemaining(world: World): number {
  */
 export function buildOptions(world: World, plotId = -1): BuildOption[] {
   const ley = world.rules.plotById.get(plotId)?.leyNodeIdx ?? -1;
+  const towers = world.rules.towers;
 
-  return world.rules.towers.ids.map((id, typeIdx) => {
-    const statIndex = typeIdx * TIER_SLOTS;
-    const cost = world.rules.towers.cost[statIndex] as number;
-    return {
-      typeIdx,
-      id,
-      cost,
-      affordable: canAfford(world, cost),
-      stats: statsAt(world, statIndex, ley),
-      leyNode: ley < 0 ? null : (world.rules.ley.ids[ley] ?? null),
-    };
-  });
+  /* A tower this stage has not unlocked is absent rather than shown greyed
+     out: the build menu is an arc of cards around a plot, and a row of locks
+     would crowd out the choice the player actually has (#36). The region map
+     is where "what is still to come" belongs. */
+  return towers.ids
+    .map((id, typeIdx) => ({ id, typeIdx }))
+    .filter(({ typeIdx }) => (towers.unlocked[typeIdx] as number) === 1)
+    .map(({ id, typeIdx }) => {
+      const statIndex = typeIdx * TIER_SLOTS;
+      const cost = towers.cost[statIndex] as number;
+      return {
+        typeIdx,
+        id,
+        cost,
+        affordable: canAfford(world, cost),
+        stats: statsAt(world, statIndex, ley),
+        leyNode: ley < 0 ? null : (world.rules.ley.ids[ley] ?? null),
+      };
+    });
 }
 
 /**

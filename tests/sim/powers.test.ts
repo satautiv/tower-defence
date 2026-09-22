@@ -21,6 +21,7 @@ import {
   targetingSystem,
   tick,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * Warden Powers and the primitives they are built from (#26).
@@ -36,7 +37,7 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed);
+const freshWorld = (seed = 1): World => createWorldForStage(registry, stage, seed, FULL_ROSTER);
 
 const powerIndex = (world: World, id: string): number => {
   const index = world.rules.powers.indexOf.get(id);

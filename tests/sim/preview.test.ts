@@ -18,6 +18,7 @@ import {
   threatsOf,
   tick,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * The wave preview (#28). A loss the player could not have seen coming is an
@@ -31,7 +32,7 @@ if (base === undefined) throw new Error('stage 1-1 missing');
 const stage: StageDefinition = base;
 
 const worldFor = (definition: StageDefinition = stage): World =>
-  createWorldForStage(registry, definition, 1);
+  createWorldForStage(registry, definition, 1, FULL_ROSTER);
 
 type Wave = StageDefinition['waves'][number];
 const template = stage.waves[0] as Wave;

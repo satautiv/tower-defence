@@ -1,6 +1,7 @@
 import { FixedStepLoop } from '@core/loop';
 import { Cinematic } from './cinematic.js';
 import { loadContent } from '@content/load';
+import { stageAtLeast } from '@content/stages';
 import type { StageDefinition } from '@content/schema/stage';
 import { createWorldForStage, tick } from '@sim/index';
 import type { CommandQueue, StageResult, StagePhase, World } from '@sim/index';
@@ -28,16 +29,6 @@ export function unlockedHero(stageId: string): string | undefined {
     if (stageAtLeast(stageId, hero.unlockedByStage)) return hero.id;
   }
   return undefined;
-}
-
-export function stageAtLeast(stageId: string, minimum: string): boolean {
-  const at = stageId.split('-').map(Number);
-  const need = minimum.split('-').map(Number);
-  const [atRegion = 0, atIndex = 0] = at;
-  const [needRegion = 0, needIndex = 0] = need;
-
-  if (atRegion !== needRegion) return atRegion > needRegion;
-  return atIndex >= needIndex;
 }
 
 /**

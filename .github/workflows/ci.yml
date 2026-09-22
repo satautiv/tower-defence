@@ -91,10 +91,45 @@ jobs:
           --to ${{ github.event.pull_request.head.sha }}
           --verbose
 
-  balance:
-    name: balance
+  # The gate used to be one job over one stage. Region 1 made it ten, and the
+  # work grew with both the count and the length of the later stages — the
+  # single job hit its ten-minute wall. Splitting by stage keeps the 200 runs
+  # the statistics want and keeps wall-clock roughly flat as regions 2-5 land,
+  # which a larger timeout would not. Findings are computed per stage and
+  # strategy, so a stage per job reaches the same verdict as one job for all.
+  balance-stages:
+    name: balance stages
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
+    outputs:
+      stages: ${{ steps.list.outputs.stages }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Read off the content directory rather than written out here, so
+      # authoring a stage puts it behind the gate with no workflow edit. A
+      # hardcoded list would quietly stop covering stage eleven.
+      - id: list
+        run: |
+          stages=$(ls src/content/data/stages/*.json \
+            | xargs -n1 basename \
+            | sed 's/\.json$//' \
+            | sort -t- -k1,1n -k2,2n \
+            | jq -R . | jq -sc .)
+          echo "stages=$stages" >> "$GITHUB_OUTPUT"
+          echo "$stages"
+
+  balance-stage:
+    name: balance ${{ matrix.stage }}
+    needs: balance-stages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      # Every stage reports. Stopping at the first failure would hide whether
+      # a tuning edit moved one stage or the whole region.
+      fail-fast: false
+      matrix:
+        stage: ${{ fromJson(needs.balance-stages.outputs.stages) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -105,16 +140,16 @@ jobs:
 
       - run: npm ci
 
-      # Every stage and strategy against its authored win-rate band. Fails the
-      # build when a stage falls outside the band its content declares, which
-      # is what stops a quiet tuning edit from making stage four unwinnable
-      # three months before anyone plays it.
+      # This stage and every strategy against its authored win-rate band.
+      # Fails the build when a stage falls outside the band its content
+      # declares, which is what stops a quiet tuning edit from making stage
+      # four unwinnable three months before anyone plays it.
       #
       # 200 runs per strategy rather than the 2,000 a local sweep uses: enough
       # to catch a stage that has genuinely moved, few enough to stay inside a
       # PR's patience. Seeds are fixed, so two runs of this job compare.
       - name: Balance
-        run: npm run balance -- --runs 200 --json balance-report.json
+        run: npm run balance -- --stage ${{ matrix.stage }} --runs 200 --json balance-report.json
 
       # Kept whatever the outcome — the report is most wanted on the run that
       # failed, and #59's live-balancing loop will read the same file.
@@ -122,9 +157,24 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: balance-report
+          name: balance-report-${{ matrix.stage }}
           path: balance-report.json
           if-no-files-found: warn
+
+  # One check name for the whole gate, so branch protection has a single thing
+  # to require however many stages the matrix grows to.
+  balance:
+    name: balance
+    needs: balance-stage
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verdict
+        run: |
+          result='${{ needs.balance-stage.result }}'
+          echo "stage matrix: $result"
+          [ "$result" = 'success' ] || exit 1
 
   e2e:
     name: e2e

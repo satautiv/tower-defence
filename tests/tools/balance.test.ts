@@ -37,6 +37,10 @@ const registry = buildRegistry(readContentFromDisk());
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
+/* Deliberately *not* the full roster: this file measures what the simulator
+   reports about stage 1-1 as it ships, and 1-1 unlocks three towers (#36).
+   Handing it all eight would make every number here describe a board no
+   player arriving at 1-1 could build. */
 const world = () => createWorldForStage(registry, stage, 1);
 
 describe('a run is decided by its seed and nothing else', () => {
@@ -194,10 +198,24 @@ describe('strategies play through the command queue', () => {
     expect(() => strategyByName('nonsense', world())).toThrow(/unknown strategy/);
   });
 
-  it('offers one run per tower by default, so no tower goes unmeasured', () => {
+  /* Every tower this stage has *unlocked*. A single-tower board for one the
+     player cannot build is not a board anyone could play, so measuring it
+     would only report a stage as unwinnable by a board that never existed
+     (#36). */
+  it('offers one run per unlocked tower, so no reachable tower goes unmeasured', () => {
     const w = world();
     const names = defaultStrategies(w).map((s) => s.name);
-    for (const id of w.rules.towers.ids) expect(names).toContain(`single:${id}`);
+
+    const unlocked = w.rules.towers.ids.filter(
+      (_id, typeIdx) => (w.rules.towers.unlocked[typeIdx] as number) === 1,
+    );
+    expect(unlocked.length).toBeGreaterThan(0);
+    for (const id of unlocked) expect(names).toContain(`single:${id}`);
+
+    const locked = w.rules.towers.ids.filter(
+      (_id, typeIdx) => (w.rules.towers.unlocked[typeIdx] as number) !== 1,
+    );
+    for (const id of locked) expect(names).not.toContain(`single:${id}`);
   });
 });
 
@@ -233,10 +251,38 @@ describe('the report names design problems', () => {
   /* A band is written down so a change can fail a build. A stage drifting out
      of it is breakage, not a note. */
   it('fails a win rate outside it', () => {
-    const summary = summarise('1-1', 'greedy', towerIds, target, [run(), run({ won: false })]);
+    const summary = summarise('1-1', 'balanced', towerIds, target, [run(), run({ won: false })]);
     expect(summary.withinTarget).toBe(false);
     expect(findings(summary).some((f) => f.severity === 'fail')).toBe(true);
     expect(hasFailure([summary])).toBe(true);
+  });
+
+  /**
+   * `greedy` buys the dearest tower it can afford, which leaves it with nine
+   * towers where a round-robin board has fifteen (#36). Holding it to the band
+   * forced every stage in Region 1 to be trivial for a board that fills its
+   * plots, so it is measured and reported rather than gated — and its collapse
+   * still says so out loud, or the exemption would make it silent.
+   */
+  it('does not fail a build for greedy falling short of the band', () => {
+    const summary = summarise('1-1', 'greedy', towerIds, target, [run({ won: false })]);
+    expect(summary.withinTarget).toBe(false);
+    expect(findings(summary).some((f) => f.severity === 'fail')).toBe(false);
+    expect(hasFailure([summary])).toBe(false);
+  });
+
+  it('still warns when the under-built board never wins at all', () => {
+    const summary = summarise('1-1', 'greedy', towerIds, target, [
+      run({ won: false }),
+      run({ won: false }),
+    ]);
+    const codes = findings(summary).map((f) => f.code);
+    expect(codes).toContain('greedy-never-wins');
+  });
+
+  it('says nothing of the kind when greedy is winning', () => {
+    const summary = summarise('1-1', 'greedy', towerIds, target, [run(), run()]);
+    expect(findings(summary).map((f) => f.code)).not.toContain('greedy-never-wins');
   });
 
   /**

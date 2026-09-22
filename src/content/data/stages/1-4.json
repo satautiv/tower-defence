@@ -1,0 +1,433 @@
+{
+  "id": "1-4",
+  "nameKey": "stage.1_4.name",
+  "region": 1,
+  "widthTiles": 30,
+  "heightTiles": 17,
+  "startingGold": 660,
+  "lives": 20,
+  "core": {
+    "x": 29,
+    "y": 8
+  },
+  "paths": [
+    {
+      "id": 0,
+      "points": [
+        {
+          "x": 0,
+          "y": 8
+        },
+        {
+          "x": 6,
+          "y": 8
+        },
+        {
+          "x": 6,
+          "y": 3
+        },
+        {
+          "x": 13,
+          "y": 3
+        },
+        {
+          "x": 13,
+          "y": 14
+        },
+        {
+          "x": 20,
+          "y": 14
+        },
+        {
+          "x": 20,
+          "y": 8
+        },
+        {
+          "x": 29,
+          "y": 8
+        }
+      ],
+      "branches": []
+    }
+  ],
+  "spawnPoints": [
+    {
+      "id": 0,
+      "position": {
+        "x": 0,
+        "y": 8
+      },
+      "pathId": 0
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 0,
+        "y": 16
+      },
+      "pathId": 0
+    }
+  ],
+  "plots": [
+    {
+      "id": 0,
+      "position": {
+        "x": 3,
+        "y": 5
+      }
+    },
+    {
+      "id": 1,
+      "position": {
+        "x": 3,
+        "y": 11
+      }
+    },
+    {
+      "id": 2,
+      "position": {
+        "x": 9,
+        "y": 6
+      }
+    },
+    {
+      "id": 3,
+      "position": {
+        "x": 9,
+        "y": 1
+      }
+    },
+    {
+      "id": 4,
+      "position": {
+        "x": 10,
+        "y": 10
+      },
+      "leyNode": "flux"
+    },
+    {
+      "id": 5,
+      "position": {
+        "x": 16,
+        "y": 8
+      }
+    },
+    {
+      "id": 6,
+      "position": {
+        "x": 16,
+        "y": 2
+      }
+    },
+    {
+      "id": 7,
+      "position": {
+        "x": 17,
+        "y": 16
+      }
+    },
+    {
+      "id": 8,
+      "position": {
+        "x": 23,
+        "y": 11
+      }
+    },
+    {
+      "id": 9,
+      "position": {
+        "x": 23,
+        "y": 5
+      },
+      "leyNode": "surge"
+    },
+    {
+      "id": 10,
+      "position": {
+        "x": 26,
+        "y": 11
+      }
+    },
+    {
+      "id": 11,
+      "position": {
+        "x": 26,
+        "y": 4
+      }
+    },
+    {
+      "id": 12,
+      "position": {
+        "x": 13,
+        "y": 8
+      }
+    },
+    {
+      "id": 13,
+      "position": {
+        "x": 6,
+        "y": 15
+      }
+    },
+    {
+      "id": 14,
+      "position": {
+        "x": 20,
+        "y": 3
+      }
+    }
+  ],
+  "leySeams": [
+    [
+      {
+        "x": 8,
+        "y": 10
+      },
+      {
+        "x": 12,
+        "y": 10
+      }
+    ],
+    [
+      {
+        "x": 21,
+        "y": 5
+      },
+      {
+        "x": 25,
+        "y": 5
+      }
+    ]
+  ],
+  "waves": [
+    {
+      "autoStartDelaySeconds": 25,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "riftling",
+          "count": 8,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 22,
+      "clearBonus": 15,
+      "groups": [
+        {
+          "enemy": "mite",
+          "count": 10,
+          "intervalSeconds": 0.4,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 22,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 8,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "mite",
+          "count": 8,
+          "intervalSeconds": 0.4,
+          "delaySeconds": 5,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "riftling",
+          "count": 12,
+          "intervalSeconds": 0.5,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "rift_bat",
+          "count": 6,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 1
+        },
+        {
+          "enemy": "husk",
+          "count": 6,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 20,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "mite",
+          "count": 16,
+          "intervalSeconds": 0.3,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 20,
+      "groups": [
+        {
+          "enemy": "chitin_mother",
+          "count": 2,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 10,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "mite",
+          "count": 12,
+          "intervalSeconds": 0.35,
+          "delaySeconds": 5,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "chitin_mother",
+          "count": 3,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "riftling",
+          "count": 10,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 6,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "rift_bat",
+          "count": 8,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 1
+        },
+        {
+          "enemy": "mite",
+          "count": 14,
+          "intervalSeconds": 0.3,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 0,
+      "groups": [
+        {
+          "enemy": "husk",
+          "count": 12,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "chitin_mother",
+          "count": 2,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 8,
+          "spawnPoint": 0
+        }
+      ]
+    },
+    {
+      "autoStartDelaySeconds": 18,
+      "clearBonus": 35,
+      "groups": [
+        {
+          "enemy": "riftling",
+          "count": 18,
+          "intervalSeconds": 0.35,
+          "delaySeconds": 0,
+          "spawnPoint": 0
+        },
+        {
+          "enemy": "chitin_mother",
+          "count": 3,
+          "intervalSeconds": 0.8,
+          "delaySeconds": 10,
+          "spawnPoint": 0
+        }
+      ]
+    }
+  ],
+  "interactable": {
+    "id": "fulgurite_seam",
+    "nameKey": "interactable.fulgurite_seam.name",
+    "position": {
+      "x": 13,
+      "y": 9
+    },
+    "cost": 80,
+    "effect": "ignite_vent",
+    "radiusTiles": 2,
+    "durationSeconds": 8,
+    "damagePerSecond": 30,
+    "damageType": "pyro",
+    "blocks": false,
+    "statusApplied": {
+      "status": "scorch",
+      "stacks": 2
+    }
+  },
+  "minPlotSpacingTiles": 1,
+  "balance": {
+    "minWinRate": 0.75,
+    "maxWinRate": 1
+  }
+}

@@ -14,6 +14,7 @@ import {
   tick,
   towerIndex,
 } from '@sim/index';
+import { FULL_ROSTER } from '../roster.js';
 
 /**
  * The base roster (#23, GDD Part 2 §8).
@@ -32,7 +33,7 @@ const registry = buildRegistry(raw);
 const stage = registry.stages.get('1-1');
 if (stage === undefined) throw new Error('stage 1-1 missing');
 
-const world = (): World => createWorldForStage(registry, stage, 1);
+const world = (): World => createWorldForStage(registry, stage, 1, FULL_ROSTER);
 
 describe('the roster the design names', () => {
   const EXPECTED = [
@@ -267,7 +268,7 @@ describe('a ninth tower needs no code', () => {
   const extended = buildRegistry(ninthTower());
   const extendedStage = extended.stages.get('1-1');
   if (extendedStage === undefined) throw new Error('stage 1-1 missing');
-  const extendedWorld = (): World => createWorldForStage(extended, extendedStage, 1);
+  const extendedWorld = (): World => createWorldForStage(extended, extendedStage, 1, FULL_ROSTER);
 
   it('loads without complaint', () => {
     expect(extended.towers.has('ninth_tower')).toBe(true);
