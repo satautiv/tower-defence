@@ -1,0 +1,14 @@
+{
+  "id": "rapid_channel",
+  "nameKey": "talent.rapid_channel.name",
+  "descriptionKey": "talent.rapid_channel.desc",
+  "branch": "dominion",
+  "maxRanks": 3,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "powerCooldown",
+    "perRank": -0.015,
+    "mode": "multiplier"
+  },
+  "requires": ["swift_powers"]
+}

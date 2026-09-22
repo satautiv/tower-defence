@@ -1,0 +1,13 @@
+{
+  "id": "ley_tap",
+  "nameKey": "talent.ley_tap.name",
+  "descriptionKey": "talent.ley_tap.desc",
+  "branch": "dominion",
+  "maxRanks": 3,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "aetherRegen",
+    "perRank": 0.025,
+    "mode": "flat"
+  }
+}

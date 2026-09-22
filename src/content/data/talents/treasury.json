@@ -1,0 +1,14 @@
+{
+  "id": "treasury",
+  "nameKey": "talent.treasury.name",
+  "descriptionKey": "talent.treasury.desc",
+  "branch": "dominion",
+  "maxRanks": 3,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "startingGold",
+    "perRank": 8.0,
+    "mode": "flat"
+  },
+  "requires": ["war_chest"]
+}

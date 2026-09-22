@@ -3,6 +3,7 @@ import { IdSchema, LocaleKeySchema } from './common.js';
 
 export const TALENT_BRANCHES = ['conduction', 'foundry', 'command', 'dominion'] as const;
 export const TalentBranchSchema = z.enum(TALENT_BRANCHES);
+export type TalentBranch = (typeof TALENT_BRANCHES)[number];
 
 /**
  * Every stat a talent may modify.

@@ -1,0 +1,13 @@
+{
+  "id": "drill",
+  "nameKey": "talent.drill.name",
+  "descriptionKey": "talent.drill.desc",
+  "branch": "command",
+  "maxRanks": 5,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "soldierHp",
+    "perRank": 0.02,
+    "mode": "multiplier"
+  }
+}

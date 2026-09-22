@@ -1,0 +1,14 @@
+{
+  "id": "battle_rhythm",
+  "nameKey": "talent.battle_rhythm.name",
+  "descriptionKey": "talent.battle_rhythm.desc",
+  "branch": "command",
+  "maxRanks": 2,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "heroAbilityCooldown",
+    "perRank": -0.02,
+    "mode": "multiplier"
+  },
+  "requires": ["war_college"]
+}

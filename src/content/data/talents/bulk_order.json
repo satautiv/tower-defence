@@ -1,0 +1,14 @@
+{
+  "id": "bulk_order",
+  "nameKey": "talent.bulk_order.name",
+  "descriptionKey": "talent.bulk_order.desc",
+  "branch": "foundry",
+  "maxRanks": 3,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "buildCost",
+    "perRank": -0.008,
+    "mode": "multiplier"
+  },
+  "requires": ["thrift"]
+}

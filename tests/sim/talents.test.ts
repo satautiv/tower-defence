@@ -185,11 +185,17 @@ describe('talents that land on the world rather than a table', () => {
     expect(rich.rules.towers.damage[0]).toBeGreaterThan(plain.rules.towers.damage[0] as number);
   });
 
+  /* Read from the content rather than hardcoded, so retuning the tree does not
+     make this test wrong about what the tree says. */
   it('applies a real authored node end to end', () => {
+    const bloom = registry.talents.get('resonant_bloom');
+    if (bloom === undefined) throw new Error('resonant_bloom is not authored');
+
     const plain = worldFor();
-    const bloomed = worldFor({ talents: { resonant_bloom: 5 } });
-    /* resonant_bloom is +10%/rank reaction power, five ranks. */
-    expect(bloomed.reactionPower).toBeCloseTo(plain.reactionPower * 1.5, 4);
+    const bloomed = worldFor({ talents: { resonant_bloom: bloom.maxRanks } });
+    const expected = 1 + bloom.modifier.perRank * bloom.maxRanks;
+    expect(bloomed.reactionPower).toBeCloseTo(plain.reactionPower * expected, 4);
+    expect(expected).toBeGreaterThan(1);
   });
 });
 

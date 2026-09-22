@@ -1,0 +1,14 @@
+{
+  "id": "detonation",
+  "nameKey": "talent.detonation.name",
+  "descriptionKey": "talent.detonation.desc",
+  "branch": "conduction",
+  "maxRanks": 2,
+  "starCostPerRank": 4,
+  "modifier": {
+    "stat": "reactionPower",
+    "perRank": 0.03,
+    "mode": "multiplier"
+  },
+  "requires": ["catalyst"]
+}

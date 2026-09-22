@@ -1,0 +1,14 @@
+{
+  "id": "veterancy",
+  "nameKey": "talent.veterancy.name",
+  "descriptionKey": "talent.veterancy.desc",
+  "branch": "command",
+  "maxRanks": 3,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "soldierHp",
+    "perRank": 0.02,
+    "mode": "multiplier"
+  },
+  "requires": ["drill"]
+}

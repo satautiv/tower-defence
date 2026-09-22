@@ -1,0 +1,14 @@
+{
+  "id": "resonance_field",
+  "nameKey": "talent.resonance_field.name",
+  "descriptionKey": "talent.resonance_field.desc",
+  "branch": "conduction",
+  "maxRanks": 2,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "aetherPerReaction",
+    "perRank": 0.25,
+    "mode": "flat"
+  },
+  "requires": ["overflow"]
+}

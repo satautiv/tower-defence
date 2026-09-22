@@ -1,0 +1,14 @@
+{
+  "id": "rapid_muster",
+  "nameKey": "talent.rapid_muster.name",
+  "descriptionKey": "talent.rapid_muster.desc",
+  "branch": "command",
+  "maxRanks": 2,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "heroRespawn",
+    "perRank": -0.75,
+    "mode": "flat"
+  },
+  "requires": ["field_medicine"]
+}

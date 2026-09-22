@@ -1,0 +1,14 @@
+{
+  "id": "deep_current",
+  "nameKey": "talent.deep_current.name",
+  "descriptionKey": "talent.deep_current.desc",
+  "branch": "conduction",
+  "maxRanks": 2,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "aetherRegen",
+    "perRank": 0.03,
+    "mode": "flat"
+  },
+  "requires": ["aether_well"]
+}

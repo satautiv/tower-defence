@@ -1,0 +1,13 @@
+{
+  "id": "kindling",
+  "nameKey": "talent.kindling.name",
+  "descriptionKey": "talent.kindling.desc",
+  "branch": "conduction",
+  "maxRanks": 3,
+  "starCostPerRank": 1,
+  "modifier": {
+    "stat": "reactionCooldown",
+    "perRank": -0.03,
+    "mode": "flat"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "surveyors_eye",
+  "nameKey": "talent.surveyors_eye.name",
+  "descriptionKey": "talent.surveyors_eye.desc",
+  "branch": "foundry",
+  "maxRanks": 2,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "towerRange",
+    "perRank": 0.01,
+    "mode": "multiplier"
+  },
+  "requires": ["far_sight"]
+}

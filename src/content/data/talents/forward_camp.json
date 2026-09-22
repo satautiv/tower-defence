@@ -1,0 +1,14 @@
+{
+  "id": "forward_camp",
+  "nameKey": "talent.forward_camp.name",
+  "descriptionKey": "talent.forward_camp.desc",
+  "branch": "command",
+  "maxRanks": 2,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "rallyRange",
+    "perRank": 0.25,
+    "mode": "flat"
+  },
+  "requires": ["standing_orders"]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "tithe",
+  "nameKey": "talent.tithe.name",
+  "descriptionKey": "talent.tithe.desc",
+  "branch": "dominion",
+  "maxRanks": 2,
+  "starCostPerRank": 3,
+  "modifier": {
+    "stat": "startingGold",
+    "perRank": 10.0,
+    "mode": "flat"
+  },
+  "requires": ["treasury"]
+}

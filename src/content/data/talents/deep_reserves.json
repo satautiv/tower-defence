@@ -1,0 +1,13 @@
+{
+  "id": "deep_reserves",
+  "nameKey": "talent.deep_reserves.name",
+  "descriptionKey": "talent.deep_reserves.desc",
+  "branch": "dominion",
+  "maxRanks": 2,
+  "starCostPerRank": 2,
+  "modifier": {
+    "stat": "aetherPerReaction",
+    "perRank": 0.25,
+    "mode": "flat"
+  }
+}

@@ -7,7 +7,7 @@
   "starCostPerRank": 2,
   "modifier": {
     "stat": "reactionCooldown",
-    "perRank": -0.1,
+    "perRank": -0.04,
     "mode": "flat"
   },
   "requires": ["resonant_bloom"]
