@@ -530,7 +530,11 @@ rate against each stage's authored band, tower pick rates, reaction counts, loss
 percentiles and peak unspent gold. With no `--strategy` it runs all of them plus one per tower,
 which is usually what you want — the interesting number is rarely one strategy's win rate, it is
 the gap between two. Runs spread across every core; `--workers 1` runs in-process when a stack
-trace matters. **It is a CI gate**: a stage outside its band fails the build.
+trace matters. **It is a CI gate**: a stage outside its band fails the build. The gate
+runs **one job per stage**, and the matrix is read off `src/content/data/stages/` rather
+than listed in the workflow — authoring a stage puts it behind the gate with no CI edit.
+Region 1 is what forced that: ten stages in one job blew the ten-minute wall, and a bigger
+timeout would only have moved the wall rather than kept the gate inside a PR's patience.
 
 ```
 npm run balance -- --stage 1-1 --runs 2000 --strategy greedy
