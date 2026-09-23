@@ -340,6 +340,15 @@ writes one per enemy. Statuses and damage types are **not** discovery-gated — 
 Scorch for the first time has to be able to look it up, and completion counts only what must be
 found, so a new player does not start at forty percent of a thing they have not done.
 
+**Every word a player reads is a word, and that took two passes.** The first draft printed the
+tier-5 capstone as `absolute_zero` and an ability's effect as `chillDecay ×0 for 8s` — which is
+exactly the wiki lookup the feature exists to remove. A row now carries an optional `labelKey`
+and `valueKey` alongside its plain strings, so a name travels as a locale key and the view
+resolves it, and `STAT_WORDS` gives every `MODIFIABLE_STATS` entry a phrase. `describeEffect`
+switches over the effect union rather than looking anything up, so **adding a primitive to
+`effects.ts` is a compile error until the Codex can say what it does**. The test asserts no
+underscore *and* no camelCase in what a capstone claims.
+
 Two findings from running it at phone width. **Five tabs at the default button padding took three
 rows and a third of the panel**; they are narrowed rather than shortened, because the labels are
 the words a player is looking for and the 48px touch target is not negotiable. And **the one

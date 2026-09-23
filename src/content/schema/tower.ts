@@ -205,3 +205,4 @@ export const TowerSchema = z.object({
 export type TowerDefinition = z.infer<typeof TowerSchema>;
 export type TowerTier = z.infer<typeof TowerTierSchema>;
 export type Garrison = z.infer<typeof GarrisonSchema>;
+export type TowerAbility = z.infer<typeof TowerAbilitySchema>;

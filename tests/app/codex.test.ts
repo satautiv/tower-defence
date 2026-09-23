@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { buildRegistry } from '@content/loader';
-import { DAMAGE_TYPES } from '@content/schema/common';
+import { DAMAGE_TYPES, EFFECT_KINDS } from '@content/schema/common';
 import { readContentFromDisk } from '../../tools/content/io.js';
 import {
   CodexScout,
   NOTHING_FOUND,
   codexEntries,
   codexProgress,
+  describeEffect,
   discoveredIn,
   isDiscovered,
   matchingEntries,
@@ -94,11 +95,16 @@ describe('what the Codex holds', () => {
       const labels = entry?.rows.map((row) => row.label) ?? [];
 
       tower.tiers.forEach((_, i) => expect(labels, tower.id).toContain(`Tier ${i + 1}`));
+
+      /* A branch's rungs are labelled by its *name key*, not its id: two
+         branches share the label "tier 4" and are told apart by the key. */
       for (const branch of tower.specialisations) {
-        branch.tiers.forEach((_, i) =>
-          expect(labels, branch.id).toContain(`— ${branch.id} ${i + 1}`),
-        );
-        expect(labels, branch.id).toContain(`— ${branch.id} ability`);
+        const mine = (entry?.rows ?? [])
+          .filter((row) => row.labelKey === branch.nameKey)
+          .map((row) => row.label);
+        branch.tiers.forEach((_, i) => expect(mine, branch.id).toContain(`tier ${i + 4}`));
+        expect(mine, branch.id).toContain('capstone');
+        expect(keys.has(branch.nameKey), branch.nameKey).toBe(true);
       }
     }
   });
@@ -417,5 +423,75 @@ describe('what a run discovers', () => {
     scout.consume(world);
 
     expect(scout.findings.enemies).toEqual(['rift_bat']);
+  });
+});
+
+/**
+ * The tier-5 capstone, which is the reason a branch gets chosen.
+ *
+ * §38 asks for "the tier-5 ability" in a tower's entry. The first draft printed
+ * its id — `absolute_zero` — which is exactly the wiki lookup this feature
+ * exists to remove. `describeEffect` switches over the effect union rather than
+ * looking anything up, so adding a primitive to `effects.ts` is a compile error
+ * here until the Codex can say what it does.
+ */
+describe('a capstone says what it does', () => {
+  it.each([...registry.towers.values()].map((t) => [t.id, t] as const))(
+    '%s names, prices and explains both capstones',
+    (_id, tower) => {
+      const entry = entries.find((e) => e.section === 'towers' && e.id === tower.id);
+      const rows = entry?.rows ?? [];
+
+      for (const branch of tower.specialisations) {
+        const named = rows.find(
+          (row) => row.label === 'capstone' && row.labelKey === branch.nameKey,
+        );
+        expect(named?.valueKey, branch.id).toBe(branch.ability.nameKey);
+        expect(keys.has(named?.valueKey ?? ''), branch.ability.nameKey).toBe(true);
+      }
+
+      const costs = rows.filter((row) => row.label === 'Costs');
+      const does = rows.filter((row) => row.label === 'Does');
+      expect(costs).toHaveLength(tower.specialisations.length);
+      expect(does).toHaveLength(tower.specialisations.length);
+      /* Words, not identifiers: a row reading "chillDecay ×0" or
+         "absolute_zero" is the wiki lookup this feature exists to remove. */
+      for (const row of does) {
+        expect(row.value, tower.id).not.toMatch(/_/);
+        expect(row.value, tower.id).not.toMatch(/[a-z][A-Z]/);
+      }
+    },
+  );
+
+  it('reads an ability out in the terms the effect is authored in', () => {
+    const cairn = registry.towers.get('frost_cairn');
+    if (cairn === undefined) throw new Error('frost_cairn missing');
+    const glacier = cairn.specialisations.find((b) => b.id === 'glacier_heart');
+    if (glacier === undefined) throw new Error('glacier_heart missing');
+
+    /* 1 freeze in 6 tiles, for 35 Aether every 30s — every number from the
+       content, none of them restated here. */
+    const first = glacier.ability.effects[0];
+    if (first === undefined) throw new Error('glacier_heart has no effects');
+    const said = describeEffect(first);
+    expect(said).toContain('freeze');
+    expect(said).toContain('6 tiles');
+
+    const entry = entries.find((e) => e.section === 'towers' && e.id === 'frost_cairn');
+    const cost = entry?.rows.find((row) => row.label === 'Costs');
+    expect(cost?.value).toContain(String(glacier.ability.cost));
+    expect(cost?.value).toContain(`${glacier.ability.cooldownSeconds}s`);
+  });
+
+  /* Every primitive has to be describable, or an ability composed from it is
+     one a player cannot read. */
+  it.each(EFFECT_KINDS)('describes a %s effect', (kind) => {
+    const used = [...registry.towers.values()]
+      .flatMap((tower) => tower.specialisations)
+      .flatMap((branch) => branch.ability.effects)
+      .filter((effect) => effect.kind === kind);
+    for (const effect of used) {
+      expect(describeEffect(effect).length, kind).toBeGreaterThan(0);
+    }
   });
 });
