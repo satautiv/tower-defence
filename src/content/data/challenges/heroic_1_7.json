@@ -1,0 +1,11 @@
+{
+  "id": "heroic_1_7",
+  "stageId": "1-7",
+  "kind": "heroic",
+  "nameKey": "challenge.heroic_1_7.name",
+  "descriptionKey": "challenge.heroic_1_7.desc",
+  "rules": {
+    "allowedTowers": ["alchemists_still", "arcane_spire"],
+    "enemyArmourMultiplier": 2
+  }
+}

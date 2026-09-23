@@ -21,7 +21,11 @@ function main(): void {
   const diagnostics = lintContent(registry, readLocaleKeys());
   if (diagnostics.length === 0) {
     const total =
-      registry.towers.size + registry.enemies.size + registry.stages.size + registry.powers.size;
+      registry.towers.size +
+      registry.enemies.size +
+      registry.stages.size +
+      registry.powers.size +
+      registry.challenges.size;
     console.log(`content:lint — ${total} definitions, no problems.`);
     return;
   }

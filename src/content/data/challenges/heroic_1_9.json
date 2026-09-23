@@ -1,0 +1,11 @@
+{
+  "id": "heroic_1_9",
+  "stageId": "1-9",
+  "kind": "heroic",
+  "nameKey": "challenge.heroic_1_9.name",
+  "descriptionKey": "challenge.heroic_1_9.desc",
+  "rules": {
+    "allowedTowers": ["flame_vent", "frost_cairn", "arcane_spire"],
+    "startingGold": 1760
+  }
+}

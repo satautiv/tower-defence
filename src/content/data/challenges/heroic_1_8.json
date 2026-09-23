@@ -1,0 +1,10 @@
+{
+  "id": "heroic_1_8",
+  "stageId": "1-8",
+  "kind": "heroic",
+  "nameKey": "challenge.heroic_1_8.name",
+  "descriptionKey": "challenge.heroic_1_8.desc",
+  "rules": {
+    "allowedTowers": ["mortar_emplacement", "arbalest_post", "frost_cairn"]
+  }
+}

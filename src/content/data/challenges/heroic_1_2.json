@@ -1,0 +1,12 @@
+{
+  "id": "heroic_1_2",
+  "stageId": "1-2",
+  "kind": "heroic",
+  "nameKey": "challenge.heroic_1_2.name",
+  "descriptionKey": "challenge.heroic_1_2.desc",
+  "rules": {
+    "allowedDamageTypes": ["arcane"],
+    "enemyWardMultiplier": 2,
+    "startingGold": 2000
+  }
+}

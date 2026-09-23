@@ -1,0 +1,10 @@
+{
+  "id": "heroic_1_4",
+  "stageId": "1-4",
+  "kind": "heroic",
+  "nameKey": "challenge.heroic_1_4.name",
+  "descriptionKey": "challenge.heroic_1_4.desc",
+  "rules": {
+    "allowedTowers": ["tesla_coil", "frost_cairn"]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "heroic_1_3",
+  "stageId": "1-3",
+  "kind": "heroic",
+  "nameKey": "challenge.heroic_1_3.name",
+  "descriptionKey": "challenge.heroic_1_3.desc",
+  "rules": {
+    "allowedTowers": ["arcane_spire", "frost_cairn"]
+  }
+}
