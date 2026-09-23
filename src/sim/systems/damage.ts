@@ -1,7 +1,7 @@
 import { MAX_QUERY_RESULTS } from '../capacity.js';
 import { DAMAGE_INDEX, DamageFlag } from '../damage.js';
 import { addGold, awardKill, bonusGoldFor } from '../economy.js';
-import { emitBehaviour, emitDamageDealt, emitEnemyDied } from '../events.js';
+import { DamageEventFlag, emitBehaviour, emitDamageDealt, emitEnemyDied } from '../events.js';
 import { BehaviourFlag, EnemyFlag, TowerPerk } from '../flags.js';
 import { laneOffsetFor } from '../path.js';
 import { spawnEnemy } from '../spawn.js';
@@ -235,8 +235,29 @@ function resolveOne(world: World, index: number): void {
     const absorbed = Math.min(shield, amount);
     enemies.overshield[slot] = shield - absorbed;
     amount -= absorbed;
+    /* Reported even when the shield only ate part of it. The damage log has to
+       reconcile to health lost, and a partial absorb that went unreported left
+       the difference unexplained — "where did the other forty go" is exactly
+       the question the log exists to answer. */
+    if (amount > 0) {
+      emitDamageDealt(
+        world.events,
+        enemies.ids[slot] as number,
+        absorbed,
+        type,
+        DamageEventFlag.Absorbed,
+        source,
+      );
+    }
     if (amount <= 0) {
-      emitDamageDealt(world.events, enemies.ids[slot] as number, absorbed, type, 0);
+      emitDamageDealt(
+        world.events,
+        enemies.ids[slot] as number,
+        absorbed,
+        type,
+        DamageEventFlag.Absorbed,
+        source,
+      );
       return;
     }
   }
@@ -260,7 +281,10 @@ function resolveOne(world: World, index: number): void {
     enemies.ids[slot] as number,
     amount,
     type,
-    (damageFlags & DamageFlag.IsReaction) !== 0 ? 1 : 0,
+    (damageFlags & DamageFlag.IsReaction) !== 0
+      ? DamageEventFlag.FromReaction
+      : DamageEventFlag.None,
+    source,
   );
 
   if ((enemies.hp[slot] as number) <= 0) {

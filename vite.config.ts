@@ -18,6 +18,7 @@ export default defineConfig({
       '@platform': alias('platform'),
       '@app': alias('app'),
       '@editor': alias('editor'),
+      '@devtools': alias('devtools'),
     },
   },
   build: {

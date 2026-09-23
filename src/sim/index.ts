@@ -5,6 +5,8 @@ export { SYSTEMS, SYSTEM_ORDER } from './systems/index.js';
 export type { SimSystem } from './systems/index.js';
 export { hashWorld } from './hash.js';
 export { captureWorld, restoreWorld, snapshotKeys, SNAPSHOT_VERSION } from './snapshot.js';
+export { ReplayRecorder, playReplay } from './replay.js';
+export type { Replay, ReplayCommand, ReplayHeader } from './replay.js';
 export type { WorldSnapshot } from './snapshot.js';
 export { buildRuleset, EMPTY_RULESET } from './ruleset.js';
 export { DEFAULT_DIFFICULTY, resolveDifficulty } from './ruleset.js';
@@ -114,7 +116,7 @@ export type { TowerTable } from './ruleset.js';
 export { CommandQueue, CommandKind } from './commands.js';
 export * from './commands.js';
 export { undoBuild } from './commands.js';
-export { SimEvents, SimEventKind } from './events.js';
+export { SimEvents, SimEventKind, DamageEventFlag } from './events.js';
 export * from './events.js';
 
 export { DamageQueue, DeathList, DamageFlag, DAMAGE_INDEX, DAMAGE_BY_INDEX } from './damage.js';

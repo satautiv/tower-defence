@@ -102,13 +102,35 @@ export const emitEnemyDied = (
 export const emitEnemyLeaked = (ev: SimEvents, id: number, livesCost: number) =>
   ev.push(SimEventKind.EnemyLeaked, id, livesCost);
 
+/**
+ * What was true of one resolved hit.
+ *
+ * A flag set rather than the plain `fromReaction` boolean this used to carry,
+ * because the damage log (#41) has to reconcile to an enemy's lost health and
+ * a hit swallowed by an overshield never reached it. Without telling the two
+ * apart the log over-counts by exactly the shield.
+ */
+export const enum DamageEventFlag {
+  None = 0,
+  FromReaction = 1 << 0,
+  /** Absorbed by an overshield: real damage that cost no health. */
+  Absorbed = 1 << 1,
+}
+
+/**
+ * One resolved hit, after armour, ward and every multiplier.
+ *
+ * Carries the tower that dealt it — or -1 for a burn, a reaction or a soldier —
+ * so the log can answer "what killed this" with names rather than a total.
+ */
 export const emitDamageDealt = (
   ev: SimEvents,
   targetId: number,
   amount: number,
   damageType: number,
-  fromReaction: number,
-) => ev.push(SimEventKind.DamageDealt, targetId, amount, damageType, fromReaction);
+  flags: number,
+  source = -1,
+) => ev.push(SimEventKind.DamageDealt, targetId, amount, damageType, flags, source);
 
 /**
  * A status landed or was topped up. Carries the resulting stack count rather

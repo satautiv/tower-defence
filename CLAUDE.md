@@ -355,6 +355,43 @@ the words a player is looking for and the 48px touch target is not negotiable. A
 enemy a player had actually killed sat sixteenth**, under a wall of undiscovered rows — the list
 puts what has been found first while there is anything left to find.
 
+**A replay is a seed and an ordered command list (#41), and `commands.ts` said so first.** Its own
+header already names the three properties a replay needs — nothing outside the simulation mutates
+the world, every intent arrives as a command, and commands apply at a tick boundary rather than
+mid-pipeline. `src/sim/replay.ts` is the reading of that design, not machinery bolted on: a
+recorder that reads the queue *before* the tick that drains it, and a player that pushes each
+command back on its own tick. `tests/determinism/replay.test.ts` compares `hashWorld` **at every
+tick**, not only at the end — a run that diverged at tick 300 and re-converged by 900 would pass an
+end-state check and be worthless as a bug report.
+
+It ships rather than living with the overlay that drives it, because a replay is how a bug report
+becomes a test and is a hundred and thirty lines of arithmetic; the buttons are what get stripped.
+A replay carries the mode and the progress stage beside the seed, for the reason a snapshot does:
+the world has to be *built* the same way before a command list means anything.
+
+**The damage log (#41) is a pure consumer of the event buffer, and closing its sum needed two
+gaps fixed.** `DamageDealt` already fired for every resolved hit after armour, ward and every
+multiplier — which is exactly the number that has to add up — but it carried no **source**, so the
+log could total damage and not name it, and a hit only *partly* swallowed by an overshield was
+never reported at all. That difference used to vanish, which is precisely the "where did the other
+forty go" the log exists to answer. `DamageEventFlag` distinguishes a reaction from a shield
+absorb, and slot `e` carries the tower.
+
+**"100% of an enemy's lost HP" is true to float32, and that is a property of the pools.**
+`EnemyPool.hp` is a `Float32Array` while a log accumulates in float64, so the reconciliation is a
+float32-against-float64 comparison: near 500,000 health the spacing between representable values
+is about 0.03 and `maxHp - hp` cannot recover a finer sum. The first fixture used 500,000 and
+missed by 0.014 — catastrophic cancellation, not a bug. The tests assert **relative** error, which
+holds at any size, rather than decimal places, which quietly mean something different on a
+riftling and on Grendrix.
+
+**`src/devtools/` takes the editor's bargain exactly**, and for the identical reason:
+`bundle-budget` sums every emitted chunk whether or not a player loads it, so the overlay is
+reached through a dynamic `import()` inside an `import.meta.env.DEV` branch. ESLint forbids a
+static import from all seven shipping layers and `tests/guardrails.test.ts` proves each ban fires —
+removing the rule fails seven tests. The production bundle holds **zero** devtools bytes, verified
+by grepping `dist/`.
+
 **The map editor (#34) is in, and it lives in `src/editor/`, not `tools/map-editor/`.**
 TECH_DESIGN §13.1 names that directory and in the same breath calls the thing *"a browser
 route, dev-only"*, and those cannot both be true — a browser route has to sit where Vite
