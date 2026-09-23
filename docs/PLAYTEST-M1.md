@@ -1,8 +1,16 @@
 # M1 Playtest — Vertical Slice
 
-> **Status:** ready to run · **Tracked in:** [#19](https://github.com/satautiv/tower-defence/issues/19)
+> **Status:** superseded, kept for the record · **Tracked in:** [#19](https://github.com/satautiv/tower-defence/issues/19)
 >
-> What to test, what to ask, and what the automated checks already found.
+> **Run [`PLAYTEST-REGION1.md`](PLAYTEST-REGION1.md) instead.** This protocol was written
+> against the vertical slice — three towers, six enemies, no reactions, no sound, no speed
+> controls — and that game no longer exists. A tester handed the current build and this doc
+> would be told half of what they are looking at is missing, and asked about a stage that has
+> since been rebuilt twice.
+>
+> What is still worth reading here is the bottom half: **what the automated checks found on
+> the slice**, and why "1-1 offers no resistance" was recorded rather than fixed. Those
+> numbers are the baseline everything since is measured against.
 
 ---
 

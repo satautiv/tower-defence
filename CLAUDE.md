@@ -32,10 +32,21 @@ which is **#34**. That and #27 both also want a check on a real phone, which is 
 #20 and #55 are waiting on.
 
 **#19 and #20 stay open on purpose.** #19 needs a playtest with three people who have not
-seen the design (protocol in `docs/PLAYTEST-M1.md`); #20 needs the slice run on a physical
-Android phone (steps in `docs/adr/0003-android-packaging.md`). Everything else on both is
-verified. The reaction gate the M1 gate was written to ask moved to **#62**, after #22,
-because the slice has no reactions.
+seen the design; #20 needs the game run on a physical Android phone (steps in
+`docs/adr/0003-android-packaging.md`). Everything else on both is verified. The reaction
+gate the M1 gate was written to ask moved to **#62**, after #22, because the slice has no
+reactions — and it passed, so what #19 still wants from people is the fundamentals rather
+than the mechanic.
+
+**The protocol for that is `docs/PLAYTEST-REGION1.md`, not `PLAYTEST-M1.md`.** The M1 doc
+was written against the vertical slice — three towers, six enemies, no reactions, no sound,
+no speed controls — and describes a game that no longer exists; it is kept for its measured
+baseline and marked superseded. The new doc is **two sessions**, because the human criteria
+left on #19 and #36 are two different questions: **Session A** is a stranger playing the
+campaign from 1-1 (which closes #19's playtest, #36's end-to-end criterion and "1-starrable
+by a casual player" in one sitting), and **Session B** is two skilled players 3-starring 1-8
+separately, which is the one success criterion the balance simulator structurally cannot
+answer — it round-robins or buys by price, and has no taste.
 
 `src/sim/` holds the `World`, five structure-of-arrays entity pools, the command queue, event
 buffer, damage queue and the fifteen-step tick pipeline, plus paths and movement (#11), the wave
@@ -790,7 +801,9 @@ Planning artefacts:
 | Path | What it is |
 |---|---|
 | `docs/GAME_DESIGN.md` | The design source of truth — mechanics, towers, enemies, campaign, progression, scope |
-| `docs/PLAYTEST-REACTIONS.md` | How to run #62, the reaction gate — the next thing blocking M2 |
+| `docs/PLAYTEST-REGION1.md` | The two human sessions left: a stranger on the campaign (#19, #36), two skilled players on 1-8 (#36) |
+| `docs/PLAYTEST-REACTIONS.md` | How #62, the reaction gate, was run — passed, kept as the protocol |
+| `docs/PLAYTEST-M1.md` | Superseded. Kept for what the automated checks measured on the slice |
 | `docs/adr/0004-reaction-readability.md` | What the first gate session found, and what was changed because of it |
 | `docs/TECH_DESIGN.md` | The technical spec — stack, architecture, per-system design, tooling, roadmap |
 | `tools/map-editor/README.md` | Why the editor is in `src/editor/` and not there |
