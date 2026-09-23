@@ -1,0 +1,134 @@
+/*
+ * The dev overlay's own stylesheet, imported by its own component.
+ *
+ * Here rather than in ui.css for the reason the whole module is here: a
+ * production build must not carry a byte of it, and a rule in the shipped
+ * stylesheet would be a byte of it.
+ */
+
+.dev-overlay {
+  position: absolute;
+  /* Below the top bar rather than over it. Opened at the top-left corner the
+     panel sat exactly across lives, gold and aether — the three numbers you
+     are most likely to be watching while you cheat them. Found by opening it
+     in a browser; the boss bar was moved for the same reason (#33). */
+  top: 52px;
+  left: 8px;
+  z-index: 40;
+  width: min(320px, calc(100vw - 16px));
+  /* Short of the bottom bar rather than over it: the panel is tall enough to
+     bury the hero's abilities, and scrolling a dev panel is a smaller cost
+     than hiding a control. */
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  padding: 8px 10px;
+  border: 1px solid #2f4256;
+  border-radius: 6px;
+  background: rgba(8, 14, 22, 0.92);
+  color: #d7e6f5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  /* `.ui-overlay` sets pointer-events: none and every control opts back in.
+     The editor's first draft did not, and the whole tool looked perfect and
+     did nothing. */
+  pointer-events: auto;
+}
+
+.dev-overlay__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.dev-overlay__section {
+  padding: 6px 0;
+  border-top: 1px solid #1d2b3a;
+}
+
+.dev-overlay__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dev-overlay__label {
+  margin-bottom: 4px;
+  color: #7f9ab4;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+}
+
+.dev-overlay__dim {
+  color: #7f9ab4;
+}
+
+.dev-overlay__bad {
+  color: #ff6b6b;
+}
+
+.dev-overlay__graph {
+  display: block;
+  width: 100%;
+  height: 48px;
+  margin: 4px 0;
+  background: #0c1520;
+  border-radius: 3px;
+}
+
+.dev-overlay__graph polyline {
+  fill: none;
+  stroke-width: 1.25;
+}
+
+.dev-overlay__sim {
+  stroke: #53f5c0;
+}
+
+.dev-overlay__render {
+  stroke: #ffd166;
+}
+
+.dev-overlay__budget {
+  stroke: #ff6b6b;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.6;
+}
+
+.dev-overlay__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dev-overlay__table td {
+  padding: 1px 0;
+}
+
+.dev-overlay__table td + td {
+  padding-left: 6px;
+  text-align: right;
+}
+
+.dev-overlay__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dev-overlay__chip {
+  padding: 4px 7px;
+  border: 1px solid #2f4256;
+  border-radius: 3px;
+  background: #132132;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dev-overlay__chip--on {
+  border-color: #53f5c0;
+  color: #53f5c0;
+}

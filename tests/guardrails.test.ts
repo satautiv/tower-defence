@@ -168,6 +168,42 @@ describe('nothing that ships depends on the dev overlay', () => {
   });
 });
 
+/**
+ * The cheats are dev-only too, and for a second reason on top of the bundle.
+ *
+ * `src/sim/cheats.ts` mutates the world with no command behind it, which is
+ * precisely what the command queue exists to prevent. It lives inside `sim/`
+ * so that "only sim/ mutates the world" stays literally true, and the ban is
+ * what keeps that the only place it can happen — a give-gold path reachable
+ * from the shipped command handler would be both bytes in the bundle and a
+ * route a player could find.
+ */
+describe('nothing that ships reaches the cheats', () => {
+  it.each([
+    ['src/ui/probe.tsx', '@sim/cheats'],
+    ['src/ui/probe.ts', '@sim/cheats'],
+    ['src/app/probe.ts', '@sim/cheats'],
+    ['src/view/probe.ts', '@sim/cheats'],
+    ['src/audio/probe.ts', '@sim/cheats'],
+    ['src/content/probe.ts', '@sim/cheats'],
+    ['src/sim/systems/probe.ts', '../cheats.js'],
+  ])('rejects %s importing %s', async (filePath, specifier) => {
+    const rules = await rulesTriggeredBy(
+      `import { giveGold } from '${specifier}';\nexport const g = giveGold;\n`,
+      filePath,
+    );
+    expect(rules).toContain('no-restricted-imports');
+  });
+
+  it('lets the overlay reach them, which is what they are for', async () => {
+    const rules = await rulesTriggeredBy(
+      `import { giveGold } from '@sim/cheats';\nexport const g = giveGold;\n`,
+      'src/devtools/probe.ts',
+    );
+    expect(rules).not.toContain('no-restricted-imports');
+  });
+});
+
 describe('presentation layers stay downstream', () => {
   it('blocks ui/ from importing the app layer', async () => {
     const rules = await rulesTriggeredBy(

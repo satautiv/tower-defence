@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { TILE_SIZE } from '@core/constants';
 import type { GameSpeed } from '@core/constants';
@@ -50,6 +50,7 @@ import {
 import type { SavedSession } from '@app/sessionSnapshot';
 import { platform } from '@platform/index';
 import type { GameView } from '@view/app';
+import type { Layers } from '@view/layers';
 import { BoardView } from '@view/board';
 import { EffectsView } from '@view/effects';
 import { BehavioursView } from '@view/behaviours';
@@ -111,6 +112,45 @@ const ATLAS_SRC = 'assets/atlas/game.json';
 const PLOT_HIT_RADIUS = TILE_SIZE * 0.75;
 /** And an enemy. Tighter than a plot: enemies crowd, and the nearest one wins. */
 const ENEMY_HIT_RADIUS = TILE_SIZE * 0.5;
+
+/**
+ * The dev overlay (#41), which exists only in a dev build.
+ *
+ * Reached the way the editor is, and for the same reason: `import.meta.env.DEV`
+ * is replaced with a literal at build time, so in production this branch is
+ * dead code, the `import()` inside it is unreachable, and Rollup drops the
+ * whole directory rather than emitting a chunk nobody loads. A lazily-loaded
+ * chunk would still count against the 500 kB gate, which sums every emitted
+ * file.
+ */
+const DevPanel = import.meta.env.DEV
+  ? lazy(async () => ({ default: (await import('@devtools/index.js')).DevPanel }))
+  : null;
+
+/**
+ * What the ticker asks of the overlay.
+ *
+ * Declared here rather than imported, because naming `@devtools/` in a file
+ * that ships is exactly what the layer rule forbids — correctly, since a ban
+ * with an exception for type positions is a ban somebody eventually launders a
+ * value through. The panel constructs the real instance and hands it back
+ * through a callback, so TypeScript checks the class against this shape from
+ * the other side of the boundary and nothing here has to name it.
+ *
+ * Every method guards on the overlay being visible before it does anything, so
+ * the whole of the hidden cost is the null check at each of these call sites.
+ */
+interface StageProbe {
+  beginFrame(realNow: number, world: World): number;
+  beforeTick(world: World): void;
+  endSim(world: World): void;
+  endFrame(world: World): void;
+  attachView(layers: Layers): void;
+  detachView(): void;
+  toggleVisible(): void;
+  watch(enemyId: number): void;
+  reset(): void;
+}
 
 /** An enemy is held by slot and entity id together; the slot alone is recycled. */
 interface EnemyPick {
@@ -192,6 +232,11 @@ export function InStageScreen(): ReactElement {
   const viewRef = useRef<GameView | null>(null);
   /* Measured on the device rather than inferred; see Diagnostics. */
   const metricsRef = useRef(new FrameMetrics());
+  /* Null in production, and null in a dev build until the import lands. The
+     ticker re-reads it every frame, so it simply starts working when it
+     arrives. */
+  const devRef = useRef<StageProbe | null>(null);
+  const layersRef = useRef<Layers | null>(null);
 
   const [unsupported, setUnsupported] = useState(false);
   const [selection, setSelection] = useState<Selection>(NOTHING);
@@ -466,6 +511,9 @@ export function InStageScreen(): ReactElement {
         }
       }
 
+      layersRef.current = view.layers;
+      devRef.current?.attachView(view.layers);
+
       const routes = new RouteView(view.layers);
       routes.sync(session.world);
 
@@ -528,7 +576,24 @@ export function InStageScreen(): ReactElement {
         lastNow = now;
 
         metricsRef.current.record(now);
-        const alpha = session.update(now, () => entities.captureForInterpolation());
+
+        /* Null in production, and the whole of what the overlay costs when it
+           is hidden. It decides which clock the session is advanced to, which
+           is how the time scale works without the simulation learning about
+           it — the same bargain the defeat sequence already makes. */
+        const dev = devRef.current;
+        const alpha = session.update(
+          dev === null ? now : dev.beginFrame(now, session.world),
+          () => {
+            entities.captureForInterpolation();
+            /* Before the tick that drains the queue, which is the only moment
+             that tick's commands exist (#41). */
+            dev?.beforeTick(session.world);
+          },
+        );
+        /* The boundary between simulating and drawing. Also the last moment
+           the event buffer is readable: `clearEvents` is a few lines down. */
+        dev?.endSim(session.world);
 
         entities.sync(session.world);
         effects.consume(session.world);
@@ -574,6 +639,13 @@ export function InStageScreen(): ReactElement {
           /* Fed from the world rather than only from events, because a
              standing aura is a state and has to keep being drawn (#29). */
           behaviours.render(session.world);
+        }
+
+        if (dev !== null) {
+          /* The damage log follows whatever the player has tapped, so "why did
+             that die so fast" is answered about the thing they were watching. */
+          dev.watch(enemyPickRef.current?.entityId ?? -1);
+          dev.endFrame(session.world);
         }
       });
     },
@@ -718,8 +790,30 @@ export function InStageScreen(): ReactElement {
        would re-record them on every retry. */
     recordedRef.current = false;
     scoutRef.current.reset();
+    /* Peaks, the damage log and any recording belong to the run that is over. */
+    devRef.current?.reset();
     setResult(null);
   }, [closePanel, clearSelection]);
+
+  /**
+   * Adopts the overlay once its chunk lands (#41), and lets it go on the way
+   * out.
+   *
+   * Stable identities, because the panel installs them in a mount effect: a
+   * new one each render would tear its key listener down and build it again.
+   */
+  const devReady = useCallback((dev: StageProbe) => {
+    devRef.current = dev;
+    const layers = layersRef.current;
+    /* The renderer may already exist — the chunk and the canvas race, and
+       either can win. */
+    if (layers !== null) dev.attachView(layers);
+  }, []);
+
+  const devTeardown = useCallback(() => {
+    devRef.current?.detachView();
+    devRef.current = null;
+  }, []);
 
   /** The one place a speed change is asked for, by button or by key. */
   const changeSpeed = useCallback(
@@ -921,6 +1015,22 @@ export function InStageScreen(): ReactElement {
             timeToFirstFrameMs={() => metricsRef.current.timeToFirstFrameMs}
             enemies={() => sessionRef.current?.world.enemies.count ?? 0}
           />
+
+          {/* Null in production, where the chunk does not exist to load. */}
+          {DevPanel !== null && (
+            <Suspense fallback={null}>
+              <DevPanel
+                onReady={devReady}
+                onTeardown={devTeardown}
+                world={() => sessionRef.current?.world ?? null}
+                replayHeader={() =>
+                  stageIdRef.current === null
+                    ? null
+                    : { stageId: stageIdRef.current, modeId: modeRef.current?.id }
+                }
+              />
+            </Suspense>
+          )}
 
           {selection.plotId >= 0 && selection.towerSlot < 0 && options.length > 0 && (
             <BuildMenu

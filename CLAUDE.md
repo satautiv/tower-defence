@@ -22,9 +22,10 @@ ten stages are authored: Region 1 is playable start to finish.** What remains op
 the decor tool and in-editor playtest, and on #36 the two criteria that need people.
 
 **M3 is complete: #39 (the save system), #37 (meta-progression), #40 (difficulty and challenge
-modes) and #38 (the Codex) are all done.** Progress persists, a run survives a backgrounding, unlock gating reads what the
-player has cleared, the Warden Talent tree is authored and spendable, and a map is now played
-seven ways.
+modes), #38 (the Codex) and #41 (the dev overlay) are all done.** Progress persists, a run
+survives a backgrounding, unlock gating reads what the
+player has cleared, the Warden Talent tree is authored and spendable, a map is now played
+seven ways, and `~` opens a panel that says where the frame went.
 
 Two issues stay open for things code cannot close. #30 wants editor support for placing nodes,
 which is **#34**. That and #27 both also want a check on a real phone, which is the same check
@@ -391,6 +392,54 @@ reached through a dynamic `import()` inside an `import.meta.env.DEV` branch. ESL
 static import from all seven shipping layers and `tests/guardrails.test.ts` proves each ban fires —
 removing the rule fails seven tests. The production bundle holds **zero** devtools bytes, verified
 by grepping `dist/`.
+
+**The overlay itself (#41) is behind `~`, and its acceptance criterion is asserted rather than
+timed.** *"Zero measurable overhead when hidden"* measured with a stopwatch is a flaky test that
+proves nothing on a loaded runner, so it is met by a rule applied without exception instead:
+**every per-frame hook tests `visible` as its first statement and returns**, and hidden, the
+overlay therefore reads no clock and touches no world. `tests/devtools/overlay.test.ts` hands it
+a world behind a throwing `Proxy` — any field it reads while hidden throws, by name. That is why
+`endSim()` takes no timestamp: it calls `performance.now()` itself, *after* the guard, rather
+than making the caller pay for a reading it would discard. The whole of the cost in the stage
+screen is a null check at three call sites.
+
+**Nothing in the stage screen names `@devtools/`, not even in a type position.** The panel
+constructs the `StageDevtools` and hands it back through `onReady`, so TypeScript checks the
+class from the far side of the boundary and `InStageScreen.tsx` declares only the eight methods
+its ticker calls. A ban with an exception for types is a ban somebody eventually launders a
+value through.
+
+**The cheats live in `src/sim/cheats.ts`, and that placement is the decision.** A cheat is a
+mutation with no command behind it — exactly what the command queue exists to prevent — and both
+obvious homes were worse: writing to the world from `devtools/` makes *"only `sim/` mutates the
+world"* false, and a `CommandKind` entry puts a give-gold path in the shipped command handler
+where a player can reach it. So the mutations stay inside `sim/`, in a module the barrel does not
+export and ESLint forbids **every** shipping layer from importing. Each one then sets up state and
+lets the ordinary systems draw the conclusion: `skipWave` marks the wave's groups fully spawned
+and empties the board, and the spawner's own `completeWave` pays the clear bonus and emits
+`WaveCleared` on the next tick. It frees enemies rather than killing them, because killing them
+would pay bounty, split the splitters and drop the carriers' cargo — which is the wave rather
+than a way past it.
+
+**Four findings, three of them from running the game rather than the tests.** First, and the one
+worth remembering beyond #41: **the three per-frame buffers empty at three different moments**,
+and the first draft sampled all of them after the tick — reporting a game that had never issued a
+command and never dealt any damage, for the whole run, with nothing about a zero to say it was
+taken at the wrong time. Commands are drained at step 0, so they are sampled in the pre-tick hook
+the replay recorder already uses; the damage queue is filled *and* drained inside one tick, so
+there is no moment outside one where it holds anything and `DamageQueue.highWater` tracks its own.
+Second: **`1000 / (simMs + renderMs)` read 4,317 fps** over a board doing almost nothing — that
+is the rate the frame did *work* at, not the rate the screen refreshes at, and the two are only
+the same number when the frame is already over budget. Third, **the panel opened at the top-left
+corner sat exactly across lives, gold and aether**, the three numbers you are most likely to be
+watching while you cheat them; it hangs below the top bar now, which is the same move the boss
+bar made. Fourth, the time scale rides a **virtual clock accumulated from scaled elapsed time**,
+the bargain `Cinematic` already makes — a clock re-derived from real time would snap forward on
+leaving 0.1× and burst a second of ticks into one frame.
+
+**A cheated run is not reproducible, and the panel says so next to the record button.** Nothing
+in a command list explains a mutation that had no command, so a replay saved from a cheated run
+is not a bug report. `StageDevtools` remembers that a cheat fired for exactly that sentence.
 
 **The map editor (#34) is in, and it lives in `src/editor/`, not `tools/map-editor/`.**
 TECH_DESIGN §13.1 names that directory and in the same breath calls the thing *"a browser
