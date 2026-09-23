@@ -1,0 +1,10 @@
+{
+  "id": "heroic_1_5",
+  "stageId": "1-5",
+  "kind": "heroic",
+  "nameKey": "challenge.heroic_1_5.name",
+  "descriptionKey": "challenge.heroic_1_5.desc",
+  "rules": {
+    "allowedTowers": ["flame_vent", "frost_cairn"]
+  }
+}

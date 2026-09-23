@@ -124,6 +124,44 @@ describe('saving and resuming a run', () => {
   });
 });
 
+/**
+ * A snapshot is bytes written against one ruleset (#48).
+ *
+ * Nothing in the bag says whether these enemies were scaled for Veteran or had
+ * their ward tripled by a Heroic challenge, so the mode travels beside the
+ * seed and the progress stage — the two other things a world has to be *built*
+ * with before the bytes can be written into it.
+ */
+describe('a saved run remembers how it was being played', () => {
+  it('carries the mode it was started on', async () => {
+    const veteran = createWorldForStage(registry, registry.stages.get('1-1')!, SEED, {
+      ...FULL_ROSTER,
+      difficulty: 'veteran',
+    });
+    advance(veteran, 60);
+    await writeSession(veteran, '1-1', 1, undefined, 'veteran');
+
+    const saved = await readSession();
+    expect(saved?.snapshot.modeId).toBe('veteran');
+
+    /* And the world it is restored into has to be built the same way, or the
+       lives it comes back with are Normal's twenty rather than Veteran's
+       fifteen. */
+    const rebuilt = createWorldForStage(registry, registry.stages.get('1-1')!, SEED, {
+      ...FULL_ROSTER,
+      difficulty: saved?.snapshot.modeId,
+    });
+    expect(resumeInto(rebuilt, saved!, '1-1')).toBe(true);
+    expect(hashWorld(rebuilt)).toBe(hashWorld(veteran));
+    expect(rebuilt.config.lives).toBe(15);
+  });
+
+  it('says nothing when it was not told, and opens on the default', async () => {
+    await writeSession(played(), '1-1', 1);
+    expect((await readSession())?.snapshot.modeId).toBeUndefined();
+  });
+});
+
 describe('a saved run that does not belong here', () => {
   it('is not offered for another stage', async () => {
     await writeSession(played('1-3'), '1-3', 1);

@@ -86,6 +86,50 @@ export const TuningSchema = z.object({
    * bounty by the square roots of the region and difficulty multipliers so a
    * later region pays more without paying proportionally more.
    */
+  /**
+   * The play modes, and what each one changes (#40, docs/GAME_DESIGN.md §9.2).
+   *
+   * Authored rather than coded for the same reason every other balance number
+   * is: no multiplier lives in `src/`. A mode is a row here, and adding one is
+   * a JSON edit plus an id — the simulation reads the resolved numbers and
+   * never asks which mode it is running.
+   *
+   * `normal` must exist and must be the baseline at 1.0, because it is what
+   * every other figure in the design is quoted against.
+   */
+  difficulties: z
+    .record(
+      z.string().min(1),
+      z.object({
+        /** Multiplies enemy health, and armour and ward at the defence rate. */
+        hp: Positive,
+        /** Multiplies bounty and starting gold. Below 1 makes a stage meaner. */
+        gold: Positive,
+        lives: z.number().int().positive(),
+        /**
+         * Extra enemies added to every authored group, as a fraction.
+         *
+         * §9.2 gives Impossible "extra enemies per wave" on top of its stat
+         * multiplier, because a pure stat wall is the failure mode a harder
+         * mode falls into most easily.
+         */
+        extraEnemyFraction: z.number().min(0).default(0),
+        /** Extra elite waves appended to the stage. Impossible gets one. */
+        extraEliteWaves: z.number().int().min(0).default(0),
+        /**
+         * Whether a clear here counts toward the campaign's stars.
+         *
+         * Relaxed sets this false: §18 says it carries no shame and no
+         * lockout, and awarding it stars would make it the optimal way to
+         * farm the talent tree, which is a different thing from being kind.
+         */
+        awardsStars: z.boolean().default(true),
+      }),
+    )
+    .refine((modes) => modes['normal'] !== undefined, {
+      message: 'a "normal" difficulty is required; it is the 1.0 baseline',
+    }),
+
   waveScaling: z.object({
     /** Fraction of base HP added per wave. */
     hpGrowthPerWave: NonNegative,

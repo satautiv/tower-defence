@@ -172,3 +172,36 @@ export function plotOccupant(world: World, plotId: number): number {
 export function towerIndex(world: World, id: string): number {
   return world.rules.towers.indexOf.get(id) ?? -1;
 }
+
+/**
+ * Builds the towers a challenge hands over before the first wave (#45).
+ *
+ * "You start with four towers already built and no gold" is one of §13's own
+ * Heroic examples, and it arrives through `placeTower` like any other build —
+ * so the ley node on the plot, the stat resolution and the built event are all
+ * the ones a player's tap would have produced, with nothing here to keep in
+ * step.
+ *
+ * Called from the World's constructor *and* its reset, because a retry starts
+ * the challenge over rather than the plain stage: a restart that quietly
+ * removed the starting position would turn a puzzle into an impossible one on
+ * the second attempt.
+ */
+export function placeStartingTowers(world: World): void {
+  const starts = world.rules.startingTowers;
+  if (starts.length === 0) return;
+
+  for (const start of starts) {
+    const slot = placeTower(world, start.typeIdx, start.x, start.y, start.plotId);
+    if (slot < 0) continue;
+    for (let tier = 1; tier <= start.tier; tier++) {
+      const cost = world.rules.towers.cost[start.typeIdx * TIER_SLOTS + tier] as number;
+      raiseTowerTier(world, slot, cost);
+    }
+  }
+
+  /* A tower the challenge gave away is not one the player built, and the
+     results screen reports what the player did. Reset rather than adjusted,
+     because nothing else has run yet. */
+  world.stats.towersBuilt = 0;
+}

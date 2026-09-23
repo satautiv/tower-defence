@@ -330,6 +330,56 @@ export function lintContent(
     add('talent-cycle', cycle[0] ?? '(unknown)', `prerequisite cycle: ${cycle.join(' -> ')}`);
   }
 
+  /* ---- challenges name a stage, towers and plots that exist ---- */
+  for (const challenge of registry.challenges.values()) {
+    const stage = registry.stages.get(challenge.stageId);
+    if (stage === undefined) {
+      add('challenge-stage-ref', challenge.id, `is for unknown stage "${challenge.stageId}"`);
+    }
+
+    for (const id of challenge.rules.allowedTowers) {
+      if (!registry.towers.has(id)) {
+        add('challenge-tower-ref', challenge.id, `allows unknown tower "${id}"`);
+      }
+    }
+
+    const plotIds = new Set(stage?.plots.map((plot) => plot.id) ?? []);
+    const taken = new Set<number>();
+    for (const start of challenge.rules.startingTowers) {
+      if (!registry.towers.has(start.tower)) {
+        add('challenge-tower-ref', challenge.id, `starts with unknown tower "${start.tower}"`);
+      }
+      if (stage !== undefined && !plotIds.has(start.plotId)) {
+        add(
+          'challenge-plot-ref',
+          challenge.id,
+          `starts a tower on plot ${start.plotId}, which stage ${challenge.stageId} has not got`,
+        );
+      }
+      if (taken.has(start.plotId)) {
+        add('challenge-plot-twice', challenge.id, `starts two towers on plot ${start.plotId}`);
+      }
+      taken.add(start.plotId);
+    }
+
+    /* A challenge that allows nothing is unwinnable, and the failure is silent:
+       the build menu simply offers no towers. Worth catching at lint rather
+       than at the end of a playtest. */
+    const allowsATower =
+      challenge.rules.allowedTowers.length === 0 && challenge.rules.allowedDamageTypes.length === 0
+        ? true
+        : [...registry.towers.values()].some(
+            (tower) =>
+              (challenge.rules.allowedTowers.length === 0 ||
+                challenge.rules.allowedTowers.includes(tower.id)) &&
+              (challenge.rules.allowedDamageTypes.length === 0 ||
+                challenge.rules.allowedDamageTypes.includes(tower.tiers[0]?.damageType ?? 'true')),
+          );
+    if (!allowsATower && challenge.rules.startingTowers.length === 0) {
+      add('challenge-no-towers', challenge.id, 'allows no tower to be built and hands over none');
+    }
+  }
+
   /* ---- every referenced localisation key exists ---- */
   if (localeKeys !== undefined) {
     const referenced = collectLocaleKeys({
@@ -339,6 +389,7 @@ export function lintContent(
       powers: [...registry.powers.values()],
       heroes: [...registry.heroes.values()],
       talents: [...registry.talents.values()],
+      challenges: [...registry.challenges.values()],
       statuses: [...registry.statuses.values()],
       reactions: [...registry.reactions.values()],
     });

@@ -37,6 +37,7 @@ import type {
   World,
 } from '@sim/index';
 import { GameSession } from '@app/session';
+import { DEFAULT_MODE_ID, defaultMode, modeById } from '@app/modes';
 import { useProfile } from '@app/profile';
 import {
   clearSession,
@@ -140,6 +141,7 @@ export function InStageScreen(): ReactElement {
   const closePanel = useUiStore((state) => state.closePanel);
   const openPanelById = useUiStore((state) => state.openPanelById);
   const selectedStageId = useUiStore((state) => state.selectedStageId);
+  const selectedModeId = useUiStore((state) => state.selectedModeId);
 
   const sessionRef = useRef<GameSession | null>(null);
   const boardRef = useRef<BoardView | null>(null);
@@ -226,6 +228,15 @@ export function InStageScreen(): ReactElement {
   const recordedRef = useRef(false);
   const stageIdRef = useRef(selectedStageId);
   stageIdRef.current = selectedStageId;
+  /* Resolved once here rather than at each use: the stage decides which modes
+     exist, and an unknown id opens on the default rather than refusing. */
+  const mode =
+    selectedStageId === null
+      ? undefined
+      : (modeById(selectedStageId, selectedModeId ?? DEFAULT_MODE_ID) ??
+        defaultMode(selectedStageId));
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   const finishedRef = useRef(result !== null);
   finishedRef.current = result !== null;
@@ -260,8 +271,8 @@ export function InStageScreen(): ReactElement {
         void clearSession();
         return;
       }
-      void writeSession(session.world, stageId, Date.now()).catch((error: unknown) =>
-        console.warn('Could not save the run in progress.', error),
+      void writeSession(session.world, stageId, Date.now(), undefined, modeRef.current?.id).catch(
+        (error: unknown) => console.warn('Could not save the run in progress.', error),
       );
       openPanelById('pause');
     });
@@ -396,7 +407,14 @@ export function InStageScreen(): ReactElement {
       const saved = savedRunRef.current;
       const resuming = saved !== null && sessionMatches(saved, stageId) ? saved : null;
 
-      const session = GameSession.forStage(stageId, resuming?.snapshot.seed);
+      /* A resumed run keeps the mode it was started on: the snapshot's bytes
+         were written against that ruleset, and rebuilding the world on Normal
+         would restore Veteran's enemies into Normal's tables. */
+      const session = GameSession.forStage(
+        stageId,
+        resuming?.snapshot.seed,
+        resuming?.snapshot.modeId ?? selectedModeId ?? DEFAULT_MODE_ID,
+      );
       if (session === null) return;
       sessionRef.current = session;
       applyPreferredSpeed(session);
@@ -519,7 +537,7 @@ export function InStageScreen(): ReactElement {
         }
       });
     },
-    [selectedStageId],
+    [selectedStageId, selectedModeId],
   );
 
   /* The panel and the undo clock poll at ten times a second. Reading them per
@@ -562,7 +580,15 @@ export function InStageScreen(): ReactElement {
         /* Recorded on the tick the stage ends rather than when the player
            dismisses the results, so closing the tab on the victory screen
            still keeps the run. */
-        if (stageIdRef.current !== null) recordResult(stageIdRef.current, finished);
+        if (stageIdRef.current !== null) {
+          const played = modeRef.current;
+          recordResult(
+            stageIdRef.current,
+            played?.id ?? DEFAULT_MODE_ID,
+            finished,
+            played?.maxStars ?? 3,
+          );
+        }
         setResult((shown) => shown ?? finished);
       }
     }, 100);

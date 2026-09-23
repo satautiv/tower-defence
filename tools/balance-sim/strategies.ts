@@ -1,5 +1,13 @@
 import type { World } from '../../src/sim/index.js';
-import { buildTower, callWave, plotOccupant, upgradeTower } from '../../src/sim/index.js';
+import {
+  buildTower,
+  callWave,
+  plotOccupant,
+  specialiseCost,
+  specialiseTower,
+  upgradeCost,
+  upgradeTower,
+} from '../../src/sim/index.js';
 
 /**
  * Scripted players, driving the simulation through the command queue.
@@ -220,7 +228,72 @@ export function singleType(towerId: string): Strategy {
   };
 }
 
-export const STRATEGY_NAMES = ['greedy', 'balanced', 'rush', 'single'] as const;
+/**
+ * Fills the board, then keeps improving all of it (#47).
+ *
+ * Every other strategy shares `upgradeSomething`, which upgrades the *lowest
+ * slot* and nothing else: once that one tower is maxed, `upgradeCost` returns
+ * -1 and gold simply piles up. On a ten-wave stage that barely shows, because
+ * the board is rarely full for long. Over a two-hundred-wave Endless run it is
+ * the whole result — a player who stops spending at wave twenty is measuring
+ * the script rather than the mode.
+ *
+ * So this one spends on the cheapest available improvement anywhere on the
+ * board, and takes the first branch when a tower has reached the tier-four
+ * choice. It is still not a good player — it reads no map and picks no branch
+ * on merit — but it is a player who keeps playing.
+ *
+ * Deliberately outside `defaultStrategies`: it is a measuring instrument for
+ * Endless, and adding a strategy to the CI gate changes what every stage is
+ * measured against.
+ */
+export function endurance(): Strategy {
+  let next = 0;
+  return {
+    name: 'endurance',
+    reset() {
+      next = 0;
+    },
+    decide(world) {
+      const plot = firstEmptyPlot(world);
+      if (plot >= 0) {
+        const count = world.rules.towers.ids.length;
+        for (let i = 0; i < count; i++) {
+          const typeIdx = (next + i) % count;
+          if (!buildable(world, typeIdx)) continue;
+          buildTower(world.commands, plot, typeIdx);
+          next = (typeIdx + 1) % count;
+          return;
+        }
+        return;
+      }
+
+      let bestSlot = -1;
+      let bestCost = Number.POSITIVE_INFINITY;
+      let bestIsBranch = false;
+      for (let slot = 0; slot < world.towers.watermark; slot++) {
+        if (!world.towers.isAlive(slot)) continue;
+
+        let cost = upgradeCost(world, slot);
+        let branch = false;
+        if (cost < 0) {
+          cost = specialiseCost(world, slot, 0);
+          branch = cost >= 0;
+        }
+        if (cost < 0 || cost > world.resources.gold || cost >= bestCost) continue;
+        bestSlot = slot;
+        bestCost = cost;
+        bestIsBranch = branch;
+      }
+
+      if (bestSlot < 0) return;
+      if (bestIsBranch) specialiseTower(world.commands, bestSlot, 0);
+      else upgradeTower(world.commands, bestSlot);
+    },
+  };
+}
+
+export const STRATEGY_NAMES = ['greedy', 'balanced', 'rush', 'endurance', 'single'] as const;
 
 /**
  * Builds a strategy from its command-line name.
@@ -240,6 +313,8 @@ export function strategyByName(name: string, world: World): Strategy {
       return balanced();
     case 'rush':
       return rush();
+    case 'endurance':
+      return endurance();
     default:
       throw new Error(
         `unknown strategy "${name}" — expected one of ${STRATEGY_NAMES.join(', ')}` +

@@ -47,6 +47,11 @@ export function validContent(): RawContent {
         undoWindowSeconds: 3,
         previewArmourThreshold: 30,
         previewWardThreshold: 30,
+        difficulties: {
+          /* The schema requires a `normal` at the 1.0 baseline, because every
+             other figure in the design is quoted against it. */
+          normal: { hp: 1, gold: 1, lives: 20 },
+        },
         waveScaling: {
           hpGrowthPerWave: 0.075,
           defenceGrowthFraction: 0.6,
@@ -202,6 +207,24 @@ export function validContent(): RawContent {
           maxRanks: 5,
           starCostPerRank: 1,
           modifier: { stat: 'reactionPower', perRank: 0.1 },
+        },
+      },
+    ],
+    challenges: [
+      {
+        path: 'challenges/1_1_iron.json',
+        data: {
+          id: 'iron_1_1',
+          stageId: '1-1',
+          kind: 'iron',
+          nameKey: 'a.b',
+          descriptionKey: 'a.c',
+          rules: {
+            lives: 1,
+            noSelling: true,
+            noRebuilding: true,
+            startingTowers: [{ plotId: 0, tower: 'post' }],
+          },
         },
       },
     ],

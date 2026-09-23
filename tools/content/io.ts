@@ -54,6 +54,7 @@ export function readContentFromDisk(root = CONTENT_ROOT): RawContent {
     powers: readDir(root, 'powers'),
     heroes: readDir(root, 'heroes'),
     talents: readDir(root, 'talents'),
+    challenges: readDir(root, 'challenges'),
   };
 }
 

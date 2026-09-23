@@ -1,0 +1,12 @@
+{
+  "id": "endless_1_9",
+  "stageId": "1-9",
+  "kind": "endless",
+  "nameKey": "challenge.endless_1_9.name",
+  "descriptionKey": "challenge.endless_1_9.desc",
+  "rules": {
+    "waveLimit": 200,
+    "waveSource": "region",
+    "lives": 30
+  }
+}

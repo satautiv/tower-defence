@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import {
+  ChallengeSchema,
   EnemySchema,
   HeroSchema,
   PowerSchema,
@@ -12,6 +13,7 @@ import {
 } from './schema/index.js';
 import type {
   TuningDefinition,
+  ChallengeDefinition,
   EnemyDefinition,
   HeroDefinition,
   PowerDefinition,
@@ -47,6 +49,7 @@ export interface RawContent {
   powers: RawFile[];
   heroes: RawFile[];
   talents: RawFile[];
+  challenges: RawFile[];
 }
 
 export interface ContentRegistry {
@@ -59,6 +62,7 @@ export interface ContentRegistry {
   powers: ReadonlyMap<string, PowerDefinition>;
   heroes: ReadonlyMap<string, HeroDefinition>;
   talents: ReadonlyMap<string, TalentDefinition>;
+  challenges: ReadonlyMap<string, ChallengeDefinition>;
 }
 
 export interface ContentIssue {
@@ -160,6 +164,7 @@ export function buildRegistry(raw: RawContent): ContentRegistry {
     powers: indexBy(raw.powers, PowerSchema, issues),
     heroes: indexBy(raw.heroes, HeroSchema, issues),
     talents: indexBy(raw.talents, TalentSchema, issues),
+    challenges: indexBy(raw.challenges, ChallengeSchema, issues),
   };
 
   if (issues.length > 0) throw new ContentValidationError(issues);

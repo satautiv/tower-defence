@@ -92,10 +92,11 @@ export async function writeSession(
   stageId: string,
   savedAtMs: number,
   progressStageId?: string,
+  modeId?: string,
 ): Promise<void> {
   const saved: SavedSession = {
     savedAtMs,
-    snapshot: captureWorld(world, stageId, progressStageId),
+    snapshot: captureWorld(world, stageId, progressStageId, modeId),
   };
   await store().set(SESSION_KEY, serializeSession(saved));
 }

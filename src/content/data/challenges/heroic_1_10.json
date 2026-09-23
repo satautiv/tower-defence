@@ -1,0 +1,32 @@
+{
+  "id": "heroic_1_10",
+  "stageId": "1-10",
+  "kind": "heroic",
+  "nameKey": "challenge.heroic_1_10.name",
+  "descriptionKey": "challenge.heroic_1_10.desc",
+  "rules": {
+    "startingGold": 0,
+    "startingTowers": [
+      {
+        "plotId": 0,
+        "tower": "arbalest_post",
+        "tier": 2
+      },
+      {
+        "plotId": 1,
+        "tower": "frost_cairn",
+        "tier": 2
+      },
+      {
+        "plotId": 2,
+        "tower": "flame_vent",
+        "tier": 2
+      },
+      {
+        "plotId": 3,
+        "tower": "arcane_spire",
+        "tier": 2
+      }
+    ]
+  }
+}

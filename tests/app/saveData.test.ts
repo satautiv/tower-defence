@@ -10,9 +10,10 @@ import {
 } from '@app/saveData';
 import {
   EMPTY_PROFILE,
+  PROFILE_VERSION,
   recordStageResult,
   setProfileStorage,
-  stageRecord,
+  modeRecord,
   totalStars,
   useProfile,
 } from '@app/profile';
@@ -62,8 +63,8 @@ beforeEach(() => {
 
 /** A campaign worth exporting. */
 function playSome(): void {
-  let profile = recordStageResult(EMPTY_PROFILE, '1-1', result({ stars: 3 }));
-  profile = recordStageResult(profile, '1-2', result({ stars: 2, durationSeconds: 410 }));
+  let profile = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', result({ stars: 3 }));
+  profile = recordStageResult(profile, '1-2', 'normal', result({ stars: 2, durationSeconds: 410 }));
   useProfile.setState({ profile, loaded: true });
   useSettings.setState({ speed: 3, volume: 0.25 });
 }
@@ -82,7 +83,7 @@ describe('the exported file', () => {
   it('keeps each file versioned separately rather than flattening them', () => {
     playSome();
     const bundle = JSON.parse(exportSaveData()) as { data: Record<string, { version: number }> };
-    expect(bundle.data['profile']?.version).toBe(1);
+    expect(bundle.data['profile']?.version).toBe(PROFILE_VERSION);
     expect(bundle.data['settings']?.version).toBe(1);
   });
 
@@ -111,8 +112,8 @@ describe('a round trip', () => {
 
     const imported = importSaveData(file);
     expect(imported.profile).not.toBeNull();
-    expect(stageRecord(useProfile.getState().profile, '1-1').stars).toBe(3);
-    expect(stageRecord(useProfile.getState().profile, '1-2').bestTimeSeconds).toBe(410);
+    expect(modeRecord(useProfile.getState().profile, '1-1', 'normal').stars).toBe(3);
+    expect(modeRecord(useProfile.getState().profile, '1-2', 'normal').bestTimeSeconds).toBe(410);
     expect(useSettings.getState().speed).toBe(3);
     expect(useSettings.getState().volume).toBe(0.25);
   });

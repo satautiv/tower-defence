@@ -6,6 +6,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
+  /* A menu screen can be taller than a phone — forty talent nodes, or ten
+     stages with their seven modes open — and without this the bottom of the
+     list is simply unreachable. The in-stage screen is not one of these: it
+     has its own root, so the board can never scroll out from under a tap. */
+  overflow-y: auto;
   padding: calc(var(--s-5) + var(--safe-area-top)) calc(var(--s-5) + var(--safe-area-right))
     calc(var(--s-5) + var(--safe-area-bottom)) calc(var(--s-5) + var(--safe-area-left));
 }
@@ -822,6 +827,57 @@ abbr.ui-wave__threat {
   margin-left: var(--s-2);
   letter-spacing: 0.1em;
   color: var(--c-gold);
+}
+
+/* A stage and, when it is open, its modes (#48). The whole row spans the grid
+   cell so the mode list sits under the stage it belongs to rather than beside
+   an unrelated one. */
+.ui-stage-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+/* Eleven stars are spread over seven ways of playing, and the list is how a
+   player sees which are still owed. Indented, because a mode is a child of the
+   stage above it and a flat list reads as eight more stages. */
+.ui-modes {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+/* Two rows rather than three columns. A row of name, sentence and score reads
+   well on a desktop and shreds on a phone: at 420px the middle column came out
+   two words wide and a mode's description ran to ten lines. Found by opening
+   the picker at phone width, which is the width the game is for. */
+.ui-mode {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-2);
+  width: 100%;
+  text-align: left;
+}
+
+.ui-mode__name {
+  font-weight: 600;
+}
+
+.ui-mode__desc {
+  grid-column: 1 / -1;
+  color: var(--c-text-dim);
+  font-size: var(--t-sm);
+}
+
+.ui-mode__status {
+  justify-self: end;
+  color: var(--c-gold);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
 }
 
 /* Save-data controls (#39). Rows rather than the stage grid: these are a few

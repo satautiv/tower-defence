@@ -12,7 +12,7 @@ import {
   recordStageResult,
   serializeProfile,
   setProfileStorage,
-  stageRecord,
+  modeRecord,
   totalStars,
   useProfile,
 } from '@app/profile';
@@ -82,17 +82,18 @@ beforeEach(() => {
 
 describe('recording a run', () => {
   it('starts from nothing', () => {
-    expect(stageRecord(EMPTY_PROFILE, '1-1')).toEqual({
+    expect(modeRecord(EMPTY_PROFILE, '1-1', 'normal')).toEqual({
       stars: 0,
       bestLives: 0,
+      bestWave: 0,
       cleared: false,
       attempts: 0,
     });
   });
 
   it('keeps stars, lives and a time from a win', () => {
-    const profile = recordStageResult(EMPTY_PROFILE, '1-1', result());
-    expect(stageRecord(profile, '1-1')).toMatchObject({
+    const profile = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', result());
+    expect(modeRecord(profile, '1-1', 'normal')).toMatchObject({
       stars: 3,
       bestLives: 20,
       bestTimeSeconds: 300,
@@ -103,14 +104,15 @@ describe('recording a run', () => {
 
   /* The bug this file exists to prevent. */
   it('does not let a later defeat erase an earlier win', () => {
-    let profile = recordStageResult(EMPTY_PROFILE, '1-1', result());
+    let profile = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', result());
     profile = recordStageResult(
       profile,
       '1-1',
+      'normal',
       result({ won: false, stars: 0, livesRemaining: 0 }),
     );
 
-    expect(stageRecord(profile, '1-1')).toMatchObject({
+    expect(modeRecord(profile, '1-1', 'normal')).toMatchObject({
       stars: 3,
       bestLives: 20,
       bestTimeSeconds: 300,
@@ -120,14 +122,15 @@ describe('recording a run', () => {
   });
 
   it('does not let a worse win lower a better one', () => {
-    let profile = recordStageResult(EMPTY_PROFILE, '1-1', result());
+    let profile = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', result());
     profile = recordStageResult(
       profile,
       '1-1',
+      'normal',
       result({ stars: 1, livesRemaining: 3, durationSeconds: 900 }),
     );
 
-    expect(stageRecord(profile, '1-1')).toMatchObject({
+    expect(modeRecord(profile, '1-1', 'normal')).toMatchObject({
       stars: 3,
       bestLives: 20,
       bestTimeSeconds: 300,
@@ -135,28 +138,33 @@ describe('recording a run', () => {
   });
 
   it('takes a faster clear', () => {
-    let profile = recordStageResult(EMPTY_PROFILE, '1-1', result());
-    profile = recordStageResult(profile, '1-1', result({ durationSeconds: 240 }));
-    expect(stageRecord(profile, '1-1').bestTimeSeconds).toBe(240);
+    let profile = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', result());
+    profile = recordStageResult(profile, '1-1', 'normal', result({ durationSeconds: 240 }));
+    expect(modeRecord(profile, '1-1', 'normal').bestTimeSeconds).toBe(240);
   });
 
   it('records no time for a defeat, however long it lasted', () => {
-    const profile = recordStageResult(EMPTY_PROFILE, '1-1', result({ won: false, stars: 0 }));
-    expect(stageRecord(profile, '1-1').bestTimeSeconds).toBeUndefined();
-    expect(stageRecord(profile, '1-1').cleared).toBe(false);
-    expect(stageRecord(profile, '1-1').attempts).toBe(1);
+    const profile = recordStageResult(
+      EMPTY_PROFILE,
+      '1-1',
+      'normal',
+      result({ won: false, stars: 0 }),
+    );
+    expect(modeRecord(profile, '1-1', 'normal').bestTimeSeconds).toBeUndefined();
+    expect(modeRecord(profile, '1-1', 'normal').cleared).toBe(false);
+    expect(modeRecord(profile, '1-1', 'normal').attempts).toBe(1);
   });
 
   it('counts stars across the campaign', () => {
-    let profile = recordStageResult(EMPTY_PROFILE, '1-1', result({ stars: 3 }));
-    profile = recordStageResult(profile, '1-2', result({ stars: 2 }));
-    profile = recordStageResult(profile, '1-3', result({ won: false, stars: 0 }));
+    let profile = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', result({ stars: 3 }));
+    profile = recordStageResult(profile, '1-2', 'normal', result({ stars: 2 }));
+    profile = recordStageResult(profile, '1-3', 'normal', result({ won: false, stars: 0 }));
     expect(totalStars(profile)).toBe(5);
   });
 
   it('leaves the profile it was given alone', () => {
     const before = EMPTY_PROFILE;
-    recordStageResult(before, '1-1', result());
+    recordStageResult(before, '1-1', 'normal', result());
     expect(before.stages).toEqual({});
   });
 });
@@ -164,7 +172,7 @@ describe('recording a run', () => {
 describe('how far the player has got', () => {
   function cleared(...stageIds: string[]): Profile {
     return stageIds.reduce(
-      (profile, id) => recordStageResult(profile, id, result()),
+      (profile, id) => recordStageResult(profile, id, 'normal', result()),
       EMPTY_PROFILE,
     );
   }
@@ -180,7 +188,12 @@ describe('how far the player has got', () => {
   });
 
   it('ignores a stage that was attempted but never won', () => {
-    const profile = recordStageResult(cleared('1-2'), '1-7', result({ won: false, stars: 0 }));
+    const profile = recordStageResult(
+      cleared('1-2'),
+      '1-7',
+      'normal',
+      result({ won: false, stars: 0 }),
+    );
     expect(highestCleared(profile)).toBe('1-2');
   });
 });
@@ -193,12 +206,12 @@ describe('the roster a run is played with', () => {
   /* The failure the merged unlock code refused to allow: replaying an early
      stage must not take the roster away. */
   it('keeps the full roster when replaying an early stage', () => {
-    const finished = recordStageResult(EMPTY_PROFILE, '1-10', result());
+    const finished = recordStageResult(EMPTY_PROFILE, '1-10', 'normal', result());
     expect(progressFor(finished, '1-1')).toBe('1-10');
   });
 
   it('still advances when the player is ahead of what they have cleared', () => {
-    const upTo5 = recordStageResult(EMPTY_PROFILE, '1-5', result());
+    const upTo5 = recordStageResult(EMPTY_PROFILE, '1-5', 'normal', result());
     expect(progressFor(upTo5, '1-6')).toBe('1-6');
   });
 });
@@ -219,7 +232,7 @@ describe('hero levels', () => {
 
 describe('the profile file', () => {
   it('round-trips', () => {
-    const profile = recordStageResult(EMPTY_PROFILE, '1-4', result({ stars: 2 }));
+    const profile = recordStageResult(EMPTY_PROFILE, '1-4', 'normal', result({ stars: 2 }));
     expect(parseProfile(serializeProfile(profile))).toEqual(profile);
   });
 
@@ -251,6 +264,48 @@ describe('the profile file', () => {
     expect(() => parseProfile(future)).toThrow(/newer build/);
   });
 
+  /**
+   * The one migration this file has, and the one thing it is for.
+   *
+   * v1 kept a single flat record per stage, from before a stage could be
+   * played eleven ways. Everything in such a file was earned on Normal — the
+   * only mode that existed — so that is where it has to land. Dropping it
+   * would take a campaign's stars away on an update.
+   */
+  it('moves a v1 stage record onto Normal', () => {
+    const v1 = JSON.stringify({
+      version: 1,
+      data: {
+        stages: {
+          '1-4': { stars: 3, bestLives: 20, bestTimeSeconds: 210, cleared: true, attempts: 6 },
+        },
+        heroLevels: { kaelen: 4 },
+      },
+    });
+
+    const profile = parseProfile(v1);
+    expect(modeRecord(profile, '1-4', 'normal')).toMatchObject({
+      stars: 3,
+      bestLives: 20,
+      bestTimeSeconds: 210,
+      cleared: true,
+      attempts: 6,
+    });
+    expect(totalStars(profile)).toBe(3);
+    /* Everything outside the stages is untouched. */
+    expect(profile.heroLevels['kaelen']).toBe(4);
+  });
+
+  it('leaves a record already in the new shape alone', () => {
+    const half = JSON.stringify({
+      version: 1,
+      data: { stages: { '1-1': { modes: { veteran: { stars: 2, cleared: true } } } } },
+    });
+    const profile = parseProfile(half);
+    expect(modeRecord(profile, '1-1', 'veteran').stars).toBe(2);
+    expect(modeRecord(profile, '1-1', 'normal').stars).toBe(0);
+  });
+
   it('refuses a file with no migration path to this build', () => {
     expect(() => parseProfile(JSON.stringify({ version: 1, data: {} }), {}, 2)).toThrow(
       /no migration from profile v1/,
@@ -274,11 +329,11 @@ describe('loading', () => {
   });
 
   it('restores a saved campaign', async () => {
-    const profile = recordStageResult(EMPTY_PROFILE, '1-7', result({ stars: 2 }));
+    const profile = recordStageResult(EMPTY_PROFILE, '1-7', 'normal', result({ stars: 2 }));
     adapter.data.set(PROFILE_KEY, serializeProfile(profile));
 
     await loadProfile();
-    expect(stageRecord(useProfile.getState().profile, '1-7').stars).toBe(2);
+    expect(modeRecord(useProfile.getState().profile, '1-7', 'normal').stars).toBe(2);
   });
 
   /* §12.2: corrupt saves fail loudly, and what might be recoverable is kept. */
@@ -312,25 +367,25 @@ describe('loading', () => {
 
 describe('saving', () => {
   it('writes a finished run straight away, and a later visit reads it back', async () => {
-    useProfile.getState().recordResult('1-2', result({ stars: 2 }));
+    useProfile.getState().recordResult('1-2', 'normal', result({ stars: 2 }));
     await Promise.resolve();
 
     const saved = parseProfile(adapter.data.get(PROFILE_KEY) ?? '');
-    expect(stageRecord(saved, '1-2').stars).toBe(2);
+    expect(modeRecord(saved, '1-2', 'normal').stars).toBe(2);
   });
 
   it('keeps the run for this visit even if it cannot be saved', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     adapter.failSet = true;
 
-    useProfile.getState().recordResult('1-2', result());
+    useProfile.getState().recordResult('1-2', 'normal', result());
     await Promise.resolve();
 
-    expect(stageRecord(useProfile.getState().profile, '1-2').stars).toBe(3);
+    expect(modeRecord(useProfile.getState().profile, '1-2', 'normal').stars).toBe(3);
   });
 
   it('clears everything on request', async () => {
-    useProfile.getState().recordResult('1-2', result());
+    useProfile.getState().recordResult('1-2', 'normal', result());
     useProfile.getState().reset();
     await Promise.resolve();
 

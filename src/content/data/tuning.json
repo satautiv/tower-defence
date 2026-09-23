@@ -18,9 +18,51 @@
     "regionMultipliers": [1.0, 1.9, 3.4, 5.8, 9.5]
   },
   "leyNodes": {
-    "flux": { "attackSpeed": 1.25 },
-    "depth": { "range": 1.2 },
-    "resonance": { "statusStacks": 1 },
-    "surge": { "reactionDamage": 1.5 }
+    "flux": {
+      "attackSpeed": 1.25
+    },
+    "depth": {
+      "range": 1.2
+    },
+    "resonance": {
+      "statusStacks": 1
+    },
+    "surge": {
+      "reactionDamage": 1.5
+    }
+  },
+  "difficulties": {
+    "relaxed": {
+      "hp": 1.0,
+      "gold": 1.5,
+      "lives": 30,
+      "extraEnemyFraction": 0,
+      "extraEliteWaves": 0,
+      "awardsStars": false
+    },
+    "normal": {
+      "hp": 1.0,
+      "gold": 1.0,
+      "lives": 20,
+      "extraEnemyFraction": 0,
+      "extraEliteWaves": 0,
+      "awardsStars": true
+    },
+    "veteran": {
+      "hp": 1.35,
+      "gold": 0.85,
+      "lives": 15,
+      "extraEnemyFraction": 0,
+      "extraEliteWaves": 0,
+      "awardsStars": true
+    },
+    "impossible": {
+      "hp": 1.8,
+      "gold": 0.7,
+      "lives": 10,
+      "extraEnemyFraction": 0.25,
+      "extraEliteWaves": 1,
+      "awardsStars": true
+    }
   }
 }

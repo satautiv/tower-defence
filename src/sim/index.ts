@@ -7,6 +7,8 @@ export { hashWorld } from './hash.js';
 export { captureWorld, restoreWorld, snapshotKeys, SNAPSHOT_VERSION } from './snapshot.js';
 export type { WorldSnapshot } from './snapshot.js';
 export { buildRuleset, EMPTY_RULESET } from './ruleset.js';
+export { DEFAULT_DIFFICULTY, resolveDifficulty } from './ruleset.js';
+export type { ResolvedDifficulty, ResolvedChallenge, StartingTower } from './ruleset.js';
 export type {
   Ruleset,
   RulesetOptions,
@@ -53,7 +55,13 @@ export {
   awardReactionAether,
   bonusGoldFor,
 } from './economy.js';
-export { raiseTowerTier, setTowerSpecialisation, removeTower, plotOccupant } from './towers.js';
+export {
+  raiseTowerTier,
+  setTowerSpecialisation,
+  removeTower,
+  plotOccupant,
+  placeStartingTowers,
+} from './towers.js';
 export { lifecycleSystem, starsFor, stageResult } from './systems/lifecycle.js';
 export type { StageResult } from './systems/lifecycle.js';
 export type { StageStats, UndoableBuild } from './world.js';
@@ -117,6 +125,7 @@ export {
   ProjectileFlag,
   SoldierFlag,
   GroundEffectFlag,
+  PlayRestriction,
   hasFlag,
 } from './flags.js';
 export { STATUS_COUNT, STATUS_INDEX, STATUS_BY_INDEX, statusSlot } from './status.js';

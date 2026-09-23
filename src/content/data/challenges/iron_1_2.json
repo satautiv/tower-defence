@@ -1,0 +1,13 @@
+{
+  "id": "iron_1_2",
+  "stageId": "1-2",
+  "kind": "iron",
+  "nameKey": "challenge.iron_1_2.name",
+  "descriptionKey": "challenge.iron_1_2.desc",
+  "rules": {
+    "waveLimit": 15,
+    "lives": 1,
+    "noSelling": true,
+    "noRebuilding": true
+  }
+}

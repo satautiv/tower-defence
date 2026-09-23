@@ -1,5 +1,6 @@
 import { GAME_SPEEDS, TICK_HZ } from '@core/constants';
 import { CommandKind } from '../commands.js';
+import { PlayRestriction } from '../flags.js';
 import {
   addGold,
   buildCost,
@@ -68,6 +69,20 @@ export const enum RejectReason {
   NoHero,
   HeroDown,
   AbilityOnCooldown,
+  /**
+   * The challenge being played forbids it (#45).
+   *
+   * One reason for all three restrictions rather than three: the rejection
+   * event already carries the command kind, so "you cannot sell" and "you
+   * cannot upgrade" are the same fact read against two different verbs, and a
+   * second enum entry would only invite pairing the wrong one.
+   */
+  ForbiddenByChallenge,
+}
+
+/** Whether the challenge this run is played under forbids something. */
+function forbids(world: World, restriction: PlayRestriction): boolean {
+  return (world.rules.restrictions & restriction) !== 0;
 }
 
 export function drainCommandQueue(world: World): void {
@@ -201,6 +216,10 @@ function applyBuild(world: World, plotId: number, typeIdx: number, targetMode = 
  * longer the thing that was built.
  */
 function applyUndo(world: World): void {
+  if (forbids(world, PlayRestriction.NoRebuilding)) {
+    return reject(world, CommandKind.UndoBuild, RejectReason.ForbiddenByChallenge);
+  }
+
   const last = world.lastBuild;
   if (last.towerSlot < 0) {
     return reject(world, CommandKind.UndoBuild, RejectReason.NothingToUndo);
@@ -239,6 +258,9 @@ function clearUndo(world: World): void {
 }
 
 function applyUpgrade(world: World, towerSlot: number): void {
+  if (forbids(world, PlayRestriction.NoUpgrading)) {
+    return reject(world, CommandKind.UpgradeTower, RejectReason.ForbiddenByChallenge);
+  }
   if (!world.towers.isAlive(towerSlot)) {
     return reject(world, CommandKind.UpgradeTower, RejectReason.NoSuchTower);
   }
@@ -265,7 +287,12 @@ function applyUpgrade(world: World, towerSlot: number): void {
      than the blank NothingToUndo they would get if it were cleared here. */
 }
 
+/* Specialising is an upgrade wearing a different name: a challenge that
+   refused tier three and let a player buy tier four would forbid nothing. */
 function applySpecialise(world: World, towerSlot: number, branch: number): void {
+  if (forbids(world, PlayRestriction.NoUpgrading)) {
+    return reject(world, CommandKind.Specialise, RejectReason.ForbiddenByChallenge);
+  }
   if (!world.towers.isAlive(towerSlot)) {
     return reject(world, CommandKind.Specialise, RejectReason.NoSuchTower);
   }
@@ -281,6 +308,9 @@ function applySpecialise(world: World, towerSlot: number, branch: number): void 
 }
 
 function applySell(world: World, towerSlot: number): void {
+  if (forbids(world, PlayRestriction.NoSelling)) {
+    return reject(world, CommandKind.SellTower, RejectReason.ForbiddenByChallenge);
+  }
   if (!world.towers.isAlive(towerSlot)) {
     return reject(world, CommandKind.SellTower, RejectReason.NoSuchTower);
   }

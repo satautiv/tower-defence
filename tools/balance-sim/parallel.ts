@@ -1,5 +1,6 @@
 import { availableParallelism } from 'node:os';
 import { Worker } from 'node:worker_threads';
+import type { RulesetOptions } from '../../src/sim/index.js';
 import type { RunResult } from './runner.js';
 
 /**
@@ -22,6 +23,14 @@ export interface WorkerRequest {
   seedStart: number;
   runs: number;
   maxTicks?: number;
+  /**
+   * The mode, challenge and roster the run is played under.
+   *
+   * Sent rather than re-derived, because a worker that built its world from
+   * the defaults would quietly report Normal figures under a Veteran heading —
+   * the same failure `--difficulty` refused to risk while #40 was unbuilt.
+   */
+  rules?: RulesetOptions;
 }
 
 export type WorkerReply = { ok: true; results: RunResult[] } | { ok: false; error: string };
@@ -72,6 +81,7 @@ export async function runParallel(
     stageId: request.stageId,
     strategyName: request.strategyName,
     maxTicks: request.maxTicks,
+    rules: request.rules,
   }));
 
   const url = new URL('./worker.ts', import.meta.url);
