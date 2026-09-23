@@ -288,8 +288,15 @@ export function createWorldForStage(
       heightTiles: stage.heightTiles,
       /* Talents that land on the world rather than in a table are applied
          here, once, so nothing during a tick has to know they exist (#37). */
-      startingGold: stage.startingGold + rules.talentWorld.startingGold,
-      lives: stage.lives,
+      /* Gold is scaled by the mode and *then* the talent bonus is added, not
+         the other way round: a talent is a flat sum the player earned, and
+         scaling it by the difficulty would quietly make the tree worth less on
+         the modes it exists to help with. */
+      startingGold:
+        Math.round(stage.startingGold * rules.difficulty.gold) + rules.talentWorld.startingGold,
+      /* The mode decides lives, not the stage (§9.2: 20 / 15 / 10). A stage
+         authoring its own would make every mode the same one. */
+      lives: rules.difficulty.lives,
       totalWaves: stage.waves.length,
       reactionPower: rules.talentWorld.reactionPower,
     },

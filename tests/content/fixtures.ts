@@ -47,6 +47,11 @@ export function validContent(): RawContent {
         undoWindowSeconds: 3,
         previewArmourThreshold: 30,
         previewWardThreshold: 30,
+        difficulties: {
+          /* The schema requires a `normal` at the 1.0 baseline, because every
+             other figure in the design is quoted against it. */
+          normal: { hp: 1, gold: 1, lives: 20 },
+        },
         waveScaling: {
           hpGrowthPerWave: 0.075,
           defenceGrowthFraction: 0.6,

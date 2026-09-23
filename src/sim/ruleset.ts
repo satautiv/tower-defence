@@ -455,6 +455,25 @@ export interface Ruleset {
    * other talent is already folded into the numbers above.
    */
   readonly talentWorld: TalentWorldBonuses;
+  /** The mode this run is played on, resolved to numbers (#40). */
+  readonly difficulty: ResolvedDifficulty;
+}
+
+/**
+ * What a play mode comes to, once named.
+ *
+ * Holds the id as well as the numbers, so the results screen can say which
+ * mode a run was and the profile records the star against the right one.
+ */
+export interface ResolvedDifficulty {
+  readonly id: string;
+  readonly hp: number;
+  readonly gold: number;
+  readonly lives: number;
+  readonly extraEnemyFraction: number;
+  readonly extraEliteWaves: number;
+  /** Whether a clear here counts toward the campaign's stars. */
+  readonly awardsStars: boolean;
 }
 
 /** Talent totals that land on the world rather than in a table. */
@@ -1091,8 +1110,59 @@ export function buildHeroRules(
 /** Levels one to ten across the campaign (§11). */
 export const MAX_HERO_LEVEL = 10;
 
-function buildWaveTable(stage: StageDefinition, enemies: EnemyTable): WaveTable {
-  const count = stage.waves.length;
+/**
+ * The waves a stage runs on one mode.
+ *
+ * Impossible gets more than a stat multiplier (§9.2): a fraction more enemies
+ * in every group, and one extra elite wave. Both are here rather than in the
+ * stage, because a stage that authored them would have to know which mode it
+ * was being played on — and then every stage would need editing to add a mode.
+ *
+ * The extra wave is a **copy of the stage's heaviest authored wave, inserted
+ * second-to-last**. Copying rather than composing means no new content to
+ * author and nothing to keep in step with the roster; second-to-last rather
+ * than last so a boss stage still ends on its boss, which is the fight the
+ * stage was built around.
+ */
+function wavesFor(
+  stage: StageDefinition,
+  enemies: EnemyTable,
+  difficulty: ResolvedDifficulty,
+): StageDefinition['waves'] {
+  if (difficulty.extraEliteWaves <= 0 || stage.waves.length < 2) return stage.waves;
+
+  let heaviest = 0;
+  let best = -1;
+  stage.waves.forEach((wave, index) => {
+    let bounty = 0;
+    for (const group of wave.groups) {
+      const typeIdx = enemies.indexOf.get(group.enemy) ?? -1;
+      if (typeIdx >= 0) bounty += (enemies.bounty[typeIdx] as number) * group.count;
+    }
+    if (bounty > heaviest) {
+      heaviest = bounty;
+      best = index;
+    }
+  });
+  if (best < 0) return stage.waves;
+
+  const template = stage.waves[best];
+  if (template === undefined) return stage.waves;
+
+  const waves = [...stage.waves];
+  for (let i = 0; i < difficulty.extraEliteWaves; i++) {
+    waves.splice(waves.length - 1, 0, template);
+  }
+  return waves;
+}
+
+function buildWaveTable(
+  stage: StageDefinition,
+  enemies: EnemyTable,
+  difficulty: ResolvedDifficulty,
+): WaveTable {
+  const authored = wavesFor(stage, enemies, difficulty);
+  const count = authored.length;
   const slots = count * MAX_GROUPS_PER_WAVE;
 
   const table: WaveTable = {
@@ -1109,7 +1179,7 @@ function buildWaveTable(stage: StageDefinition, enemies: EnemyTable): WaveTable 
     groupSpawnPoint: new Uint8Array(slots),
   };
 
-  stage.waves.forEach((wave, w) => {
+  authored.forEach((wave, w) => {
     table.autoStartTicks[w] = Math.round(wave.autoStartDelaySeconds * TICK_HZ);
     table.clearBonus[w] = wave.clearBonus;
 
@@ -1124,15 +1194,19 @@ function buildWaveTable(stage: StageDefinition, enemies: EnemyTable): WaveTable 
       const i = w * MAX_GROUPS_PER_WAVE + g;
       const typeIdx = enemies.indexOf.get(group.enemy) ?? -1;
       table.groupEnemy[i] = typeIdx;
-      table.groupCountPer[i] = group.count;
+      /* Rounded up, so a fraction below one enemy still adds one: a mode that
+         promised more enemies and delivered none on a small group would be a
+         difficulty setting that does nothing on exactly the waves a player
+         meets first. */
+      const spawned = Math.ceil(group.count * (1 + difficulty.extraEnemyFraction));
+      table.groupCountPer[i] = spawned;
       table.groupIntervalTicks[i] = group.intervalSeconds * TICK_HZ;
       table.groupDelayTicks[i] = group.delaySeconds * TICK_HZ;
       table.groupSpawnPoint[i] = group.spawnPoint;
 
-      if (typeIdx >= 0) bounty += (enemies.bounty[typeIdx] as number) * group.count;
+      if (typeIdx >= 0) bounty += (enemies.bounty[typeIdx] as number) * spawned;
       const finishes =
-        group.delaySeconds * TICK_HZ +
-        Math.max(0, group.count - 1) * group.intervalSeconds * TICK_HZ;
+        group.delaySeconds * TICK_HZ + Math.max(0, spawned - 1) * group.intervalSeconds * TICK_HZ;
       if (finishes > longest) longest = finishes;
     });
 
@@ -1148,12 +1222,19 @@ export interface RulesetOptions {
   heroId?: string;
   heroLevel?: number;
   /**
-   * Difficulty multiplier on health and armour, 1 on Normal.
+   * Which mode this run is played on — `normal`, `veteran`, `impossible`,
+   * `relaxed` (#40).
    *
-   * A parameter rather than a stage property: the same stage is played on every
-   * difficulty, and which one is a run-time choice (#40).
+   * A parameter rather than a stage property: the same stage is played on
+   * every difficulty, and which one is a run-time choice. Resolved to numbers
+   * here, so **no system asks which mode it is running** — it reads a scaled
+   * health and a lives count, exactly as it did when there was only one.
+   *
+   * An unknown name falls back to `normal` rather than throwing, because a
+   * saved run or a replay naming a mode this build has retired should play on
+   * the baseline rather than refuse to open.
    */
-  difficultyMultiplier?: number;
+  difficulty?: string;
   /**
    * How far the player has got, which is what decides the roster (#36).
    *
@@ -1186,6 +1267,39 @@ export interface RulesetOptions {
  * stage that loaded but scaled wrongly is easier to diagnose than one that
  * refused to load at all.
  */
+/** The baseline every other figure in the design is quoted against. */
+export const DEFAULT_DIFFICULTY = 'normal';
+
+/**
+ * Looks a mode up, falling back to the baseline.
+ *
+ * Falls back rather than throwing: a saved run or a replay naming a mode this
+ * build has retired should open on Normal rather than refuse to load, and the
+ * schema already guarantees `normal` exists.
+ */
+export function resolveDifficulty(
+  tuning: TuningDefinition,
+  id: string = DEFAULT_DIFFICULTY,
+): ResolvedDifficulty {
+  const row = tuning.difficulties[id] ?? tuning.difficulties[DEFAULT_DIFFICULTY];
+  const name = tuning.difficulties[id] === undefined ? DEFAULT_DIFFICULTY : id;
+  /* The schema's refine guarantees `normal`, so this is unreachable from valid
+     content — but a cast would hide it if that ever stopped being true. */
+  if (row === undefined) {
+    throw new Error('tuning has no "normal" difficulty');
+  }
+
+  return {
+    id: name,
+    hp: row.hp,
+    gold: row.gold,
+    lives: row.lives,
+    extraEnemyFraction: row.extraEnemyFraction,
+    extraEliteWaves: row.extraEliteWaves,
+    awardsStars: row.awardsStars,
+  };
+}
+
 function buildScaling(tuning: TuningDefinition, region: number, difficulty: number): ScalingRules {
   const multipliers = tuning.waveScaling.regionMultipliers;
   const regionMult = multipliers[Math.min(Math.max(region, 1), multipliers.length) - 1] ?? 1;
@@ -1332,6 +1446,7 @@ export function buildRuleset(
     leyNodeIdx: plot.leyNode === undefined ? -1 : LEY_NODE_TYPES.indexOf(plot.leyNode),
   }));
 
+  const difficulty = resolveDifficulty(registry.tuning, options.difficulty);
   const talents = totalTalents(registry.talents.values(), options.talents ?? {});
 
   const hero =
@@ -1348,13 +1463,13 @@ export function buildRuleset(
   return {
     hero,
     tuning: applyTuningTalents(registry.tuning, talents),
-    scaling: buildScaling(registry.tuning, stage.region, options.difficultyMultiplier ?? 1),
+    scaling: buildScaling(registry.tuning, stage.region, difficulty.hp),
     towers,
     enemies,
     statuses: buildStatusTable(registry),
     reactions,
     powers,
-    waves: buildWaveTable(stage, enemies),
+    waves: buildWaveTable(stage, enemies, difficulty),
     paths,
     pathById: new Map(paths.map((path) => [path.id, path])),
     spawnPoints: stage.spawnPoints.map((spawn) => ({
@@ -1372,6 +1487,7 @@ export function buildRuleset(
     core: { x: stage.core.x * TILE_SIZE, y: stage.core.y * TILE_SIZE },
     laneWidth: TILE_SIZE * 0.6,
     interactable: buildInteractable(stage),
+    difficulty,
     talentWorld: {
       startingGold: Math.round(flatFor(talents, 'startingGold')),
       reactionPower: multiplierFor(talents, 'reactionPower'),
@@ -1524,6 +1640,16 @@ const EMPTY_TUNING: TuningDefinition = {
   previewArmourThreshold: 30,
   previewWardThreshold: 30,
   waveScaling: { hpGrowthPerWave: 0, defenceGrowthFraction: 0.6, regionMultipliers: [1] },
+  difficulties: {
+    normal: {
+      hp: 1,
+      gold: 1,
+      lives: 20,
+      extraEnemyFraction: 0,
+      extraEliteWaves: 0,
+      awardsStars: true,
+    },
+  },
   leyNodes: {
     flux: NO_LEY_BONUS,
     depth: NO_LEY_BONUS,
@@ -1534,6 +1660,15 @@ const EMPTY_TUNING: TuningDefinition = {
 
 export const EMPTY_RULESET: Ruleset = {
   talentWorld: { startingGold: 0, reactionPower: 1 },
+  difficulty: {
+    id: DEFAULT_DIFFICULTY,
+    hp: 1,
+    gold: 1,
+    lives: 20,
+    extraEnemyFraction: 0,
+    extraEliteWaves: 0,
+    awardsStars: true,
+  },
   tuning: EMPTY_TUNING,
   scaling: buildScaling(EMPTY_TUNING, 1, 1),
   towers: EMPTY_TOWERS,

@@ -7,6 +7,8 @@ export { hashWorld } from './hash.js';
 export { captureWorld, restoreWorld, snapshotKeys, SNAPSHOT_VERSION } from './snapshot.js';
 export type { WorldSnapshot } from './snapshot.js';
 export { buildRuleset, EMPTY_RULESET } from './ruleset.js';
+export { DEFAULT_DIFFICULTY, resolveDifficulty } from './ruleset.js';
+export type { ResolvedDifficulty } from './ruleset.js';
 export type {
   Ruleset,
   RulesetOptions,
