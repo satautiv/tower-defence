@@ -18,6 +18,9 @@ const RENDER_LIBS = ['pixi.js', 'pixi.js/*', 'react', 'react-dom', 'react/*', 'h
 const EDITOR_IS_DEV_ONLY =
   'The map editor is dev-only and must never be statically imported: that would put it in the production bundle, which the 500 kB gate sums whether or not anyone loads it. Reach it with a dynamic import inside an import.meta.env.DEV branch (#34).';
 
+const DEVTOOLS_IS_DEV_ONLY =
+  'The dev overlay is dev-only and must never be statically imported: that would put it in the production bundle, which the 500 kB gate sums whether or not anyone loads it. Reach it with a dynamic import inside an import.meta.env.DEV branch (#41).';
+
 /**
  * Import patterns that reach a layer, whether by alias or by relative path.
  *
@@ -110,6 +113,7 @@ export default tseslint.config(
                 ...layer('platform'),
                 ...layer('app'),
                 ...layer('editor'),
+                ...layer('devtools'),
               ],
               message:
                 'core/ is the bottom of the dependency stack and must not import from any other layer.',
@@ -143,6 +147,7 @@ export default tseslint.config(
                 ...layer('platform'),
                 ...layer('app'),
                 ...layer('editor'),
+                ...layer('devtools'),
               ],
               message:
                 'sim/ may only import from core/ and content/schema/. It emits SimEvents; it never calls out.',
@@ -171,6 +176,10 @@ export default tseslint.config(
               group: [...layer('editor')],
               message: EDITOR_IS_DEV_ONLY,
             },
+            {
+              group: [...layer('devtools')],
+              message: DEVTOOLS_IS_DEV_ONLY,
+            },
           ],
         },
       ],
@@ -178,13 +187,14 @@ export default tseslint.config(
   },
 
   /*
-   * ---- Nothing that ships may depend on the editor. ----
+   * ---- Nothing that ships may depend on the editor or the dev overlay. ----
    *
    * It may read anything — it is a tool built on the game — but a production
    * layer importing it would drag it into the bundle, which is the one thing
    * that must not happen (#34). The route reaches it through a dynamic import
    * inside an `import.meta.env.DEV` branch, which Rollup drops along with the
-   * whole screen; a static import anywhere would defeat that silently.
+   * whole screen; a static import anywhere would defeat that silently. The dev
+   * overlay (#41) takes the identical bargain for the identical reason.
    *
    * A separate block, and deliberately only for the files the blocks above do
    * not already cover: two blocks setting `no-restricted-imports` for the same
@@ -195,11 +205,16 @@ export default tseslint.config(
    */
   {
     files: ['src/**/*.tsx', 'src/app/**/*.ts', 'src/content/**/*.ts'],
-    ignores: ['src/editor/**'],
+    ignores: ['src/editor/**', 'src/devtools/**'],
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [{ group: [...layer('editor')], message: EDITOR_IS_DEV_ONLY }] },
+        {
+          patterns: [
+            { group: [...layer('editor')], message: EDITOR_IS_DEV_ONLY },
+            { group: [...layer('devtools')], message: DEVTOOLS_IS_DEV_ONLY },
+          ],
+        },
       ],
     },
   },

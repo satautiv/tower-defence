@@ -131,6 +131,43 @@ describe('nothing that ships depends on the editor', () => {
   });
 });
 
+/**
+ * The dev overlay is dev-only (#41), on exactly the editor's terms.
+ *
+ * Same reason, restated because the guard is what makes it true: the 500 kB
+ * gate sums every emitted chunk whether or not a player loads it, so a static
+ * import from anything that ships would put the whole overlay — its cheats,
+ * its graphs, its replay controls — into the payload. It is reached through a
+ * dynamic import inside an `import.meta.env.DEV` branch, which Rollup drops.
+ */
+describe('nothing that ships depends on the dev overlay', () => {
+  it.each([
+    ['src/ui/probe.tsx', '@devtools/DevOverlay'],
+    ['src/ui/probe.ts', '@devtools/damageLog'],
+    ['src/app/probe.ts', '@devtools/damageLog'],
+    ['src/sim/probe.ts', '@devtools/damageLog'],
+    ['src/core/probe.ts', '@devtools/damageLog'],
+    ['src/view/probe.ts', '@devtools/damageLog'],
+    ['src/audio/probe.ts', '@devtools/damageLog'],
+  ])('rejects %s importing %s', async (filePath, specifier) => {
+    const rules = await rulesTriggeredBy(
+      `import { thing } from '${specifier}';\nexport const t = thing;\n`,
+      filePath,
+    );
+    expect(rules).toContain('no-restricted-imports');
+  });
+
+  /* It is a tool built on the game, so it reads the game freely — and imports
+     its own modules, or it could not be written. */
+  it('lets the overlay read the simulation and its own modules', async () => {
+    const rules = await rulesTriggeredBy(
+      `import { hashWorld } from '@sim/index';\nimport { DamageWatcher } from '@devtools/damageLog';\nexport const t = [hashWorld, DamageWatcher];\n`,
+      'src/devtools/probe.tsx',
+    );
+    expect(rules).not.toContain('no-restricted-imports');
+  });
+});
+
 describe('presentation layers stay downstream', () => {
   it('blocks ui/ from importing the app layer', async () => {
     const rules = await rulesTriggeredBy(

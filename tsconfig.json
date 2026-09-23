@@ -34,7 +34,8 @@
       "@audio/*": ["./src/audio/*"],
       "@platform/*": ["./src/platform/*"],
       "@app/*": ["./src/app/*"],
-      "@editor/*": ["./src/editor/*"]
+      "@editor/*": ["./src/editor/*"],
+      "@devtools/*": ["./src/devtools/*"]
     }
   },
   "include": ["src", "tests", "tools", "vite.config.ts", "eslint.config.js"]
