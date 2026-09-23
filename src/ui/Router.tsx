@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import type { ReactElement } from 'react';
 import { InStageScreen } from './screens/InStageScreen.js';
 import { TalentsScreen } from './screens/TalentsScreen.js';
+import { CodexScreen } from './screens/CodexScreen.js';
 import {
   MenuScreen,
   RegionMapScreen,
@@ -54,6 +55,8 @@ export function Router(): ReactElement {
       return <RegionMapScreen />;
     case 'talents':
       return <TalentsScreen />;
+    case 'codex':
+      return <CodexScreen />;
     case 'stageSelect':
       return <StageSelectScreen />;
     case 'inStage':

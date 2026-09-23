@@ -1,6 +1,7 @@
 {
   "id": "dread_wyrm",
   "nameKey": "enemy.dread_wyrm.name",
+  "counterKey": "enemy.dread_wyrm.counter",
   "hp": 2250,
   "speed": 1.0,
   "armour": 20,

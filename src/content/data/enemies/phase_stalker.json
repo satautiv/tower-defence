@@ -1,6 +1,7 @@
 {
   "id": "phase_stalker",
   "nameKey": "enemy.phase_stalker.name",
+  "counterKey": "enemy.phase_stalker.counter",
   "hp": 600,
   "speed": 1.3,
   "ward": 30,

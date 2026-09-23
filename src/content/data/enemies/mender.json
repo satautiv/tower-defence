@@ -1,6 +1,7 @@
 {
   "id": "mender",
   "nameKey": "enemy.mender.name",
+  "counterKey": "enemy.mender.counter",
   "hp": 350,
   "speed": 0.9,
   "armour": 10,

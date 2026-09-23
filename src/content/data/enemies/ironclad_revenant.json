@@ -1,6 +1,7 @@
 {
   "id": "ironclad_revenant",
   "nameKey": "enemy.ironclad_revenant.name",
+  "counterKey": "enemy.ironclad_revenant.counter",
   "hp": 650,
   "speed": 0.7,
   "armour": 40,

@@ -1,6 +1,7 @@
 {
   "id": "nullifier",
   "nameKey": "enemy.nullifier.name",
+  "counterKey": "enemy.nullifier.counter",
   "hp": 750,
   "speed": 0.9,
   "armour": 20,

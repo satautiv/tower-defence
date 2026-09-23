@@ -1,6 +1,7 @@
 {
   "id": "chitin_mother",
   "nameKey": "enemy.chitin_mother.name",
+  "counterKey": "enemy.chitin_mother.counter",
   "hp": 800,
   "speed": 0.8,
   "armour": 15,

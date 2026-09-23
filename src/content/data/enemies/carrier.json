@@ -1,6 +1,7 @@
 {
   "id": "carrier",
   "nameKey": "enemy.carrier.name",
+  "counterKey": "enemy.carrier.counter",
   "hp": 950,
   "speed": 0.7,
   "armour": 10,

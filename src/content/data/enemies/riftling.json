@@ -1,6 +1,7 @@
 {
   "id": "riftling",
   "nameKey": "enemy.riftling.name",
+  "counterKey": "enemy.riftling.counter",
   "hp": 110,
   "speed": 1.6,
   "bounty": 4,

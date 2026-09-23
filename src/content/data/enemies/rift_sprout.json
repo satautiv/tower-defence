@@ -1,6 +1,7 @@
 {
   "id": "rift_sprout",
   "nameKey": "enemy.rift_sprout.name",
+  "counterKey": "enemy.rift_sprout.counter",
   "hp": 650,
   "speed": 0,
   "armour": 30,

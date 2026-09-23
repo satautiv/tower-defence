@@ -22,9 +22,42 @@ import { create } from 'zustand';
  * in production and the screen itself is never bundled.
  */
 export type Screen =
-  'splash' | 'menu' | 'regionMap' | 'stageSelect' | 'inStage' | 'talents' | 'settings' | 'editor';
+  | 'splash'
+  | 'menu'
+  | 'regionMap'
+  | 'stageSelect'
+  | 'inStage'
+  | 'talents'
+  | 'codex'
+  | 'settings'
+  | 'editor';
 
-export type PanelId = 'towerInfo' | 'wavePreview' | 'buildMenu' | 'pause';
+/**
+ * Panels that sit over the board.
+ *
+ * `codex` is here rather than being a screen of its own *while a stage is
+ * running*, and that is #38's second acceptance criterion: "accessible while
+ * paused during a stage, without leaving the board". Navigating would unmount
+ * the renderer, and coming back would rebuild the whole Pixi application over
+ * a run the player had merely wanted to look something up in.
+ */
+export type PanelId = 'towerInfo' | 'wavePreview' | 'buildMenu' | 'pause' | 'codex';
+
+/**
+ * Panels that hold the board still.
+ *
+ * The Codex opens *as* a panel, which means it replaces the pause panel — and
+ * if "paused" meant only `pause`, a player who tapped Codex to look up a
+ * Nullifier would have the wave start moving again behind the page they opened
+ * to understand it. Stated here rather than in the stage screen because which
+ * panels pause is a fact about panels, and a test should not have to mount
+ * Pixi to ask.
+ */
+const PAUSING_PANELS: readonly PanelId[] = ['pause', 'codex'];
+
+export function isPaused(panel: PanelId | null): boolean {
+  return panel !== null && PAUSING_PANELS.includes(panel);
+}
 
 export interface UiState {
   screen: Screen;

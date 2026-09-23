@@ -1,6 +1,7 @@
 {
   "id": "sapper",
   "nameKey": "enemy.sapper.name",
+  "counterKey": "enemy.sapper.counter",
   "hp": 275,
   "speed": 1.4,
   "bounty": 15,

@@ -38,6 +38,7 @@ import type {
 } from '@sim/index';
 import { GameSession } from '@app/session';
 import { DEFAULT_MODE_ID, defaultMode, modeById } from '@app/modes';
+import { CodexScout, recordFindings } from '@app/codex';
 import { useProfile } from '@app/profile';
 import {
   clearSession,
@@ -64,6 +65,7 @@ import { Assets } from 'pixi.js';
 import type { Spritesheet } from 'pixi.js';
 import { GameCanvas } from '../GameCanvas.js';
 import { Button, Panel } from '../components/index.js';
+import { CodexView } from '../codex/CodexView.js';
 import { Hud } from '../hud/Hud.js';
 import type { HudModel } from '../hud/model.js';
 import { BuildMenu } from '../stage/BuildMenu.js';
@@ -75,7 +77,7 @@ import { PowerBar } from '../stage/PowerBar.js';
 import { TowerPanel } from '../stage/TowerPanel.js';
 import { WavePreview } from '../stage/WavePreview.js';
 import { BossBar } from '../stage/BossBar.js';
-import { useUiStore } from '../store.js';
+import { isPaused, useUiStore } from '../store.js';
 import { focusOf, keyAction, nextSpeed } from '../keys.js';
 import type { KeyAction } from '../keys.js';
 import { useSettings } from '../settings.js';
@@ -136,6 +138,7 @@ function applyPreferredSpeed(session: GameSession): void {
 
 export function InStageScreen(): ReactElement {
   const recordResult = useProfile((state) => state.recordResult);
+  const replaceProfile = useProfile((state) => state.replace);
   const navigate = useUiStore((state) => state.navigate);
   const openPanel = useUiStore((state) => state.openPanel);
   const closePanel = useUiStore((state) => state.closePanel);
@@ -201,7 +204,30 @@ export function InStageScreen(): ReactElement {
   /* Set once the stage ends; the results sit over the board it ended on. */
   const [result, setResult] = useState<StageResult | null>(null);
 
-  const paused = openPanel === 'pause';
+  const codexOpen = openPanel === 'codex';
+
+  /**
+   * Folds what this run has met into the profile.
+   *
+   * A no-op when nothing is new — `recordFindings` returns the same profile,
+   * so a player pausing repeatedly costs no writes. Called at three moments,
+   * and the third is the one that matters most: a player who kills a Nullifier
+   * and opens the Codex to find out what it was must not be told they have
+   * never seen one.
+   */
+  const flushFindings = useCallback(() => {
+    const profile = useProfile.getState().profile;
+    const next = recordFindings(profile, scoutRef.current.findings);
+    if (next !== profile) replaceProfile(next);
+  }, [replaceProfile]);
+
+  /* The poll is set up once, so it reaches the flush through a ref rather than
+     capturing the callback from this render. */
+  const flushFindingsRef = useRef(flushFindings);
+  flushFindingsRef.current = flushFindings;
+  /* Reading the Codex is a paused state, not a resumed one — `isPaused` says
+     which panels hold the board still, and why (#38). */
+  const paused = isPaused(openPanel);
 
   /* Read by the ticker, which must not re-subscribe when React re-renders. */
   const selectionRef = useRef(selection);
@@ -226,6 +252,9 @@ export function InStageScreen(): ReactElement {
   savedRunRef.current = savedRun ?? null;
 
   const recordedRef = useRef(false);
+  /* One per screen rather than per run: `reset` empties it on Retry, which is
+     the same lifetime the session has. */
+  const scoutRef = useRef(new CodexScout());
   const stageIdRef = useRef(selectedStageId);
   stageIdRef.current = selectedStageId;
   /* Resolved once here rather than at each use: the stage decides which modes
@@ -271,6 +300,9 @@ export function InStageScreen(): ReactElement {
         void clearSession();
         return;
       }
+      /* The Codex learns from a run that may never resume, so what it met is
+         written beside the snapshot rather than only at the results screen. */
+      flushFindingsRef.current();
       void writeSession(session.world, stageId, Date.now(), undefined, modeRef.current?.id).catch(
         (error: unknown) => console.warn('Could not save the run in progress.', error),
       );
@@ -421,6 +453,10 @@ export function InStageScreen(): ReactElement {
 
       if (resuming !== null) {
         if (resumeInto(session.world, resuming, stageId)) {
+          /* The enemies already walking were spawned before the snapshot, so
+             the Codex adopts them: otherwise killing one would discover
+             nothing (#38). */
+          scoutRef.current.seed(session.world);
           /* Held on the pause menu rather than dropped straight back into a
              wave that was halfway to the core when the phone rang
              (docs/TECH_DESIGN.md §14). */
@@ -503,6 +539,10 @@ export function InStageScreen(): ReactElement {
            inside the simulation, which has no business knowing what the
            presentation does about a death it reported. */
         if (killedABoss(session.world)) session.playDefeatSequence(now);
+        /* What this run has met, for the Codex (#38). Folded into the profile
+           when the stage ends rather than per kill: this is localStorage, and
+           a write per riftling would be absurd. */
+        scoutRef.current.consume(session.world);
         /* Every consumer has read the buffer, so it can be dropped. */
         session.clearEvents();
 
@@ -580,6 +620,10 @@ export function InStageScreen(): ReactElement {
         /* Recorded on the tick the stage ends rather than when the player
            dismisses the results, so closing the tab on the victory screen
            still keeps the run. */
+        /* What the run met goes in whether it was won or lost: a player who
+           died to a Nullifier has certainly met one, and the Codex is where
+           they go to find out what it was. */
+        flushFindingsRef.current();
         if (stageIdRef.current !== null) {
           const played = modeRef.current;
           recordResult(
@@ -669,8 +713,11 @@ export function InStageScreen(): ReactElement {
     audioRef.current?.reset();
     closePanel();
     clearSelection();
-    /* A new run is a new thing to record. */
+    /* A new run is a new thing to record, and a new thing to discover: the
+       last run's findings are already in the profile, and carrying them over
+       would re-record them on every retry. */
     recordedRef.current = false;
+    scoutRef.current.reset();
     setResult(null);
   }, [closePanel, clearSelection]);
 
@@ -836,6 +883,12 @@ export function InStageScreen(): ReactElement {
             onSpeed={changeSpeed}
             onRestart={restart}
             onQuit={() => navigate('stageSelect')}
+            onCodex={() => {
+              /* Before the panel opens, so the page shows what this run has
+                 already taught rather than what the last one did. */
+              flushFindings();
+              openPanelById('codex');
+            }}
             muted={muted}
             onMute={(next) => {
               useSettings.getState().setMuted(next);
@@ -918,6 +971,18 @@ export function InStageScreen(): ReactElement {
               onClose={clearSelection}
               locked={paused}
             />
+          )}
+
+          {/* Over the board rather than instead of it: the renderer stays
+              mounted, the run stays paused, and closing returns to the pause
+              menu the player came from (#38). */}
+          {codexOpen && (
+            <Panel title="Codex" className="ui-codex-panel" data-testid="codex-panel">
+              <CodexView />
+              <Button variant="ghost" onClick={() => openPanelById('pause')}>
+                Close
+              </Button>
+            </Panel>
           )}
 
           {result !== null && (

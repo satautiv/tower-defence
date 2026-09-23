@@ -1,6 +1,7 @@
 {
   "id": "rust_prelate",
   "nameKey": "enemy.rust_prelate.name",
+  "counterKey": "enemy.rust_prelate.counter",
   "hp": 1100,
   "speed": 0.85,
   "armour": 35,
