@@ -55,6 +55,7 @@ export class DamageQueue {
 
   private used = 0;
   private lost = 0;
+  private peak = 0;
 
   get count(): number {
     return this.used;
@@ -63,6 +64,20 @@ export class DamageQueue {
   /** Entries refused because the queue was full. Non-zero means under-sized. */
   get dropped(): number {
     return this.lost;
+  }
+
+  /**
+   * The busiest tick since the stage began.
+   *
+   * Tracked here rather than sampled from outside because it cannot be sampled
+   * from outside: the queue is filled and drained entirely within one tick, so
+   * anything looking at it between ticks sees an empty one. One comparison on
+   * a path that was already incrementing a counter, and the number is the only
+   * way to know how close a busy wave came to the ceiling before it started
+   * dropping hits.
+   */
+  get highWater(): number {
+    return this.peak;
   }
 
   push(
@@ -79,6 +94,7 @@ export class DamageQueue {
       return false;
     }
     const i = this.used++;
+    if (this.used > this.peak) this.peak = this.used;
     this.target[i] = target;
     this.amount[i] = amount;
     this.type[i] = type;
@@ -96,6 +112,7 @@ export class DamageQueue {
   reset(): void {
     this.used = 0;
     this.lost = 0;
+    this.peak = 0;
   }
 }
 

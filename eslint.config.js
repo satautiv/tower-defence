@@ -21,6 +21,26 @@ const EDITOR_IS_DEV_ONLY =
 const DEVTOOLS_IS_DEV_ONLY =
   'The dev overlay is dev-only and must never be statically imported: that would put it in the production bundle, which the 500 kB gate sums whether or not anyone loads it. Reach it with a dynamic import inside an import.meta.env.DEV branch (#41).';
 
+const CHEATS_ARE_DEV_ONLY =
+  'src/sim/cheats.ts backs the dev overlay and must never be imported by anything that ships. It mutates the world with no command behind it, which is exactly what the command queue exists to prevent — it lives in sim/ so that "only sim/ mutates the world" stays literally true, and it is banned everywhere else so that stays the only place it can happen (#41).';
+
+/**
+ * The cheat module, by every route that reaches it.
+ *
+ * Listed rather than folded into `layer('sim')`, because sim/ is a layer the
+ * presentation is meant to read: the ban is on one file inside it, not on the
+ * directory.
+ */
+const CHEATS = [
+  '@sim/cheats',
+  '@sim/cheats.js',
+  './cheats.js',
+  '../cheats.js',
+  '../sim/cheats.js',
+  '../../sim/cheats.js',
+  '../../../sim/cheats.js',
+];
+
 /**
  * Import patterns that reach a layer, whether by alias or by relative path.
  *
@@ -152,6 +172,10 @@ export default tseslint.config(
               message:
                 'sim/ may only import from core/ and content/schema/. It emits SimEvents; it never calls out.',
             },
+            {
+              group: CHEATS,
+              message: CHEATS_ARE_DEV_ONLY,
+            },
           ],
         },
       ],
@@ -179,6 +203,10 @@ export default tseslint.config(
             {
               group: [...layer('devtools')],
               message: DEVTOOLS_IS_DEV_ONLY,
+            },
+            {
+              group: CHEATS,
+              message: CHEATS_ARE_DEV_ONLY,
             },
           ],
         },
@@ -213,6 +241,7 @@ export default tseslint.config(
           patterns: [
             { group: [...layer('editor')], message: EDITOR_IS_DEV_ONLY },
             { group: [...layer('devtools')], message: DEVTOOLS_IS_DEV_ONLY },
+            { group: CHEATS, message: CHEATS_ARE_DEV_ONLY },
           ],
         },
       ],
