@@ -210,6 +210,24 @@ export function validContent(): RawContent {
         },
       },
     ],
+    challenges: [
+      {
+        path: 'challenges/1_1_iron.json',
+        data: {
+          id: 'iron_1_1',
+          stageId: '1-1',
+          kind: 'iron',
+          nameKey: 'a.b',
+          descriptionKey: 'a.c',
+          rules: {
+            lives: 1,
+            noSelling: true,
+            noRebuilding: true,
+            startingTowers: [{ plotId: 0, tower: 'post' }],
+          },
+        },
+      },
+    ],
   };
 }
 

@@ -240,6 +240,50 @@ describe('unlock chains', () => {
     expect(rulesFor(content)).toContain('talent-cycle');
   });
 
+  it('catches a challenge for a stage that does not exist', () => {
+    const content = contentWith((c) => {
+      asRecord(c.challenges[0]!.data).stageId = '9-9';
+    });
+    expect(rulesFor(content)).toContain('challenge-stage-ref');
+  });
+
+  it('catches a challenge naming a tower that does not exist', () => {
+    const content = contentWith((c) => {
+      asRecord(asRecord(c.challenges[0]!.data).rules).allowedTowers = ['post', 'post_typo'];
+    });
+    expect(rulesFor(content)).toContain('challenge-tower-ref');
+  });
+
+  it('catches a challenge starting a tower on a plot the stage has not got', () => {
+    const content = contentWith((c) => {
+      asRecord(asRecord(c.challenges[0]!.data).rules).startingTowers = [
+        { plotId: 99, tower: 'post' },
+      ];
+    });
+    expect(rulesFor(content)).toContain('challenge-plot-ref');
+  });
+
+  it('catches two starting towers on one plot', () => {
+    const content = contentWith((c) => {
+      asRecord(asRecord(c.challenges[0]!.data).rules).startingTowers = [
+        { plotId: 0, tower: 'post' },
+        { plotId: 0, tower: 'post' },
+      ];
+    });
+    expect(rulesFor(content)).toContain('challenge-plot-twice');
+  });
+
+  /* An unwinnable challenge fails silently — the build menu simply offers
+     nothing — which is exactly the kind of thing to catch before a playtest. */
+  it('catches a challenge that allows no tower and hands over none', () => {
+    const content = contentWith((c) => {
+      const rules = asRecord(asRecord(c.challenges[0]!.data).rules);
+      rules.allowedDamageTypes = ['cryo'];
+      rules.startingTowers = [];
+    });
+    expect(rulesFor(content)).toContain('challenge-no-towers');
+  });
+
   it('accepts a deep but acyclic prerequisite chain', () => {
     const content = contentWith((c) => {
       asRecord(c.talents[0]!.data).requires = ['second'];

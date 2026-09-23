@@ -58,6 +58,9 @@ export function loadContent(): ContentRegistry {
     talents: filesFrom(
       import.meta.glob('./data/talents/*.json', { eager: true, import: 'default' }),
     ),
+    challenges: filesFrom(
+      import.meta.glob('./data/challenges/*.json', { eager: true, import: 'default' }),
+    ),
   });
   return cached;
 }

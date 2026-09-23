@@ -222,6 +222,28 @@ export const enum GroundEffectFlag {
   Suppresses = 1 << 2,
 }
 
+/**
+ * Player actions a challenge forbids (#45, docs/GAME_DESIGN.md §13).
+ *
+ * A mask on the ruleset rather than a challenge object the handler inspects,
+ * for the same reason a perk is a bit: the tick-time question is "may I?", not
+ * "which challenge is this?". A run with no challenge carries zero and pays
+ * nothing for the feature existing.
+ */
+export const enum PlayRestriction {
+  None = 0,
+  NoSelling = 1 << 0,
+  NoUpgrading = 1 << 1,
+  /**
+   * Every placement is final.
+   *
+   * Which, with selling already refused, comes down to closing the undo
+   * window: nothing else in the game removes a tower, so undo is the only
+   * route left to a plot that has been built on.
+   */
+  NoRebuilding = 1 << 2,
+}
+
 export function hasFlag(flags: number, flag: number): boolean {
   return (flags & flag) !== 0;
 }

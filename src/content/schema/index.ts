@@ -1,3 +1,4 @@
+export * from './challenge.js';
 export * from './common.js';
 export * from './enemy.js';
 export * from './hero.js';

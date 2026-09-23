@@ -59,6 +59,7 @@ ids += idBlock('StageId', 'STAGE_IDS', [...registry.stages.keys()]);
 ids += idBlock('PowerId', 'POWER_IDS', [...registry.powers.keys()]);
 ids += idBlock('HeroId', 'HERO_IDS', [...registry.heroes.keys()]);
 ids += idBlock('TalentId', 'TALENT_IDS', [...registry.talents.keys()]);
+ids += idBlock('ChallengeId', 'CHALLENGE_IDS', [...registry.challenges.keys()]);
 ids += idBlock('ReactionId', 'REACTION_IDS', [...registry.reactions.keys()]);
 ids += idBlock(
   'SpecialisationId',
@@ -77,6 +78,7 @@ const unlockStages = [
   ...[...registry.heroes.values()].map((h) => h.unlockedByStage),
 ].filter((s): s is string => s !== undefined);
 const talentRequires = [...registry.talents.values()].flatMap((t) => t.requires);
+const challengeStages = [...registry.challenges.values()].map((c) => c.stageId);
 const derivedEnemies = [...registry.enemies.values()].flatMap((e) =>
   [e.traitConfig.splitsInto, e.traitConfig.spawns].filter((v): v is string => v !== undefined),
 );
@@ -90,6 +92,12 @@ refs += refBlock(
   'TalentId',
   talentRequires,
   'Talents named as prerequisites.',
+);
+refs += refBlock(
+  'CHALLENGE_STAGE_REFS',
+  'StageId',
+  challengeStages,
+  'Stages named by challenge variants.',
 );
 refs += refBlock(
   'DERIVED_ENEMY_REFS',
@@ -106,6 +114,7 @@ const counts = [
   `${registry.powers.size} powers`,
   `${registry.heroes.size} heroes`,
   `${registry.talents.size} talents`,
+  `${registry.challenges.size} challenges`,
   `${registry.statuses.size} statuses`,
   `${registry.reactions.size} reactions`,
 ];

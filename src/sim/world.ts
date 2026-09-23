@@ -14,6 +14,7 @@ import { GroundEffectPool } from './entities/groundEffects.js';
 import { ProjectilePool } from './entities/projectiles.js';
 import { SoldierPool } from './entities/soldiers.js';
 import { TowerPool } from './entities/towers.js';
+import { placeStartingTowers } from './towers.js';
 import { SimEvents } from './events.js';
 
 /**
@@ -206,6 +207,8 @@ export class World {
     this.wave = { index: -1, active: 0, autoStartIn: this.firstWaveDelay(), cleared: 0 };
     this.stats = freshStats();
     this.lastBuild = { towerSlot: -1, towerId: -1, cost: 0, atTick: -1 };
+
+    placeStartingTowers(this);
   }
 
   /** Back to the state a fresh stage starts in, reusing every allocation. */
@@ -253,6 +256,11 @@ export class World {
 
     Object.assign(this.stats, freshStats());
     Object.assign(this.lastBuild, { towerSlot: -1, towerId: -1, cost: 0, atTick: -1 });
+
+    /* Last, so the challenge's starting position survives a retry. Everything
+       above has just been cleared, which is exactly the state a fresh world is
+       in when the constructor places them. */
+    placeStartingTowers(this);
   }
 
   /** The build phase before wave one, taken from authored content. */
@@ -292,12 +300,18 @@ export function createWorldForStage(
          the other way round: a talent is a flat sum the player earned, and
          scaling it by the difficulty would quietly make the tree worth less on
          the modes it exists to help with. */
+      /* A challenge's own figure replaces the stage's before either multiplier
+         is applied: "you start with four towers and no gold" means no gold,
+         not no gold times 1.5 plus whatever the tree pays. */
       startingGold:
+        rules.challenge?.startingGold ??
         Math.round(stage.startingGold * rules.difficulty.gold) + rules.talentWorld.startingGold,
       /* The mode decides lives, not the stage (§9.2: 20 / 15 / 10). A stage
          authoring its own would make every mode the same one. */
-      lives: rules.difficulty.lives,
-      totalWaves: stage.waves.length,
+      lives: rules.challenge?.lives ?? rules.difficulty.lives,
+      /* From the resolved table rather than the stage, because the mode and
+         the challenge both change how many waves a run is. */
+      totalWaves: rules.waves.count,
       reactionPower: rules.talentWorld.reactionPower,
     },
     rules,

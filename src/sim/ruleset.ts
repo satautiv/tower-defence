@@ -3,12 +3,20 @@ import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
 import type { TowerTier } from '@content/schema/tower';
 import type { TuningDefinition } from '@content/schema/tuning';
+import type { ChallengeDefinition } from '@content/schema/challenge';
 import type { EnemyDefinition, EnemyPhase } from '@content/schema/enemy';
 import { stageAtLeast } from '@content/stages';
 import { LEY_NODE_TYPES, STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
-import { BEHAVIOUR_BITS, BehaviourFlag, EnemyFlag, GroundEffectFlag, TowerPerk } from './flags.js';
+import {
+  BEHAVIOUR_BITS,
+  BehaviourFlag,
+  EnemyFlag,
+  GroundEffectFlag,
+  PlayRestriction,
+  TowerPerk,
+} from './flags.js';
 import { behaviourBit } from './flags.js';
 import { DAMAGE_INDEX } from './damage.js';
 import { resolveEffect } from './effects.js';
@@ -457,6 +465,45 @@ export interface Ruleset {
   readonly talentWorld: TalentWorldBonuses;
   /** The mode this run is played on, resolved to numbers (#40). */
   readonly difficulty: ResolvedDifficulty;
+  /** The challenge variant this run is, or null for the ordinary stage (#45). */
+  readonly challenge: ResolvedChallenge | null;
+  /** `PlayRestriction` bits the command handler refuses against. */
+  readonly restrictions: number;
+  /** Towers the challenge hands over before the first wave. */
+  readonly startingTowers: readonly StartingTower[];
+}
+
+/**
+ * A tower a challenge starts the player with, resolved to indices.
+ *
+ * `typeIdx` and pixel coordinates rather than ids and tiles, because the thing
+ * that places it is `placeTower`, and `placeTower` deals in the flat tables
+ * like everything else below the ruleset.
+ */
+export interface StartingTower {
+  readonly plotId: number;
+  readonly typeIdx: number;
+  readonly x: number;
+  readonly y: number;
+  readonly tier: number;
+}
+
+/**
+ * What a challenge comes to, once its constraints are folded away.
+ *
+ * Only the identity survives — the numbers are already in the tables. The
+ * results screen needs to say which challenge was played and the profile needs
+ * to record the star against it, and neither is a tick-time question.
+ */
+export interface ResolvedChallenge {
+  readonly id: string;
+  readonly kind: 'heroic' | 'iron';
+  readonly nameKey: string;
+  readonly descriptionKey: string;
+  /** Overrides the stage's gold, after the mode's multiplier, when set. */
+  readonly startingGold: number | null;
+  /** Overrides the mode's lives when set. Iron's is 1. */
+  readonly lives: number | null;
 }
 
 /**
@@ -1156,12 +1203,51 @@ function wavesFor(
   return waves;
 }
 
+/**
+ * Cuts or lengthens a wave list to a challenge's count (#45).
+ *
+ * Iron is "survive fifteen waves" on every map, and Region 1's stages author
+ * ten to sixteen — so the limit has to work in both directions.
+ *
+ * **The stage's last wave stays last either way.** That is the rule `wavesFor`
+ * already follows when Impossible splices its extra elite wave second-to-last,
+ * and for the same reason: a boss stage still ends on its boss, which is the
+ * fight the stage was built around. Truncating from the front and appending
+ * the finale keeps that true, and lengthening inserts repeats ahead of it.
+ *
+ * Repeats come from the stage's own waves rather than from anything generated.
+ * Wave scaling is applied per wave *index* at spawn time, so wave three
+ * repeated at position twelve is already a harder fight with nothing here to
+ * arrange it — the same bargain the extra elite wave takes.
+ */
+function limitWaves(waves: StageDefinition['waves'], limit: number): StageDefinition['waves'] {
+  if (waves.length === 0 || limit === waves.length) return waves;
+
+  const finale = waves[waves.length - 1];
+  if (finale === undefined) return waves;
+  if (limit < waves.length) return [...waves.slice(0, limit - 1), finale];
+
+  /* Cycled over the body rather than the whole list, so the finale appears
+     once — at the end, where the stage put it. */
+  const body = waves.length > 1 ? waves.slice(0, -1) : waves;
+  const out = [...waves.slice(0, -1)];
+  for (let i = 0; out.length < limit - 1; i++) {
+    const repeat = body[i % body.length];
+    if (repeat === undefined) break;
+    out.push(repeat);
+  }
+  out.push(finale);
+  return out;
+}
+
 function buildWaveTable(
   stage: StageDefinition,
   enemies: EnemyTable,
   difficulty: ResolvedDifficulty,
+  waveLimit: number | null,
 ): WaveTable {
-  const authored = wavesFor(stage, enemies, difficulty);
+  const scaled = wavesFor(stage, enemies, difficulty);
+  const authored = waveLimit === null ? scaled : limitWaves(scaled, waveLimit);
   const count = authored.length;
   const slots = count * MAX_GROUPS_PER_WAVE;
 
@@ -1257,6 +1343,17 @@ export interface RulesetOptions {
    * `towers.damage[i]` as it always did, and the bonus is already in it.
    */
   talents?: Readonly<Record<string, number>>;
+  /**
+   * The challenge variant being played, or absent for the ordinary stage (#45).
+   *
+   * A parameter rather than a property of the stage, exactly as difficulty and
+   * progress are: the same map is the campaign stage, the Heroic puzzle and
+   * the Iron run, and which one is a run-time choice. An unknown id is
+   * ignored rather than throwing, for the same reason an unknown mode falls
+   * back — a saved run naming a retired challenge should open on the plain
+   * stage rather than refuse to load.
+   */
+  challengeId?: string;
 }
 
 /**
@@ -1431,6 +1528,87 @@ function applyTuningTalents(tuning: TuningDefinition, totals: TalentTotals): Tun
   };
 }
 
+/**
+ * Narrows the buildable roster to what a challenge allows.
+ *
+ * Folded into `towers.unlocked` — the mask `placeTower` already refuses
+ * against — rather than checked anywhere new. That is what makes the
+ * constraint hold for a replay and for the balance simulator's scripted
+ * player as surely as for the build menu, which is the whole point of #45:
+ * a challenge is a rule the simulation enforces, not a suggestion the UI makes.
+ *
+ * The two lists intersect rather than replace one another, so a challenge may
+ * say "only Cryo" and then name the one Kinetic tower it also allows.
+ */
+function applyChallengeRoster(
+  registry: ContentRegistry,
+  towers: TowerTable,
+  challenge: ChallengeDefinition,
+): void {
+  const { allowedTowers, allowedDamageTypes } = challenge.rules;
+  if (allowedTowers.length === 0 && allowedDamageTypes.length === 0) return;
+
+  towers.ids.forEach((id, i) => {
+    if ((towers.unlocked[i] as number) !== 1) return;
+    const byId = allowedTowers.length === 0 || allowedTowers.includes(id);
+    const type = registry.towers.get(id)?.tiers[0]?.damageType;
+    const byType =
+      allowedDamageTypes.length === 0 ||
+      (type !== undefined && (allowedDamageTypes as readonly string[]).includes(type));
+    if (!byId || !byType) towers.unlocked[i] = 0;
+  });
+
+  /* A tower handed over at the start stays buildable-shaped: `placeTower`
+     refuses a locked type, and it is the route the starting towers take. */
+  for (const start of challenge.rules.startingTowers) {
+    const i = towers.indexOf.get(start.tower);
+    if (i !== undefined) towers.unlocked[i] = 1;
+  }
+}
+
+/**
+ * Toughens every enemy by the challenge's multipliers.
+ *
+ * "All enemies have 3x Ward" is §13's own example, and it lands here as three
+ * bigger numbers in the enemy table. `rearArmour` is scaled with `armour`
+ * rather than left behind: it is derived from it at authoring time, and a
+ * Bulwark Golem whose back stayed soft while its front tripled would be a
+ * challenge that quietly told the player to flank.
+ */
+function applyChallengeDefences(enemies: EnemyTable, challenge: ChallengeDefinition): void {
+  const { enemyHealthMultiplier, enemyArmourMultiplier, enemyWardMultiplier } = challenge.rules;
+  scaleAll(enemies.hp, enemyHealthMultiplier);
+  scaleAll(enemies.armour, enemyArmourMultiplier);
+  scaleAll(enemies.rearArmour, enemyArmourMultiplier);
+  scaleAll(enemies.ward, enemyWardMultiplier);
+}
+
+function restrictionsOf(challenge: ChallengeDefinition): number {
+  let mask = PlayRestriction.None;
+  if (challenge.rules.noSelling) mask |= PlayRestriction.NoSelling;
+  if (challenge.rules.noUpgrading) mask |= PlayRestriction.NoUpgrading;
+  if (challenge.rules.noRebuilding) mask |= PlayRestriction.NoRebuilding;
+  return mask;
+}
+
+function startingTowersOf(
+  challenge: ChallengeDefinition,
+  towers: TowerTable,
+  plotById: ReadonlyMap<number, BuildPlot>,
+): StartingTower[] {
+  const out: StartingTower[] = [];
+  for (const start of challenge.rules.startingTowers) {
+    const typeIdx = towers.indexOf.get(start.tower);
+    const plot = plotById.get(start.plotId);
+    /* Both are content-lint errors, so an authored challenge cannot reach
+       here with either missing; dropping rather than throwing keeps a bad
+       file from bricking the stage it is attached to. */
+    if (typeIdx === undefined || plot === undefined) continue;
+    out.push({ plotId: start.plotId, typeIdx, x: plot.x, y: plot.y, tier: start.tier });
+  }
+  return out;
+}
+
 export function buildRuleset(
   registry: ContentRegistry,
   stage: StageDefinition,
@@ -1448,6 +1626,8 @@ export function buildRuleset(
 
   const difficulty = resolveDifficulty(registry.tuning, options.difficulty);
   const talents = totalTalents(registry.talents.values(), options.talents ?? {});
+  const challenge =
+    options.challengeId === undefined ? undefined : registry.challenges.get(options.challengeId);
 
   const hero =
     options.heroId === undefined
@@ -1460,6 +1640,13 @@ export function buildRuleset(
 
   applyTalents({ towers, reactions, powers, hero, refund }, talents);
 
+  /* After the talents, so a challenge's roster has the last word: a tree that
+     cheapened a banned tower must not hand it back. */
+  if (challenge !== undefined) {
+    applyChallengeRoster(registry, towers, challenge);
+    applyChallengeDefences(enemies, challenge);
+  }
+
   return {
     hero,
     tuning: applyTuningTalents(registry.tuning, talents),
@@ -1469,7 +1656,7 @@ export function buildRuleset(
     statuses: buildStatusTable(registry),
     reactions,
     powers,
-    waves: buildWaveTable(stage, enemies, difficulty),
+    waves: buildWaveTable(stage, enemies, difficulty, challenge?.rules.waveLimit ?? null),
     paths,
     pathById: new Map(paths.map((path) => [path.id, path])),
     spawnPoints: stage.spawnPoints.map((spawn) => ({
@@ -1488,6 +1675,22 @@ export function buildRuleset(
     laneWidth: TILE_SIZE * 0.6,
     interactable: buildInteractable(stage),
     difficulty,
+    challenge:
+      challenge === undefined
+        ? null
+        : {
+            id: challenge.id,
+            kind: challenge.kind,
+            nameKey: challenge.nameKey,
+            descriptionKey: challenge.descriptionKey,
+            startingGold: challenge.rules.startingGold ?? null,
+            lives: challenge.rules.lives ?? null,
+          },
+    restrictions: challenge === undefined ? PlayRestriction.None : restrictionsOf(challenge),
+    startingTowers:
+      challenge === undefined
+        ? []
+        : startingTowersOf(challenge, towers, new Map(plots.map((plot) => [plot.id, plot]))),
     talentWorld: {
       startingGold: Math.round(flatFor(talents, 'startingGold')),
       reactionPower: multiplierFor(talents, 'reactionPower'),
@@ -1660,6 +1863,9 @@ const EMPTY_TUNING: TuningDefinition = {
 
 export const EMPTY_RULESET: Ruleset = {
   talentWorld: { startingGold: 0, reactionPower: 1 },
+  challenge: null,
+  restrictions: PlayRestriction.None,
+  startingTowers: [],
   difficulty: {
     id: DEFAULT_DIFFICULTY,
     hp: 1,

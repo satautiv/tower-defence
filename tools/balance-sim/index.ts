@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { buildRegistry } from '../../src/content/loader.js';
 import { createWorldForStage } from '../../src/sim/index.js';
+import type { RulesetOptions } from '../../src/sim/index.js';
 import { readContentFromDisk } from '../content/io.js';
 import { formatConsole, formatCsv, formatJson, hasFailure, summarise } from './report.js';
 import type { Summary } from './report.js';
@@ -30,6 +31,7 @@ interface Options {
   runs: number;
   seedStart: number;
   difficulty: string;
+  challenge: string | null;
   csvPath: string | null;
   jsonPath: string | null;
   quiet: boolean;
@@ -44,7 +46,8 @@ Usage: npm run balance -- [options]
   --strategy <name>    greedy | balanced | rush | single[:<towerId>]
                        Default: all of them, plus one per tower.
   --seed-start <n>     First seed. Runs use seedStart..seedStart+runs-1. Default: 1.
-  --difficulty <name>  normal (others arrive with #40). Default: normal.
+  --difficulty <name>  relaxed | normal | veteran | impossible. Default: normal.
+  --challenge <id>     Play a stage's Heroic or Iron variant instead (#45).
   --csv <path>         Also write a CSV report.
   --json <path>        Also write a JSON report.
   --workers <n>        Cores to spread runs across. Default: all but one.
@@ -59,6 +62,7 @@ function parseArgs(argv: string[]): Options {
     runs: 200,
     seedStart: 1,
     difficulty: 'normal',
+    challenge: null,
     csvPath: null,
     jsonPath: null,
     quiet: false,
@@ -89,6 +93,9 @@ function parseArgs(argv: string[]): Options {
       case '--difficulty':
         options.difficulty = value();
         break;
+      case '--challenge':
+        options.challenge = value();
+        break;
       case '--csv':
         options.csvPath = value();
         break;
@@ -117,16 +124,6 @@ function parseArgs(argv: string[]): Options {
   if (!Number.isFinite(options.workers) || options.workers < 1) {
     throw new Error('--workers must be a positive number');
   }
-  /**
-   * Difficulty scaling is #40 and does not exist yet. Accepting the flag and
-   * quietly running `normal` would produce a report labelled "veteran" full of
-   * numbers that describe something else, which is worse than refusing.
-   */
-  if (options.difficulty !== 'normal') {
-    throw new Error(
-      `--difficulty ${options.difficulty} is not implemented: difficulty scaling arrives with #40.`,
-    );
-  }
   return options;
 }
 
@@ -138,6 +135,26 @@ function write(path: string, contents: string): void {
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const registry = buildRegistry(readContentFromDisk());
+
+  /* Checked against the authored content rather than a list in this file.
+     `resolveDifficulty` falls back to the baseline for an unknown mode, which
+     is right for a saved run and wrong for a report: it would come out
+     labelled "veteran" full of numbers describing something else. */
+  if (registry.tuning.difficulties[options.difficulty] === undefined) {
+    const known = Object.keys(registry.tuning.difficulties).sort().join(', ');
+    throw new Error(`no difficulty "${options.difficulty}" — authored modes: ${known}`);
+  }
+  if (options.challenge !== null && !registry.challenges.has(options.challenge)) {
+    const known = [...registry.challenges.keys()].sort().join(', ');
+    throw new Error(
+      `no challenge "${options.challenge}"${known === '' ? '' : ` — authored: ${known}`}`,
+    );
+  }
+
+  const rules: RulesetOptions = {
+    difficulty: options.difficulty,
+    ...(options.challenge === null ? {} : { challengeId: options.challenge }),
+  };
 
   const stageIds = options.stages.length > 0 ? options.stages : [...registry.stages.keys()].sort();
 
@@ -155,7 +172,7 @@ async function main(): Promise<void> {
 
     /* One throwaway world to resolve the roster, so a strategy can be named
        after a tower without the caller knowing its index. */
-    const probe = createWorldForStage(registry, stage, options.seedStart);
+    const probe = createWorldForStage(registry, stage, options.seedStart, rules);
     towerIds = probe.rules.towers.ids;
 
     const strategies: Strategy[] =
@@ -172,6 +189,7 @@ async function main(): Promise<void> {
           ? runBatch(registry, stage, strategy, {
               runs: options.runs,
               seedStart: options.seedStart,
+              rules,
             })
           : await runParallel(
               {
@@ -179,6 +197,7 @@ async function main(): Promise<void> {
                 strategyName: strategy.name,
                 runs: options.runs,
                 seedStart: options.seedStart,
+                rules,
               },
               options.workers,
             );

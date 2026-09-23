@@ -25,7 +25,7 @@ try {
 
   /* Built once and reset between runs, exactly as the single-threaded path
      does: rebuilding would re-bake every path for every seed. */
-  const world = createWorldForStage(registry, stage, request.seedStart);
+  const world = createWorldForStage(registry, stage, request.seedStart, request.rules);
   const strategy = strategyByName(request.strategyName, world);
 
   const results = [];
