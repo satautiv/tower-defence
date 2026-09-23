@@ -16,7 +16,7 @@ import {
   totalStars,
   useProfile,
 } from '@app/profile';
-import { maxStarsFor, modesFor } from '@app/modes';
+import { lockReason, maxStarsFor, modeLocked, modesFor } from '@app/modes';
 import type { PlayMode } from '@app/modes';
 import { clearAllSaveData, exportFileName, exportSaveData, importSaveData } from '@app/saveData';
 
@@ -219,26 +219,36 @@ export function StageSelectScreen(): ReactElement {
 
                 {expanded && (
                   <ul className="ui-modes" data-testid={`modes-${stage.id}`}>
-                    {modesFor(stage.id).map((mode) => (
-                      <li key={mode.id}>
-                        <Button
-                          variant="ghost"
-                          className="ui-mode"
-                          onClick={() => play(stage.id, mode)}
-                          data-testid={`mode-${stage.id}-${mode.id}`}
-                        >
-                          {/* Score beside the name, sentence underneath: the
-                              grid places children in order, and putting the
-                              description second pushed the score onto a third
-                              row of its own. */}
-                          <span className="ui-mode__name">{text(mode.nameKey)}</span>
-                          <span className="ui-mode__status" data-testid={`status-${mode.id}`}>
-                            {modeStatus(profile, stage.id, mode)}
-                          </span>
-                          <span className="ui-mode__desc">{text(mode.descriptionKey)}</span>
-                        </Button>
-                      </li>
-                    ))}
+                    {modesFor(stage.id).map((mode) => {
+                      const locked = modeLocked(profile, stage.id, mode);
+                      return (
+                        <li key={mode.id}>
+                          <Button
+                            variant="ghost"
+                            className="ui-mode"
+                            onClick={() => play(stage.id, mode)}
+                            disabled={locked}
+                            data-testid={`mode-${stage.id}-${mode.id}`}
+                          >
+                            {/* Score beside the name, sentence underneath: the
+                                grid places children in order, and putting the
+                                description second pushed the score onto a third
+                                row of its own. */}
+                            <span className="ui-mode__name">{text(mode.nameKey)}</span>
+                            <span className="ui-mode__status" data-testid={`status-${mode.id}`}>
+                              {locked ? 'locked' : modeStatus(profile, stage.id, mode)}
+                            </span>
+                            {/* A locked mode says what opens it rather than
+                                what it is: the requirement is the only thing a
+                                player can act on, and the description is still
+                                there when it opens. */}
+                            <span className="ui-mode__desc">
+                              {locked ? lockReason(mode) : text(mode.descriptionKey)}
+                            </span>
+                          </Button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>

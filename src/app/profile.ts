@@ -169,6 +169,21 @@ export function stageStars(profile: Profile, stageId: string): number {
   return stars;
 }
 
+/**
+ * The most stars earned on any single mode of a stage.
+ *
+ * Distinct from `stageStars`, which sums the eleven. "3-star the stage"
+ * (§14.2's gate on Endless) is a thing you do on one mode, not a total you
+ * accumulate across four.
+ */
+export function bestStarsOnAnyMode(profile: Profile, stageId: string): number {
+  let best = 0;
+  for (const record of Object.values(stageRecord(profile, stageId).modes)) {
+    if (record.stars > best) best = record.stars;
+  }
+  return best;
+}
+
 /** Whether a stage has been won on any mode at all, which is what unlocks read. */
 export function stageCleared(profile: Profile, stageId: string): boolean {
   return Object.values(stageRecord(profile, stageId).modes).some((record) => record.cleared);
