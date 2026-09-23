@@ -72,7 +72,7 @@ function withStars(stars: number): Profile {
   let stage = 1;
   while (left > 0) {
     const take = Math.min(3, left) as 1 | 2 | 3;
-    profile = recordStageResult(profile, `1-${stage}`, won(take));
+    profile = recordStageResult(profile, `1-${stage}`, 'normal', won(take));
     left -= take;
     stage++;
   }

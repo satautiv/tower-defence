@@ -6,7 +6,18 @@ import { compareStageIds } from '@content/stages';
 import { Button, Panel } from '../components/index.js';
 import { text } from '../text.js';
 import { useUiStore } from '../store.js';
-import { campaignSummary, stageRecord, totalStars, useProfile } from '@app/profile';
+import {
+  SCORING_MODE_IDS,
+  bestTimeFor,
+  modeRecord,
+  stageCleared,
+  stageStars,
+  campaignSummary,
+  totalStars,
+  useProfile,
+} from '@app/profile';
+import { maxStarsFor, modesFor } from '@app/modes';
+import type { PlayMode } from '@app/modes';
 import { clearAllSaveData, exportFileName, exportSaveData, importSaveData } from '@app/saveData';
 
 /**
@@ -78,7 +89,15 @@ export function RegionMapScreen(): ReactElement {
   const goBack = useUiStore((state) => state.goBack);
   const profile = useProfile((state) => state.profile);
 
-  const summary = campaignSummary(profile, regionStageIds(1));
+  /* What a stage is worth comes from the modes it actually offers (§12.4's
+     eleven), read from the first stage: every stage in a region carries the
+     same three difficulties and the same three variants. */
+  const region1 = regionStageIds(1);
+  const summary = campaignSummary(
+    profile,
+    region1,
+    region1.length === 0 ? 0 : maxStarsFor(region1[0] as string),
+  );
 
   return (
     <div className="ui-screen" data-testid="screen-region-map">
@@ -115,11 +134,27 @@ export function RegionMapScreen(): ReactElement {
 export function StageSelectScreen(): ReactElement {
   const navigate = useUiStore((state) => state.navigate);
   const selectStage = useUiStore((state) => state.selectStage);
+  const selectMode = useUiStore((state) => state.selectMode);
+  const selectedStageId = useUiStore((state) => state.selectedStageId);
   const goBack = useUiStore((state) => state.goBack);
   const profile = useProfile((state) => state.profile);
 
-  const play = (stageId: string): void => {
+  /**
+   * Choosing a stage opens its modes; nothing starts until a mode is chosen
+   * too (#48).
+   *
+   * That second tap is the whole of "a mode must never be entered by
+   * accident". Iron is one life and Impossible is a different game, and a
+   * single tap that launched whichever mode happened to be remembered would
+   * throw a player into one of them with no way to tell before the first wave.
+   */
+  const open = (stageId: string): void => {
+    selectStage(selectedStageId === stageId ? null : stageId);
+  };
+
+  const play = (stageId: string, mode: PlayMode): void => {
     selectStage(stageId);
+    selectMode(mode.id);
     navigate('inStage');
   };
 
@@ -133,9 +168,11 @@ export function StageSelectScreen(): ReactElement {
   const stages = [...loadContent().stages.values()]
     .filter((stage) => stage.region === 1)
     .sort((a, b) => compareStageIds(a.id, b.id));
+  const stageIds = stages.map((stage) => stage.id);
   const regionSummary = campaignSummary(
     profile,
-    stages.map((stage) => stage.id),
+    stageIds,
+    stageIds.length === 0 ? 0 : maxStarsFor(stageIds[0] as string),
   );
 
   return (
@@ -147,33 +184,64 @@ export function StageSelectScreen(): ReactElement {
         </p>
         <div className="ui-stages">
           {stages.map((stage) => {
-            const record = stageRecord(profile, stage.id);
+            const stars = stageStars(profile, stage.id);
+            const most = maxStarsFor(stage.id);
+            const best = bestTimeFor(profile, stage.id, SCORING_MODE_IDS);
+            const expanded = selectedStageId === stage.id;
+
             return (
-              <Button
-                key={stage.id}
-                variant="primary"
-                className="ui-stage"
-                onClick={() => play(stage.id)}
-              >
-                <span className="ui-stage__name">
-                  {stage.id} &middot; {text(stage.nameKey)}
-                </span>
-                {/* The best clear, which §13 calls "no reward, pure pride" —
-                    so it sits beside the stars rather than above them. */}
-                {record.bestTimeSeconds !== undefined && (
-                  <span className="ui-stage__time" data-testid={`best-${stage.id}`}>
-                    {formatClock(record.bestTimeSeconds)}
-                  </span>
-                )}
-                <span
-                  className="ui-stage__stars"
-                  aria-label={`${record.stars} of 3 stars`}
-                  data-testid={`stars-${stage.id}`}
+              <div key={stage.id} className="ui-stage-row">
+                <Button
+                  variant="primary"
+                  className="ui-stage"
+                  onClick={() => open(stage.id)}
+                  aria-expanded={expanded}
+                  data-testid={`stage-${stage.id}`}
                 >
-                  {'\u2605'.repeat(record.stars)}
-                  {'\u2606'.repeat(3 - record.stars)}
-                </span>
-              </Button>
+                  <span className="ui-stage__name">
+                    {stage.id} &middot; {text(stage.nameKey)}
+                  </span>
+                  {/* The best clear, which §13 calls "no reward, pure pride" —
+                      so it sits beside the stars rather than above them. */}
+                  {best !== undefined && (
+                    <span className="ui-stage__time" data-testid={`best-${stage.id}`}>
+                      {formatClock(best)}
+                    </span>
+                  )}
+                  <span
+                    className="ui-stage__stars"
+                    aria-label={`${stars} of ${most} stars`}
+                    data-testid={`stars-${stage.id}`}
+                  >
+                    {stars} / {most} &#9733;
+                  </span>
+                </Button>
+
+                {expanded && (
+                  <ul className="ui-modes" data-testid={`modes-${stage.id}`}>
+                    {modesFor(stage.id).map((mode) => (
+                      <li key={mode.id}>
+                        <Button
+                          variant="ghost"
+                          className="ui-mode"
+                          onClick={() => play(stage.id, mode)}
+                          data-testid={`mode-${stage.id}-${mode.id}`}
+                        >
+                          {/* Score beside the name, sentence underneath: the
+                              grid places children in order, and putting the
+                              description second pushed the score onto a third
+                              row of its own. */}
+                          <span className="ui-mode__name">{text(mode.nameKey)}</span>
+                          <span className="ui-mode__status" data-testid={`status-${mode.id}`}>
+                            {modeStatus(profile, stage.id, mode)}
+                          </span>
+                          <span className="ui-mode__desc">{text(mode.descriptionKey)}</span>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             );
           })}
         </div>
@@ -185,6 +253,27 @@ export function StageSelectScreen(): ReactElement {
   );
 }
 
+/**
+ * What one mode says about itself on the stage list.
+ *
+ * Stars where a mode pays them, the furthest wave where it does not — Endless
+ * has no other score, and a row reading "0 of 0 stars" would say nothing about
+ * a run that reached wave sixty.
+ */
+function modeStatus(
+  profile: Parameters<typeof stageStars>[0],
+  stageId: string,
+  mode: PlayMode,
+): string {
+  const record = modeRecord(profile, stageId, mode.id);
+
+  if (mode.maxStars === 0) {
+    return record.bestWave > 0 ? `wave ${record.bestWave}` : 'not yet played';
+  }
+  if (mode.maxStars === 1) return record.stars > 0 ? 'solved \u2605' : 'unsolved';
+  return `${'\u2605'.repeat(record.stars)}${'\u2606'.repeat(mode.maxStars - record.stars)}`;
+}
+
 export function SettingsScreen(): ReactElement {
   const goBack = useUiStore((state) => state.goBack);
   const profile = useProfile((state) => state.profile);
@@ -193,7 +282,7 @@ export function SettingsScreen(): ReactElement {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const stars = totalStars(profile);
-  const cleared = Object.values(profile.stages).filter((record) => record.cleared).length;
+  const cleared = Object.keys(profile.stages).filter((id) => stageCleared(profile, id)).length;
 
   /* A download rather than a copy box: a save is a file, and a player moving
      one to another device wants something they can put in a folder. */

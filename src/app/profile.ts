@@ -24,28 +24,51 @@ import type { StageResult } from '@sim/index';
 export const PROFILE_KEY = 'profile';
 /** Where a profile that failed to load is kept, rather than overwritten. */
 export const PROFILE_BACKUP_KEY = 'profile.unreadable';
-export const PROFILE_VERSION = 1;
+export const PROFILE_VERSION = 2;
 
 /**
- * What one stage remembers.
+ * What one stage remembers about one way of playing it.
  *
  * Every field is a best rather than a latest. A player who three-stars 1-4 and
  * then replays it badly to try a different board has not lost their three
  * stars, and a progression that punished experimenting would push against
  * pillar P5 as squarely as a paid respec would.
  */
-export const StageRecordSchema = z.object({
+export const ModeRecordSchema = z.object({
   stars: z.number().int().min(0).max(3).default(0),
   /** Most lives ever finished with. Stars come from this (§12.4). */
   bestLives: z.number().int().min(0).default(0),
-  /** Fastest clear, in seconds. Absent until the stage has been won once. */
+  /** Fastest clear, in seconds. Absent until this mode has been won once. */
   bestTimeSeconds: z.number().positive().optional(),
   /** Won at least once. Distinct from `stars > 0`, which a 0-star win is not. */
   cleared: z.boolean().default(false),
   attempts: z.number().int().min(0).default(0),
+  /**
+   * Furthest wave reached, which is the only score Endless has (§13).
+   *
+   * On every mode rather than only on Endless, because a record that changed
+   * shape per mode would be a second thing for every reader to branch on, and
+   * a stage's own wave count is a perfectly good thing to remember anyway.
+   */
+  bestWave: z.number().int().min(0).default(0),
+});
+
+export type ModeRecord = z.infer<typeof ModeRecordSchema>;
+
+/**
+ * What one stage remembers, keyed by the mode it was played on (#48).
+ *
+ * §12.4 awards stars *per difficulty*, and §13 adds a star for Heroic and one
+ * for Iron — eleven per stage. One flat record per stage could hold exactly
+ * one of those eleven, which is the whole reason for the v2 migration below.
+ */
+export const StageRecordSchema = z.object({
+  modes: z.record(z.string(), ModeRecordSchema).default({}),
 });
 
 export type StageRecord = z.infer<typeof StageRecordSchema>;
+
+export const EMPTY_MODE_RECORD: ModeRecord = ModeRecordSchema.parse({});
 
 /** Every field defaults, so a profile missing one — new since it was written — still loads. */
 export const ProfileSchema = z.object({
@@ -70,8 +93,39 @@ export type Profile = z.infer<typeof ProfileSchema>;
 
 export const EMPTY_PROFILE: Profile = ProfileSchema.parse({});
 
-/** Each entry upgrades a profile written at that version to the next. Empty until v2. */
-export const MIGRATIONS: Migrations = {};
+/**
+ * Each entry upgrades a profile written at that version to the next.
+ *
+ * v1 kept one flat record per stage, from before a stage could be played
+ * eleven ways. Everything it holds was earned on Normal — the only mode that
+ * existed — so that is where it lands, rather than being spread or discarded.
+ */
+export const MIGRATIONS: Migrations = {
+  1: (data) => {
+    const profile = (data ?? {}) as Record<string, unknown>;
+    const stages = profile.stages;
+    /* Anything that is not a map of stages is handed on untouched, so the
+       schema refuses it rather than this quietly repairing a corrupt file into
+       an empty one. A migration's job is to change shape, not to validate. */
+    if (stages === null || typeof stages !== 'object' || Array.isArray(stages)) return profile;
+
+    const migrated: Record<string, unknown> = {};
+
+    for (const [stageId, record] of Object.entries(stages as Record<string, unknown>)) {
+      /* A record already in the new shape is left alone: a half-migrated file
+         is not something this should make worse. */
+      migrated[stageId] =
+        record !== null && typeof record === 'object' && 'modes' in record
+          ? record
+          : { modes: { [LEGACY_MODE_ID]: record } };
+    }
+
+    return { ...profile, stages: migrated };
+  },
+};
+
+/** The one mode a v1 profile could have been played on. */
+const LEGACY_MODE_ID = 'normal';
 
 export { SaveFileError as ProfileError };
 
@@ -98,6 +152,49 @@ export function stageRecord(profile: Profile, stageId: string): StageRecord {
   return profile.stages[stageId] ?? StageRecordSchema.parse({});
 }
 
+/** What one stage remembers about one mode, or a blank record. */
+export function modeRecord(profile: Profile, stageId: string, modeId: string): ModeRecord {
+  return stageRecord(profile, stageId).modes[modeId] ?? EMPTY_MODE_RECORD;
+}
+
+/**
+ * Stars earned on one stage, across every mode.
+ *
+ * Summed rather than maxed: the eleven §12.4 offers are eleven separate
+ * achievements, and three-starring Normal says nothing about Impossible.
+ */
+export function stageStars(profile: Profile, stageId: string): number {
+  let stars = 0;
+  for (const record of Object.values(stageRecord(profile, stageId).modes)) stars += record.stars;
+  return stars;
+}
+
+/** Whether a stage has been won on any mode at all, which is what unlocks read. */
+export function stageCleared(profile: Profile, stageId: string): boolean {
+  return Object.values(stageRecord(profile, stageId).modes).some((record) => record.cleared);
+}
+
+/**
+ * The best clear of a stage on any mode that pays stars.
+ *
+ * Relaxed and Endless are left out on purpose: §13 calls the clock "no reward,
+ * pure pride", and a time set with thirty lives and half again the gold is not
+ * the same run. Endless never ends in a clear at all.
+ */
+export function bestTimeFor(
+  profile: Profile,
+  stageId: string,
+  scoring: readonly string[],
+): number | undefined {
+  let best: number | undefined;
+  for (const modeId of scoring) {
+    const time = modeRecord(profile, stageId, modeId).bestTimeSeconds;
+    if (time === undefined) continue;
+    best = best === undefined ? time : Math.min(best, time);
+  }
+  return best;
+}
+
 /**
  * Folds a finished run into the profile, returning a new one.
  *
@@ -108,14 +205,28 @@ export function stageRecord(profile: Profile, stageId: string): StageRecord {
  * a defeat's zero stars over an earlier win is the single most annoying bug
  * this file could have.
  */
-export function recordStageResult(profile: Profile, stageId: string, result: StageResult): Profile {
-  const before = stageRecord(profile, stageId);
+export function recordStageResult(
+  profile: Profile,
+  stageId: string,
+  modeId: string,
+  result: StageResult,
+  maxStars = 3,
+): Profile {
+  const stage = stageRecord(profile, stageId);
+  const before = modeRecord(profile, stageId, modeId);
 
-  const after: StageRecord = {
+  /* Clamped on the way in rather than on the way out, so the file never holds
+     a number the mode could not have paid. A challenge is one star for solving
+     it — there is no half-solving a fixed-constraint puzzle — and Relaxed and
+     Endless pay none at all. */
+  const earned = result.won ? Math.min(result.stars, maxStars) : 0;
+
+  const after: ModeRecord = {
     ...before,
     attempts: before.attempts + 1,
-    stars: Math.max(before.stars, result.stars) as StageRecord['stars'],
+    stars: Math.max(before.stars, earned) as ModeRecord['stars'],
     bestLives: Math.max(before.bestLives, result.won ? result.livesRemaining : 0),
+    bestWave: Math.max(before.bestWave, result.wavesCleared),
     cleared: before.cleared || result.won,
   };
 
@@ -128,12 +239,20 @@ export function recordStageResult(profile: Profile, stageId: string, result: Sta
         : Math.min(before.bestTimeSeconds, result.durationSeconds);
   }
 
-  return { ...profile, stages: { ...profile.stages, [stageId]: after } };
+  return {
+    ...profile,
+    stages: {
+      ...profile.stages,
+      [stageId]: { ...stage, modes: { ...stage.modes, [modeId]: after } },
+    },
+  };
 }
 
 export function totalStars(profile: Profile): number {
   let total = 0;
-  for (const record of Object.values(profile.stages)) total += record.stars;
+  for (const stage of Object.values(profile.stages)) {
+    for (const record of Object.values(stage.modes)) total += record.stars;
+  }
   return total;
 }
 
@@ -141,9 +260,10 @@ export function totalStars(profile: Profile): number {
  * What a set of stages adds up to, for the region map.
  *
  * Takes the stage ids rather than reading content, so it stays pure and a test
- * can ask about a region that does not exist yet. `maxStars` is three per stage
- * today; §12.4 makes it eleven once difficulties (#40) and the challenge modes
- * (§13) land, and this is the one place that will need to know.
+ * can ask about a region that does not exist yet. What a stage is *worth* is
+ * a parameter for the same reason: §12.4's eleven is what Region 1 offers, and
+ * `app/modes.ts` is where that number is derived from the modes a stage
+ * actually has.
  */
 export interface CampaignSummary {
   readonly stars: number;
@@ -156,23 +276,36 @@ export interface CampaignSummary {
   readonly complete: boolean;
 }
 
-export const STARS_PER_STAGE = 3;
+/**
+ * §12.4's eleven: three stars on each of the three scoring difficulties, plus
+ * one for Heroic and one for Iron. Relaxed and Endless pay none.
+ *
+ * Restated here so this file stays pure, and checked against what the modes
+ * actually offer by `tests/app/modes.test.ts`.
+ */
+export const STARS_PER_STAGE = 11;
 
-export function campaignSummary(profile: Profile, stageIds: readonly string[]): CampaignSummary {
+/** Modes whose clock counts as a best time, in `bestTimeFor`'s sense. */
+export const SCORING_MODE_IDS: readonly string[] = ['normal', 'veteran', 'impossible'];
+
+export function campaignSummary(
+  profile: Profile,
+  stageIds: readonly string[],
+  starsPerStage: number = STARS_PER_STAGE,
+): CampaignSummary {
   let stars = 0;
   let cleared = 0;
   let bestTotalSeconds = 0;
 
   for (const stageId of stageIds) {
-    const record = stageRecord(profile, stageId);
-    stars += record.stars;
-    if (record.cleared) cleared++;
-    bestTotalSeconds += record.bestTimeSeconds ?? 0;
+    stars += stageStars(profile, stageId);
+    if (stageCleared(profile, stageId)) cleared++;
+    bestTotalSeconds += bestTimeFor(profile, stageId, SCORING_MODE_IDS) ?? 0;
   }
 
   return {
     stars,
-    maxStars: stageIds.length * STARS_PER_STAGE,
+    maxStars: stageIds.length * starsPerStage,
     cleared,
     total: stageIds.length,
     bestTotalSeconds,
@@ -184,7 +317,10 @@ export function campaignSummary(profile: Profile, stageIds: readonly string[]): 
 export function highestCleared(profile: Profile): string | undefined {
   let highest: string | undefined;
   for (const [stageId, record] of Object.entries(profile.stages)) {
-    if (!record.cleared) continue;
+    /* Any mode counts. Clearing 1-6 on Relaxed still taught the player what
+       1-6 teaches, and withholding the Barracks for it would be a lesson in
+       nothing. */
+    if (!Object.values(record.modes).some((mode) => mode.cleared)) continue;
     if (highest === undefined || compareStageIds(stageId, highest) > 0) highest = stageId;
   }
   return highest;
@@ -225,7 +361,7 @@ interface ProfileState {
   profile: Profile;
   /** False until the saved profile has been read, or found missing. */
   loaded: boolean;
-  recordResult: (stageId: string, result: StageResult) => void;
+  recordResult: (stageId: string, modeId: string, result: StageResult, maxStars?: number) => void;
   setHeroLevel: (heroId: string, level: number) => void;
   replace: (profile: Profile) => void;
   reset: () => void;
@@ -261,8 +397,8 @@ export const useProfile = create<ProfileState>((set, get) => ({
   profile: EMPTY_PROFILE,
   loaded: false,
 
-  recordResult: (stageId, result) => {
-    const profile = recordStageResult(get().profile, stageId, result);
+  recordResult: (stageId, modeId, result, maxStars) => {
+    const profile = recordStageResult(get().profile, stageId, modeId, result, maxStars);
     set({ profile });
     persist(profile);
   },

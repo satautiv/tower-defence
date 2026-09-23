@@ -40,6 +40,15 @@ export interface WorldSnapshot {
   readonly seed: number;
   /** Stage the player's progress had reached, so the roster resolves the same. */
   readonly progressStageId: string | undefined;
+  /**
+   * Which mode the run was started on (#48).
+   *
+   * Carried for the same reason as `progressStageId` and the seed: the world
+   * has to be *built* the same way before the bytes are written into it, and
+   * nothing in the bag says whether these enemies were scaled for Veteran or
+   * had their ward tripled by a Heroic challenge. No tick reads it.
+   */
+  readonly modeId: string | undefined;
   readonly bag: SavedBag;
 }
 
@@ -146,11 +155,12 @@ export function captureWorld(
   world: World,
   stageId: string,
   progressStageId?: string,
+  modeId?: string,
 ): WorldSnapshot {
   const { writer, bag } = createWriter();
   captureScalars(world, writer);
   for (const [prefix, pool] of pools(world)) pool.capture(writer, prefix);
-  return { stageId, seed: world.config.seed, progressStageId, bag };
+  return { stageId, seed: world.config.seed, progressStageId, modeId, bag };
 }
 
 /**

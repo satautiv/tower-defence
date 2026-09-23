@@ -36,7 +36,7 @@ function won(stars: 1 | 2 | 3): StageResult {
 beforeEach(() => {
   setProfileStorage(() => new MemorySaveAdapter());
   let profile = EMPTY_PROFILE;
-  for (let i = 1; i <= 6; i++) profile = recordStageResult(profile, `1-${i}`, won(3));
+  for (let i = 1; i <= 6; i++) profile = recordStageResult(profile, `1-${i}`, 'normal', won(3));
   useProfile.setState({ profile, loaded: true });
 });
 
@@ -113,7 +113,10 @@ describe('the talent screen', () => {
   });
 
   it('stops offering ranks the player cannot pay for', () => {
-    useProfile.setState({ profile: recordStageResult(EMPTY_PROFILE, '1-1', won(1)), loaded: true });
+    useProfile.setState({
+      profile: recordStageResult(EMPTY_PROFILE, '1-1', 'normal', won(1)),
+      loaded: true,
+    });
     render(<TalentsScreen />);
     fireEvent.click(screen.getByTestId('resonant_bloom-take'));
     expect(screen.getByTestId('talent-stars')).toHaveTextContent('0 of 1');

@@ -9,6 +9,7 @@ import { stageResult } from '@sim/index';
 import type { RulesetOptions } from '@sim/index';
 import { useSettings } from '@ui/settings';
 import { progressFor, useProfile } from './profile.js';
+import { DEFAULT_MODE_ID, defaultMode, modeById } from './modes.js';
 
 /**
  * The hero this stage may take, if any.
@@ -69,15 +70,25 @@ export class GameSession {
     this.world = createWorldForStage(loadContent(), stage, seed, options);
   }
 
-  static forStage(stageId: string, seed = Date.now() & 0x7fffffff): GameSession | null {
+  static forStage(
+    stageId: string,
+    seed = Date.now() & 0x7fffffff,
+    modeId: string = DEFAULT_MODE_ID,
+  ): GameSession | null {
     const stage = loadContent().stages.get(stageId);
     if (stage === undefined) return null;
 
     const heroId = unlockedHero(stageId);
     const profile = useProfile.getState().profile;
+    /* An unknown mode opens the stage on its default rather than refusing:
+       a saved run naming a retired challenge should still be playable, which
+       is the bargain `resolveDifficulty` already makes one layer down. */
+    const mode = modeById(stageId, modeId) ?? defaultMode(stageId);
 
     return new GameSession(stage, seed, {
       ...(heroId === undefined ? {} : { heroId }),
+      difficulty: mode?.difficulty ?? DEFAULT_MODE_ID,
+      ...(mode?.challengeId === undefined ? {} : { challengeId: mode.challengeId }),
       /* The profile owns hero levels now. The settings value is read as a
          fallback so a player who has one from an older build keeps it; nothing
          writes it any more. */

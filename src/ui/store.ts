@@ -31,6 +31,14 @@ export interface UiState {
   /** Where `goBack` returns to. One level; the router is a shallow tree. */
   previousScreen: Screen | null;
   selectedStageId: string | null;
+  /**
+   * Which way the selected stage is being played (#48).
+   *
+   * Null until a mode is chosen, which is what makes a challenge impossible to
+   * enter by accident: tapping a stage opens its modes, and nothing starts
+   * until one of them is tapped too.
+   */
+  selectedModeId: string | null;
   /** Simulation entity id of the selected tower. An id, never the entity. */
   selectedEntityId: number | null;
   openPanel: PanelId | null;
@@ -38,6 +46,7 @@ export interface UiState {
   navigate: (screen: Screen) => void;
   goBack: () => void;
   selectStage: (stageId: string | null) => void;
+  selectMode: (modeId: string | null) => void;
   selectEntity: (entityId: number | null) => void;
   openPanelById: (panel: PanelId) => void;
   closePanel: () => void;
@@ -53,11 +62,13 @@ export const UI_STATE_KEYS = [
   'screen',
   'previousScreen',
   'selectedStageId',
+  'selectedModeId',
   'selectedEntityId',
   'openPanel',
   'navigate',
   'goBack',
   'selectStage',
+  'selectMode',
   'selectEntity',
   'openPanelById',
   'closePanel',
@@ -68,6 +79,7 @@ const INITIAL = {
   screen: 'splash' as Screen,
   previousScreen: null,
   selectedStageId: null,
+  selectedModeId: null,
   selectedEntityId: null,
   openPanel: null,
 };
@@ -96,7 +108,11 @@ export const useUiStore = create<UiState>((set) => ({
         : { screen: state.previousScreen, previousScreen: null, openPanel: null },
     ),
 
-  selectStage: (selectedStageId) => set({ selectedStageId }),
+  /* Choosing a stage forgets the last mode, so the picker opens on nothing
+     chosen rather than on whatever the previous stage was played as. */
+  selectStage: (selectedStageId) => set({ selectedStageId, selectedModeId: null }),
+
+  selectMode: (selectedModeId) => set({ selectedModeId }),
 
   selectEntity: (selectedEntityId) =>
     set((state) => (state.selectedEntityId === selectedEntityId ? state : { selectedEntityId })),
