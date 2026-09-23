@@ -28,6 +28,13 @@ export interface HudProps {
   /** Offered while paused. Omitted, the button is not shown. */
   onRestart?: () => void;
   onQuit?: () => void;
+  /**
+   * Opens the Codex over the paused board (#38).
+   *
+   * A callback rather than a navigation, because leaving the screen would
+   * unmount the renderer — the criterion is "without leaving the board".
+   */
+  onCodex?: () => void;
   /** Offered while paused. Omitted, the sound toggle is not shown. */
   onMute?: (muted: boolean) => void;
   muted?: boolean;
@@ -54,6 +61,7 @@ export function Hud({
   onSpeed,
   onRestart,
   onQuit,
+  onCodex,
   onMute,
   muted = false,
 }: HudProps): ReactElement {
@@ -97,6 +105,11 @@ export function Hud({
           {onRestart !== undefined && (
             <Button variant="ghost" onClick={onRestart} shortcut={BINDINGS.restart}>
               Restart
+            </Button>
+          )}
+          {onCodex !== undefined && (
+            <Button variant="ghost" onClick={onCodex} data-testid="open-codex">
+              Codex
             </Button>
           )}
           {onMute !== undefined && (

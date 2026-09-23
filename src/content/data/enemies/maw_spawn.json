@@ -1,6 +1,7 @@
 {
   "id": "maw_spawn",
   "nameKey": "enemy.maw_spawn.name",
+  "counterKey": "enemy.maw_spawn.counter",
   "hp": 900,
   "speed": 1.1,
   "armour": 25,

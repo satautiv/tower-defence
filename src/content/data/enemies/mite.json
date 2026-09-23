@@ -1,6 +1,7 @@
 {
   "id": "mite",
   "nameKey": "enemy.mite.name",
+  "counterKey": "enemy.mite.counter",
   "hp": 75,
   "speed": 1.5,
   "bounty": 2,

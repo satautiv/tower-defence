@@ -147,6 +147,18 @@ export type EnemyPhase = z.infer<typeof EnemyPhaseSchema>;
 export const EnemySchema = z.object({
   id: IdSchema,
   nameKey: LocaleKeySchema,
+  /**
+   * How to fight it, for the Codex (#38, docs/GAME_DESIGN.md §9.1).
+   *
+   * Authored rather than derived from the trait list, because the useful
+   * sentence is not "has directional_armour" but "put towers behind the road".
+   * §9.1 already writes one per enemy and this is where they land.
+   *
+   * Optional in the schema so a fixture need not carry one;
+   * `tests/app/codex.test.ts` requires one on every authored enemy, which
+   * is the same split `perkKeys` takes on a tier-4 branch.
+   */
+  counterKey: LocaleKeySchema.optional(),
   hp: Positive,
   /** Tiles per second. */
   speed: NonNegative,

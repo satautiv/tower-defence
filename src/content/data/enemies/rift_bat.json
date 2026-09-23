@@ -1,6 +1,7 @@
 {
   "id": "rift_bat",
   "nameKey": "enemy.rift_bat.name",
+  "counterKey": "enemy.rift_bat.counter",
   "hp": 150,
   "speed": 2.0,
   "ward": 5,

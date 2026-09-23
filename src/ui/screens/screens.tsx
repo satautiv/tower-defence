@@ -59,6 +59,7 @@ export function MenuScreen(): ReactElement {
           Campaign
         </Button>
         <Button onClick={() => navigate('talents')}>Warden Talents</Button>
+        <Button onClick={() => navigate('codex')}>Codex</Button>
         <Button onClick={() => navigate('settings')}>Settings</Button>
         {/* The only way into the editor, and it is not here in a production
             build: the condition is a literal after substitution, so this

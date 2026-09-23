@@ -986,3 +986,157 @@ abbr.ui-wave__threat {
   font-size: var(--t-sm);
   font-variant-numeric: tabular-nums;
 }
+
+/* The Codex (#38). A column that scrolls inside whatever holds it — a screen
+   on the menu, a panel over a paused board — because the same component has to
+   fit both and neither can assume the other's height. */
+.ui-codex {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-height: 0;
+}
+
+.ui-codex__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.ui-codex__search {
+  width: 100%;
+  min-height: var(--hit-min);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: 400 var(--t-md) / 1.2 var(--f-ui);
+}
+.ui-codex__search:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+/* Wraps rather than scrolls sideways: five tabs do not fit a phone in one
+   line, and a horizontal scroller hides the last of them. They are narrowed
+   rather than shortened — at the default button padding five tabs took three
+   rows and a third of the panel, and the labels are the words a player is
+   looking for. The 48px touch target is left alone; only the sides give. */
+.ui-codex__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+.ui-codex__tabs .ui-button {
+  flex: 1 1 auto;
+  padding-inline: var(--s-2);
+}
+
+.ui-codex__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.ui-codex__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  width: 100%;
+  text-align: left;
+}
+
+.ui-codex__name {
+  flex: 1 1 auto;
+  font-weight: 600;
+}
+
+.ui-codex__hint {
+  flex: 0 0 auto;
+  color: var(--c-text-dim);
+  font-size: var(--t-sm);
+}
+
+.ui-codex__entry--unknown .ui-codex__name {
+  color: var(--c-text-dim);
+  letter-spacing: 0.2em;
+}
+
+.ui-codex__detail {
+  padding: var(--s-2) var(--s-3) var(--s-3);
+}
+
+.ui-codex__desc,
+.ui-codex__counter {
+  margin: 0 0 var(--s-2);
+  color: var(--c-text-dim);
+  font-size: var(--t-sm);
+}
+
+/* The counter-play hint is the one line a player came for, so it is the one
+   line that is not dimmed into the background. */
+.ui-codex__counter {
+  margin: var(--s-2) 0 0;
+  color: var(--c-text);
+  border-left: 2px solid var(--c-accent-dim);
+  padding-left: var(--s-2);
+}
+
+.ui-codex__rows {
+  margin: 0;
+  display: grid;
+  gap: var(--s-1);
+}
+
+/* Label and value on one line, value wrapping under itself rather than
+   pushing the label off the screen — a tower's rung is a long string. */
+.ui-codex__stat {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, auto) 1fr;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+}
+.ui-codex__stat dt {
+  color: var(--c-text-dim);
+}
+.ui-codex__stat dd {
+  margin: 0;
+}
+
+/* The Codex over a paused board. Centred and capped so it never covers the
+   whole screen: the point of reading it here rather than on a screen of its
+   own is that the board is still there behind it. */
+.ui-codex-panel {
+  position: absolute;
+  inset: var(--s-5) var(--s-4);
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  max-width: 560px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* The chain that lets the entry list have the leftover height rather than
+   leaving it blank under the Close button: every box between the panel and the
+   list has to agree to shrink, and `min-height: 0` is what overrides a flex
+   item's default refusal to go below its content. */
+.ui-codex-panel .ui-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.ui-codex-panel .ui-codex {
+  flex: 1 1 auto;
+}
+.ui-codex-panel .ui-codex__list {
+  flex: 1 1 auto;
+}

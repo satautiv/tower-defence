@@ -1,6 +1,7 @@
 {
   "id": "grendrix",
   "nameKey": "enemy.grendrix.name",
+  "counterKey": "enemy.grendrix.counter",
   "hp": 18000,
   "speed": 0.5,
   "armour": 55,

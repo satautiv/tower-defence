@@ -85,8 +85,17 @@ export const ProfileSchema = z.object({
    */
   talents: z.record(z.string(), z.number().int().min(0)).default({}),
   /** Codex entries seen, by id. The anti-wiki feature is #38. */
+  /**
+   * What the Codex has been shown, by content id (#38).
+   *
+   * Enemies on first kill, reactions on first trigger, towers on first build.
+   * Arrays rather than sets because a save file is JSON, and every field
+   * defaults, so a profile written before `codexTowers` existed still loads —
+   * which is why this needed no migration.
+   */
   codexEnemies: z.array(z.string()).default([]),
   codexReactions: z.array(z.string()).default([]),
+  codexTowers: z.array(z.string()).default([]),
 });
 
 export type Profile = z.infer<typeof ProfileSchema>;

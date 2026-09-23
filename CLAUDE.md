@@ -21,8 +21,8 @@ done** and described below. **M2's code is finished, #34 — the map editor — 
 ten stages are authored: Region 1 is playable start to finish.** What remains open on #34 is
 the decor tool and in-editor playtest, and on #36 the two criteria that need people.
 
-**M3: #39 (the save system), #37 (meta-progression) and #40 (difficulty and challenge modes)
-are all done.** Progress persists, a run survives a backgrounding, unlock gating reads what the
+**M3 is complete: #39 (the save system), #37 (meta-progression), #40 (difficulty and challenge
+modes) and #38 (the Codex) are all done.** Progress persists, a run survives a backgrounding, unlock gating reads what the
 player has cleared, the Warden Talent tree is authored and spendable, and a map is now played
 seven ways.
 
@@ -298,6 +298,53 @@ name, sentence and score shreds at 420px** — the middle column came out two wo
 description ran to ten lines; it is a two-row grid now. And **`.ui-screen` did not scroll**, so the
 bottom of a long list was unreachable — already true of the forty-node talent tree, and fixed by
 the same line.
+
+**The Codex (#38) is in, and it holds no numbers of its own.** `src/app/codex.ts` resolves every
+tower, enemy, reaction, status and damage type out of the same content files `buildRuleset` reads.
+That is the load-bearing decision rather than a tidiness one: a Codex with its own copy of a
+reaction's damage would be a second source of truth for the thing the whole game is built on, and
+it would be wrong the first time `reactions.json` was retuned. "With its exact formula" is true by
+construction.
+
+**The acceptance criterion is a test, not a screenshot.** `tests/app/codex.test.ts` triggers each
+reaction in a real world and checks the Codex's arithmetic against the magnitude the simulation
+emitted. Worth knowing about its reach: **only Thermal Shock has a per-stack term** today, and
+Superconduct and Amplify deal no damage at all — so `base + perStack × stacks` is exercised by one
+row of five. That is a fact about the authored matrix, not a hole: give any reaction a
+`damagePerStack` and the test tightens on it with no edit.
+
+**Discovery needed a map, and the reason is worth remembering.** `EnemyDied` carries the *entity*
+id and not the type — all five payload slots are spoken for, and the slot is freed before anything
+drains the buffer. Growing the event record for a feature outside the tick loop is the wrong
+trade, so `CodexScout` keeps its own entity→enemy map, filled on spawn and emptied on death or
+leak, bounded by what is alive. A leak is deliberately not a discovery: something that walked past
+is not something the player learned to kill. A resumed run adopts what is already on the board,
+or killing it would discover nothing.
+
+**Findings are flushed at three moments and the third is the one that matters**: stage end, the
+platform's `pause` (a backgrounded phone may never run code again), and *opening the Codex
+mid-run*. Without that last one a player kills a Nullifier, opens the Codex to find out what it
+was, and is told they have never seen one. `recordFindings` returns the same profile when nothing
+is new, so repeated pauses cost no writes.
+
+**The Codex opens as a panel, never as a screen, while a stage is running.** §38 asks for
+"accessible while paused… without leaving the board", and the stage screen owns the Pixi
+application: navigating would unmount the renderer and rebuild it over a run the player merely
+wanted to look something up in. `isPaused` lives in the store and names both panels that hold the
+board still, because a Codex that resumed the wave behind the page explaining it would be the
+opposite of the point.
+
+**Counter-play hints are authored per enemy** as `counterKey`, not derived from the trait list:
+the useful sentence is not "has directional_armour" but "put towers behind the road". §9.1 already
+writes one per enemy. Statuses and damage types are **not** discovery-gated — a player meeting
+Scorch for the first time has to be able to look it up, and completion counts only what must be
+found, so a new player does not start at forty percent of a thing they have not done.
+
+Two findings from running it at phone width. **Five tabs at the default button padding took three
+rows and a third of the panel**; they are narrowed rather than shortened, because the labels are
+the words a player is looking for and the 48px touch target is not negotiable. And **the one
+enemy a player had actually killed sat sixteenth**, under a wall of undiscovered rows — the list
+puts what has been found first while there is anything left to find.
 
 **The map editor (#34) is in, and it lives in `src/editor/`, not `tools/map-editor/`.**
 TECH_DESIGN §13.1 names that directory and in the same breath calls the thing *"a browser

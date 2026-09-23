@@ -1,6 +1,7 @@
 {
   "id": "shieldwright",
   "nameKey": "enemy.shieldwright.name",
+  "counterKey": "enemy.shieldwright.counter",
   "hp": 450,
   "speed": 0.8,
   "armour": 15,
