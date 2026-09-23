@@ -3,9 +3,9 @@ import type { ContentRegistry } from '@content/loader';
 import type { StageDefinition } from '@content/schema/stage';
 import type { TowerTier } from '@content/schema/tower';
 import type { TuningDefinition } from '@content/schema/tuning';
-import type { ChallengeDefinition } from '@content/schema/challenge';
+import type { ChallengeDefinition, ChallengeKind } from '@content/schema/challenge';
 import type { EnemyDefinition, EnemyPhase } from '@content/schema/enemy';
-import { stageAtLeast } from '@content/stages';
+import { compareStageIds, stageAtLeast } from '@content/stages';
 import { LEY_NODE_TYPES, STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
 import { MAX_GROUPS_PER_WAVE } from './capacity.js';
 import { STATUS_COUNT, STATUS_INDEX } from './status.js';
@@ -497,7 +497,7 @@ export interface StartingTower {
  */
 export interface ResolvedChallenge {
   readonly id: string;
-  readonly kind: 'heroic' | 'iron';
+  readonly kind: ChallengeKind;
   readonly nameKey: string;
   readonly descriptionKey: string;
   /** Overrides the stage's gold, after the mode's multiplier, when set. */
@@ -1220,7 +1220,11 @@ function wavesFor(
  * repeated at position twelve is already a harder fight with nothing here to
  * arrange it — the same bargain the extra elite wave takes.
  */
-function limitWaves(waves: StageDefinition['waves'], limit: number): StageDefinition['waves'] {
+function limitWaves(
+  waves: StageDefinition['waves'],
+  limit: number,
+  pool: StageDefinition['waves'] = [],
+): StageDefinition['waves'] {
   if (waves.length === 0 || limit === waves.length) return waves;
 
   const finale = waves[waves.length - 1];
@@ -1228,8 +1232,11 @@ function limitWaves(waves: StageDefinition['waves'], limit: number): StageDefini
   if (limit < waves.length) return [...waves.slice(0, limit - 1), finale];
 
   /* Cycled over the body rather than the whole list, so the finale appears
-     once — at the end, where the stage put it. */
-  const body = waves.length > 1 ? waves.slice(0, -1) : waves;
+     once — at the end, where the stage put it. A caller may hand over a wider
+     pool, which is what Endless does: the repeats then come from the whole
+     region rather than from this map's ten waves. */
+  const own = waves.length > 1 ? waves.slice(0, -1) : waves;
+  const body = pool.length > 0 ? pool : own;
   const out = [...waves.slice(0, -1)];
   for (let i = 0; out.length < limit - 1; i++) {
     const repeat = body[i % body.length];
@@ -1240,14 +1247,37 @@ function limitWaves(waves: StageDefinition['waves'], limit: number): StageDefini
   return out;
 }
 
+/**
+ * Every wave authored in a region, in stage order.
+ *
+ * The whole of what keeps Endless from being a stat wall. Health grows with
+ * the wave index whatever is sent, so a mode that repeated one map's ten waves
+ * forever would eventually be the opening riftling with eight times the health
+ * and no new question to answer. Drawing from the region means wave sixty on
+ * Emberfall Ridge is 1-9's elites — a different fight, not a bigger number.
+ */
+function regionWaves(registry: ContentRegistry, region: number): StageDefinition['waves'] {
+  const out: StageDefinition['waves'] = [];
+  /* Campaign order, not string order. "1-10" sorts before "1-5" as text, which
+     would put Grendrix at Endless wave twenty and end the run there. */
+  const stages = [...registry.stages.values()].sort((a, b) => compareStageIds(a.id, b.id));
+  for (const stage of stages) {
+    if (stage.region !== region) continue;
+    out.push(...stage.waves);
+  }
+  return out;
+}
+
 function buildWaveTable(
   stage: StageDefinition,
   enemies: EnemyTable,
   difficulty: ResolvedDifficulty,
   waveLimit: number | null,
+  pool: StageDefinition['waves'] = [],
 ): WaveTable {
   const scaled = wavesFor(stage, enemies, difficulty);
-  const authored = waveLimit === null ? scaled : limitWaves(scaled, waveLimit);
+  const authored = waveLimit === null ? scaled : limitWaves(scaled, waveLimit, pool);
+  const spawnPoints = Math.max(1, stage.spawnPoints.length);
   const count = authored.length;
   const slots = count * MAX_GROUPS_PER_WAVE;
 
@@ -1288,7 +1318,12 @@ function buildWaveTable(
       table.groupCountPer[i] = spawned;
       table.groupIntervalTicks[i] = group.intervalSeconds * TICK_HZ;
       table.groupDelayTicks[i] = group.delaySeconds * TICK_HZ;
-      table.groupSpawnPoint[i] = group.spawnPoint;
+      /* Wrapped, because a borrowed wave names its own stage's spawn points and
+         this map may have fewer. Content-lint already refuses an out-of-range
+         index on a stage's own waves, so this only ever bites a repeat drawn
+         from the region — and a flyer group landing on the ground lane still
+         flies, since flight is the enemy's property and not the route's. */
+      table.groupSpawnPoint[i] = group.spawnPoint % spawnPoints;
 
       if (typeIdx >= 0) bounty += (enemies.bounty[typeIdx] as number) * spawned;
       const finishes =
@@ -1656,7 +1691,13 @@ export function buildRuleset(
     statuses: buildStatusTable(registry),
     reactions,
     powers,
-    waves: buildWaveTable(stage, enemies, difficulty, challenge?.rules.waveLimit ?? null),
+    waves: buildWaveTable(
+      stage,
+      enemies,
+      difficulty,
+      challenge?.rules.waveLimit ?? null,
+      challenge?.rules.waveSource === 'region' ? regionWaves(registry, stage.region) : [],
+    ),
     paths,
     pathById: new Map(paths.map((path) => [path.id, path])),
     spawnPoints: stage.spawnPoints.map((spawn) => ({

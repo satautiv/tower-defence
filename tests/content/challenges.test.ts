@@ -67,6 +67,7 @@ function worldFor(challenge: ChallengeDefinition, seed = 1): World {
 const all = [...registry.challenges.values()];
 const heroic = all.filter((c) => c.kind === 'heroic');
 const iron = all.filter((c) => c.kind === 'iron');
+const endless = all.filter((c) => c.kind === 'endless');
 const stageIds = [...registry.stages.keys()].sort();
 
 describe('every stage carries its two challenge stars', () => {
@@ -76,6 +77,14 @@ describe('every stage carries its two challenge stars', () => {
   it.each(stageIds)('%s has one Heroic and one Iron', (stageId) => {
     expect(heroic.filter((c) => c.stageId === stageId)).toHaveLength(1);
     expect(iron.filter((c) => c.stageId === stageId)).toHaveLength(1);
+  });
+
+  /* Endless is the third variant and the one that pays no star: §13 puts it on
+     a leaderboard rather than in the star count, so it is deliberately not
+     part of the pair above. `tests/content/endless.test.ts` is where it is
+     held to its own claims. */
+  it.each(stageIds)('%s also has an Endless run, which earns no star', (stageId) => {
+    expect(endless.filter((c) => c.stageId === stageId)).toHaveLength(1);
   });
 });
 

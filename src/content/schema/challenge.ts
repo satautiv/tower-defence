@@ -11,6 +11,9 @@ import { DamageTypeSchema, IdSchema, LocaleKeySchema, Positive, StageIdSchema } 
  *    3x Ward". One clean solution, discoverable.
  *  - **Iron** is the same sentence on every map: survive fifteen waves with no
  *    rebuilding, no selling, and one life.
+ *  - **Endless** is the leaderboard mode: waves that do not stop, drawn from
+ *    the whole region so late play changes what it sends rather than only how
+ *    much health it has.
  *
  * The point of the section is that a challenge costs *data authoring*, not art
  * or code, so everything below resolves into the flat tables `buildRuleset`
@@ -20,7 +23,7 @@ import { DamageTypeSchema, IdSchema, LocaleKeySchema, Positive, StageIdSchema } 
  * handler tests.
  */
 
-export const CHALLENGE_KINDS = ['heroic', 'iron'] as const;
+export const CHALLENGE_KINDS = ['heroic', 'iron', 'endless'] as const;
 export const ChallengeKindSchema = z.enum(CHALLENGE_KINDS);
 export type ChallengeKind = (typeof CHALLENGE_KINDS)[number];
 
@@ -77,6 +80,17 @@ export const ChallengeRulesSchema = z.object({
    * harder than the same wave at three with nothing here to arrange it.
    */
   waveLimit: z.number().int().positive().optional(),
+  /**
+   * Where the repeats come from when `waveLimit` runs past what the stage
+   * authored.
+   *
+   * `stage` cycles the map's own waves, which is what Iron wants: fifteen
+   * waves of the fight the player already knows. `region` cycles every wave in
+   * the region, which is what keeps Endless from being a stat wall — wave
+   * sixty on Emberfall Ridge sends 1-9's elites rather than the opening
+   * riftlings with four times the health.
+   */
+  waveSource: z.enum(['stage', 'region']).default('stage'),
 });
 
 export type ChallengeRules = z.infer<typeof ChallengeRulesSchema>;
