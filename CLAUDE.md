@@ -21,9 +21,10 @@ done** and described below. **M2's code is finished, #34 — the map editor — 
 ten stages are authored: Region 1 is playable start to finish.** What remains open on #34 is
 the decor tool and in-editor playtest, and on #36 the two criteria that need people.
 
-**M3: #39 (the save system) and #37 (meta-progression) are both done.** Progress persists, a
-run survives a backgrounding, unlock gating reads what the player has cleared, and the Warden
-Talent tree is authored, spendable and wired into play.
+**M3: #39 (the save system), #37 (meta-progression) and #40 (difficulty and challenge modes)
+are all done.** Progress persists, a run survives a backgrounding, unlock gating reads what the
+player has cleared, the Warden Talent tree is authored and spendable, and a map is now played
+seven ways.
 
 Two issues stay open for things code cannot close. #30 wants editor support for placing nodes,
 which is **#34**. That and #27 both also want a check on a real phone, which is the same check
@@ -220,6 +221,75 @@ powers and specialisations; nothing in the design gates stage *access*, and lock
 its first stage would take the remaining playtests (#19, #36) away from the people who still have
 to run them. The region map shows what has been earned — stars, clears, best times — and opens
 everything.
+
+**Modes (#40) are live, and a map is now played seven ways.** Four difficulties in
+`tuning.json`, a Heroic and an Iron challenge per map, and an Endless run per map — thirty
+challenge files and not one new system below `buildRuleset`. Every mode resolves into the flat
+tables the same way unlocks, perks, ley nodes and talents already do: a banned tower is a zero in
+`towers.unlocked`, tripled Ward is a bigger float in the enemy table, Veteran's lives are a number
+on the world. **No tick asks which mode it is running.**
+
+**Three refusals could not be a number**, and they are `PlayRestriction` bits the command handler
+tests: no selling, no upgrading, no rebuilding. One `ForbiddenByChallenge` reason serves all three,
+because the rejection event already carries the verb. Specialising counts as upgrading — a
+challenge that stopped tier three and allowed tier four would forbid nothing. And **`noRebuilding`
+comes down to closing the undo window**: with selling refused, nothing else in the game removes a
+tower, so undo is the last route to a plot that has been built on.
+
+**A wave limit both truncates and extends**, because Iron is "survive fifteen waves" on every map
+and Region 1 authors ten to sixteen. Either way **the stage's last wave stays last** — the rule
+`wavesFor` already follows when Impossible splices its extra elite wave second-to-last, so a boss
+stage still ends on its boss. Endless takes the same primitive with `waveSource: 'region'`: two
+hundred waves drawn from every map in the region, so wave sixty on Emberfall Ridge is 1-9's elites
+rather than the opening riftling with eight times the health. Wave scaling is per wave *index*, so
+a repeat is already harder with nothing arranging it.
+
+**Every Heroic has a recorded solution, replayed on three seeds every CI run.** A puzzle nobody
+has solved is indistinguishable from an unwinnable one until a player wastes an evening on it.
+`tests/content/challenges.test.ts` holds the answer key. Six of the ten failed their first draft
+for the same reason — **these stages were tuned against the whole roster, so a two-tower kit walks
+into whichever wave the missing tower existed to answer** (the Phase Stalker's 600 health behind 30
+ward on 1-2 and 1-3, the Bulwark Golem on 1-6). Fixed by changing the kit, not the wave, except on
+1-2 and 1-9 which keep their kit and are handed the gold to fill the board with it.
+
+**Two findings from measuring it, both worth keeping.** First: **more starting gold made `greedy`
+lose where it had won**, on 1-3 and 1-8. Buying the dearest allowed tower first leaves the far end
+of the road uncovered, and a bigger purse buys more of exactly the wrong board. Second, and the one
+that forced a new strategy: **every existing strategy shares `upgradeSomething`, which upgrades the
+lowest slot and nothing else** — once that one tower is maxed, gold piles up. Over ten waves it
+barely shows; over two hundred it is the whole result. `endurance` spends on the cheapest
+improvement anywhere on the board, and is deliberately outside `defaultStrategies` because adding a
+strategy to the CI gate changes what every stage is measured against. Measured with it at Endless's
+thirty lives: **1-4 26 · 1-2 37 · 1-7 37 · 1-9 41 · 1-8 43 · 1-6 52 · 1-10 52 · 1-1 53 · 1-3 66 ·
+1-5 92**. Half the region past wave fifty on a board that reads no map. The spread is the maps, not
+the mode, which is the right shape for a per-stage leaderboard.
+
+**Endless's first draft ended at wave twenty on every map**, because the region's stages were
+gathered in *string* order and "1-10" precedes "1-5". Grendrix arrived at wave twenty and that was
+the run. `compareStageIds` exists for exactly this and was not being used. A second bug from the
+same change: **a borrowed wave names its own stage's spawn points**, and the borrowing map may have
+fewer — indices are wrapped now, and a flyer group landing on the ground lane still flies, because
+flight is the enemy's property and not the route's.
+
+**A stage is worth eleven stars (#48), and the profile is keyed by mode.** `src/app/modes.ts` is
+the list of ways one map can be played, read from content rather than written down, and it carries
+both what the profile records against and what the ruleset is built from — Veteran is a difficulty
+and Iron is a challenge played on Normal's numbers. Profile **v2** migrates a v1 file by moving its
+flat record onto Normal, the only mode it could have been earned on; the migration deliberately
+hands on anything that is not a map of stages rather than repairing it, because the first draft
+turned `stages: 7` into an empty campaign. Region 1 is 110 stars, not 30.
+
+**The picker is two taps, and that is the feature.** Choosing a stage opens its modes and starts
+nothing. Iron is one life and Impossible is a different game; a single tap that launched whichever
+mode happened to be remembered would drop a player into one with nothing on screen having said so.
+A snapshot carries its mode beside its seed, for the same reason both are there: the world has to
+be *built* the right way before the bytes are written into it.
+
+Two layout bugs, both found by opening the picker at phone width rather than by a test. **A row of
+name, sentence and score shreds at 420px** — the middle column came out two words wide and one
+description ran to ten lines; it is a two-row grid now. And **`.ui-screen` did not scroll**, so the
+bottom of a long list was unreachable — already true of the forty-node talent tree, and fixed by
+the same line.
 
 **The map editor (#34) is in, and it lives in `src/editor/`, not `tools/map-editor/`.**
 TECH_DESIGN §13.1 names that directory and in the same breath calls the thing *"a browser
@@ -630,12 +700,18 @@ timeout would only have moved the wall rather than kept the gate inside a PR's p
 ```
 npm run balance -- --stage 1-1 --runs 2000 --strategy greedy
 npm run balance -- --runs 200 --csv out.csv --json out.json
+npm run balance -- --stage 1-8 --difficulty veteran --runs 2000 --strategy greedy
+npm run balance -- --stage 1-1 --challenge heroic_1_1 --strategy single:frost_cairn
 ```
 
+`--difficulty` and `--challenge` both travel to the worker threads in the request rather than
+being re-derived there: a worker that rebuilt its world from the defaults would report Normal
+figures under a Veteran heading. `endurance` is a fourth strategy, reachable by name and
+deliberately absent from the default set — it is the measuring instrument for Endless, and adding
+a strategy to the CI gate changes what every stage is measured against.
+
 **Placeholders**, named now so the naming is settled, implemented later:
-`android:dev` / `android:build` arrive with #54. The balance sim will take
-arguments:
-`npm run balance -- --stage 1-8 --difficulty veteran --runs 2000 --strategy greedy`
+`android:dev` / `android:build` arrive with #54.
 
 Howler is **not installed yet** — it arrives with #44. Don't add a dependency before the issue
 that needs it.
