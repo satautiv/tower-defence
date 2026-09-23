@@ -136,6 +136,8 @@ export const MODIFIABLE_STATS = [
   'towerDamage',
 ] as const;
 
+export type ModifiableStat = (typeof MODIFIABLE_STATS)[number];
+
 export const EffectSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('damage_in_radius'),

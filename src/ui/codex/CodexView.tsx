@@ -157,10 +157,17 @@ function CodexRowView({ entry, known, open, onToggle }: RowProps): ReactElement 
             <p className="ui-codex__desc">{text(entry.descriptionKey)}</p>
           )}
           <dl className="ui-codex__rows">
-            {entry.rows.map((row) => (
-              <div key={row.label} className="ui-codex__stat">
-                <dt>{row.label}</dt>
-                <dd>{row.value}</dd>
+            {/* Keyed by position: a tower has a "tier 4" row per branch, and
+                two branches would collide on the label alone. */}
+            {entry.rows.map((row, i) => (
+              <div key={`${row.label}:${i}`} className="ui-codex__stat">
+                {/* Labels and values that are *names* travel as locale keys,
+                    because `app/` does not reach into the interface for
+                    words — a branch is "Glacier Heart", not `glacier_heart`. */}
+                <dt>
+                  {row.labelKey === undefined ? row.label : `${text(row.labelKey)} ${row.label}`}
+                </dt>
+                <dd>{row.valueKey === undefined ? row.value : text(row.valueKey)}</dd>
               </div>
             ))}
           </dl>

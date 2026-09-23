@@ -1,11 +1,11 @@
 import { loadContent } from '@content/load';
 import { DAMAGE_TYPES, STATUS_BY_DAMAGE_TYPE } from '@content/schema/common';
-import type { DamageType } from '@content/schema/common';
+import type { DamageType, EffectDefinition, ModifiableStat } from '@content/schema/common';
 import type { ContentRegistry } from '@content/loader';
 import type { EnemyDefinition } from '@content/schema/enemy';
 import type { ReactionDefinition } from '@content/schema/reaction';
 import type { StatusDefinition } from '@content/schema/status';
-import type { TowerDefinition } from '@content/schema/tower';
+import type { TowerAbility, TowerDefinition } from '@content/schema/tower';
 import { SimEventKind } from '@sim/index';
 import type { World } from '@sim/index';
 import type { Profile } from './profile.js';
@@ -39,6 +39,22 @@ const DISCOVERED_SECTIONS: readonly CodexSection[] = ['towers', 'enemies', 'reac
 export interface CodexRow {
   readonly label: string;
   readonly value: string;
+  /**
+   * A locale key the screen resolves and prints before `label`.
+   *
+   * A tower's branch is called something — "Glacier Heart", not
+   * `glacier_heart` — and the label is where that name belongs.
+   */
+  readonly labelKey?: string;
+  /**
+   * A locale key the screen resolves and prints before `value`.
+   *
+   * For a value that is a *name* rather than a number — a tower capstone is
+   * called something, and printing `glacier_heart_ability` at a player is the
+   * wiki this feature exists to replace. `app/` does not reach into the
+   * interface for words, so the key travels and the view resolves it.
+   */
+  readonly valueKey?: string;
 }
 
 export interface CodexEntry {
@@ -70,6 +86,29 @@ function num(value: number): string {
   return String(Number(value.toFixed(2)));
 }
 
+/**
+ * The stats an ability may change, in words.
+ *
+ * `chillDecay ×0 for 8s` is an internal identifier on a player's screen, which
+ * is the wiki lookup this whole feature exists to remove. A map rather than a
+ * regex over camelCase, because "goldPerKill" wants to read "gold per kill"
+ * and "ward" already reads fine — and the vocabulary is closed, so a new stat
+ * is a compile error here until it has words.
+ */
+const STAT_WORDS: Readonly<Record<ModifiableStat, string>> = {
+  damage: 'damage',
+  fireRate: 'fire rate',
+  armour: 'armour',
+  ward: 'ward',
+  defence: 'armour and ward',
+  speed: 'movement speed',
+  chillDecay: 'how fast Chill wears off',
+  goldPerKill: 'gold per kill',
+  reactionPower: 'reaction damage',
+  reactionCooldown: 'reaction lockout',
+  towerDamage: 'tower damage',
+};
+
 function seconds(value: number): string {
   return `${num(value)}s`;
 }
@@ -87,35 +126,136 @@ function percent(fraction: number): string {
  * §38 scope asks for "full stats at every tier and specialisation", so the rows
  * are per rung rather than a summary of the first.
  */
+/** One rung of a tower, as the line a player reads. */
+function tierValue(tier: TowerDefinition['tiers'][number]): string {
+  const parts = [
+    `${num(tier.damage)} ${tier.damageType}`,
+    `${num(tier.fireRate)}/s`,
+    `${num(tier.rangeTiles)} tiles`,
+    `${tier.cost}g`,
+  ];
+  if (tier.splashRadiusTiles > 0) parts.push(`splash ${num(tier.splashRadiusTiles)}`);
+  if (tier.chainTargets > 0) parts.push(`chains ${tier.chainTargets}`);
+  if (tier.armourPierce > 0) parts.push(`pierces ${num(tier.armourPierce)} armour`);
+  if (tier.targets !== 'both') parts.push(`${tier.targets} only`);
+  if (tier.statusApplied !== undefined) {
+    parts.push(`${tier.statusApplied.stacks} ${tier.statusApplied.status}`);
+  }
+  if (tier.garrison !== undefined) parts.push(`${tier.garrison.count} soldiers`);
+  return parts.join(' · ');
+}
+
+/**
+ * A tower at every rung it has.
+ *
+ * Tiers one to three are the base path; each specialisation adds two more and
+ * a capstone. §38 asks for "full stats at every tier and specialisation", so
+ * the rows are per rung rather than a summary of the first — and a branch is
+ * labelled by its own name, because `glacier_heart` is not a word.
+ */
 function towerRows(tower: TowerDefinition): CodexRow[] {
   const rows: CodexRow[] = [];
 
-  const tierRows = (label: string, tiers: TowerDefinition['tiers'][number][]): void => {
-    tiers.forEach((tier, i) => {
-      const parts = [
-        `${num(tier.damage)} ${tier.damageType}`,
-        `${num(tier.fireRate)}/s`,
-        `${num(tier.rangeTiles)} tiles`,
-        `${tier.cost}g`,
-      ];
-      if (tier.splashRadiusTiles > 0) parts.push(`splash ${num(tier.splashRadiusTiles)}`);
-      if (tier.chainTargets > 0) parts.push(`chains ${tier.chainTargets}`);
-      if (tier.armourPierce > 0) parts.push(`pierces ${num(tier.armourPierce)} armour`);
-      if (tier.targets !== 'both') parts.push(`${tier.targets} only`);
-      if (tier.statusApplied !== undefined) {
-        parts.push(`${tier.statusApplied.stacks} ${tier.statusApplied.status}`);
-      }
-      if (tier.garrison !== undefined) parts.push(`${tier.garrison.count} soldiers`);
-      rows.push({ label: `${label} ${i + 1}`, value: parts.join(' · ') });
-    });
-  };
+  tower.tiers.forEach((tier, i) => {
+    rows.push({ label: `Tier ${i + 1}`, value: tierValue(tier) });
+  });
 
-  tierRows('Tier', [...tower.tiers]);
   for (const branch of tower.specialisations) {
-    tierRows(`— ${branch.id}`, [...branch.tiers]);
-    rows.push({ label: `— ${branch.id} ability`, value: branch.ability.id });
+    branch.tiers.forEach((tier, i) => {
+      rows.push({
+        label: `tier ${i + 4}`,
+        labelKey: branch.nameKey,
+        value: tierValue(tier),
+      });
+    });
+    rows.push(...abilityRows(branch.nameKey, branch.ability));
   }
   return rows;
+}
+
+/**
+ * What a tier-5 capstone is called, what it costs and what it does.
+ *
+ * §38 asks for "the tier-5 ability" in a tower's entry, and the ability is the
+ * reason a branch gets chosen — a row that printed its id would say nothing a
+ * player could act on.
+ */
+function abilityRows(branchNameKey: string, ability: TowerAbility): CodexRow[] {
+  return [
+    { label: 'capstone', labelKey: branchNameKey, value: '', valueKey: ability.nameKey },
+    {
+      label: 'Costs',
+      value: `${ability.cost} Aether, every ${seconds(ability.cooldownSeconds)}`,
+    },
+    { label: 'Does', value: ability.effects.map(describeEffect).join('; ') },
+  ];
+}
+
+/**
+ * One ability primitive, in words.
+ *
+ * A switch over the discriminated union rather than a lookup, so adding a
+ * primitive to `effects.ts` is a compile error here until the Codex can say
+ * what it does — the same bargain the schema already makes: an ability that
+ * cannot be described is one a player cannot understand.
+ */
+export function describeEffect(effect: EffectDefinition): string {
+  /* `effect.params` is read inside each branch rather than hoisted: pulling it
+     out above the switch collapses the discriminated union back into a union
+     of every parameter shape, and the narrowing this depends on is gone. */
+  switch (effect.kind) {
+    case 'damage_in_radius': {
+      const { damage, damageType, durationSeconds, radiusTiles } = effect.params;
+      const where = `in ${num(radiusTiles)} tiles`;
+      return durationSeconds > 0
+        ? `${num(damage)} ${damageType} over ${seconds(durationSeconds)} ${where}`
+        : `${num(damage)} ${damageType} ${where}`;
+    }
+    case 'apply_status_in_radius': {
+      const { stacks, status, radiusTiles } = effect.params;
+      return `${stacks} ${status} in ${num(radiusTiles)} tiles`;
+    }
+    case 'create_ground_effect': {
+      const e = effect.params;
+      const parts = [`ground for ${seconds(e.durationSeconds)} in ${num(e.radiusTiles)} tiles`];
+      if (e.damagePerSecond > 0) parts.push(`${num(e.damagePerSecond)} ${e.damageType}/s`);
+      if (e.status !== undefined) parts.push(`${e.stacks} ${e.status}`);
+      if (e.slowMultiplier < 1) parts.push(`slows to ${percent(e.slowMultiplier)}`);
+      if (e.blocks) parts.push('blocks the path');
+      return parts.join(', ');
+    }
+    case 'modify_stat': {
+      const { charges, durationSeconds, flat, multiplier, radiusTiles, stat } = effect.params;
+      const how = multiplier !== 1 ? `×${num(multiplier)}` : `${flat >= 0 ? '+' : ''}${num(flat)}`;
+      const where = radiusTiles > 0 ? ` in ${num(radiusTiles)} tiles` : '';
+      const forHowLong =
+        charges > 0
+          ? ` for ${charges} uses`
+          : durationSeconds > 0
+            ? ` for ${seconds(durationSeconds)}`
+            : '';
+      return `${STAT_WORDS[stat]} ${how}${where}${forHowLong}`;
+    }
+    case 'force_reactions': {
+      const { ignoreCooldown, radiusTiles } = effect.params;
+      const lockout = ignoreCooldown ? ', ignoring the lockout' : '';
+      return `sets off every reaction in ${num(radiusTiles)} tiles${lockout}`;
+    }
+    case 'block_path': {
+      const { durationSeconds, radiusTiles } = effect.params;
+      return `blocks the path for ${seconds(durationSeconds)} in ${num(radiusTiles)} tiles`;
+    }
+    case 'taunt_in_radius': {
+      const { durationSeconds, radiusTiles } = effect.params;
+      return `taunts everything in ${num(radiusTiles)} tiles for ${seconds(durationSeconds)}`;
+    }
+    case 'spawn_entity': {
+      const { count, entity, seconds: forSeconds } = effect.params;
+      return forSeconds > 0
+        ? `summons ${count} ${entity} for ${seconds(forSeconds)}`
+        : `summons ${count} ${entity}`;
+    }
+  }
 }
 
 function enemyRows(enemy: EnemyDefinition): CodexRow[] {
