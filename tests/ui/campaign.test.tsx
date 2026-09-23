@@ -229,10 +229,39 @@ describe('the mode picker', () => {
     expect(screen.getByTestId('stars-1-1')).toHaveTextContent('2 / 11');
   });
 
+  /* §14.2 gates Endless on 3-starring the stage, and it is the only mode
+     gated at all. A two-hundred-wave leaderboard in front of a player still
+     learning the road is not a reward. */
+  it('locks Endless until the stage has been three-starred', () => {
+    render(<StageSelectScreen />);
+    fireEvent.click(screen.getByTestId('stage-1-1'));
+
+    const button = screen.getByTestId('mode-1-1-endless_1_1');
+    expect(button).toBeDisabled();
+    expect(button).toHaveTextContent('3-star this stage to unlock');
+    expect(screen.getByTestId('mode-1-1-impossible')).toBeEnabled();
+
+    fireEvent.click(button);
+    expect(useUiStore.getState().screen).not.toBe('inStage');
+  });
+
+  it('opens Endless once it has been', () => {
+    useProfile.setState({
+      profile: recordStageResult(EMPTY_PROFILE, '1-1', 'normal', won({ stars: 3 })),
+      loaded: true,
+    });
+    render(<StageSelectScreen />);
+    fireEvent.click(screen.getByTestId('stage-1-1'));
+
+    expect(screen.getByTestId('mode-1-1-endless_1_1')).toBeEnabled();
+  });
+
   /* A challenge is one star for solving it, and Endless has no stars at all —
      only how far you got. */
   it('scores a challenge as solved and Endless by wave', () => {
-    let profile = recordStageResult(EMPTY_PROFILE, '1-1', 'heroic_1_1', won({ stars: 3 }), 1);
+    /* Three-starred on Normal so Endless is open, which is what §14.2 asks. */
+    let profile = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', won({ stars: 3 }));
+    profile = recordStageResult(profile, '1-1', 'heroic_1_1', won({ stars: 3 }), 1);
     profile = recordStageResult(
       profile,
       '1-1',
@@ -247,7 +276,8 @@ describe('the mode picker', () => {
 
     expect(screen.getByTestId('status-heroic_1_1')).toHaveTextContent('solved');
     expect(screen.getByTestId('status-endless_1_1')).toHaveTextContent('wave 61');
-    /* One star from the Heroic, and none from Endless however far it went. */
-    expect(screen.getByTestId('stars-1-1')).toHaveTextContent('1 / 11');
+    /* Three from Normal and one from the Heroic; none from Endless however
+       far it went. */
+    expect(screen.getByTestId('stars-1-1')).toHaveTextContent('4 / 11');
   });
 });

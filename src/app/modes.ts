@@ -1,5 +1,7 @@
 import { loadContent } from '@content/load';
 import type { ChallengeDefinition } from '@content/schema/challenge';
+import { bestStarsOnAnyMode } from './profile.js';
+import type { Profile } from './profile.js';
 
 /**
  * The ways one map can be played (#48, docs/GAME_DESIGN.md §12.4 and §13).
@@ -37,6 +39,15 @@ export interface PlayMode {
   readonly difficulty: string;
   /** Passed as `RulesetOptions.challengeId`, when this mode is one. */
   readonly challengeId?: string;
+  /**
+   * Stars on one mode of this stage before it opens (§14.2).
+   *
+   * Endless is the only thing gated: "3-star the stage" is what the unlock
+   * table asks, and it is a thing done on one mode rather than a total summed
+   * across four. Everything else is zero — §13 wants the variants reachable,
+   * and #37 already settled that stage *access* is never gated.
+   */
+  readonly requiresStars: number;
 }
 
 /** What a stage opens on, and the baseline every other figure is quoted against. */
@@ -44,6 +55,9 @@ export const DEFAULT_MODE_ID = 'normal';
 
 /** §12.4's number, checked against `modesFor` by `tests/app/modes.test.ts`. */
 export const STARS_PER_STAGE = 11;
+
+/** §14.2: Endless opens when the stage has been 3-starred. */
+export const ENDLESS_STARS = 3;
 
 function challengeMode(challenge: ChallengeDefinition): PlayMode {
   return {
@@ -55,6 +69,10 @@ function challengeMode(challenge: ChallengeDefinition): PlayMode {
        (§13). A challenge is one star for clearing it at all, never three:
        there is no half-solving a fixed-constraint puzzle. */
     maxStars: challenge.kind === 'endless' ? 0 : 1,
+    /* §14.2 gates Endless and nothing else. It is the reward for having
+       mastered the map, and offering it first would put a two-hundred-wave
+       leaderboard in front of a player still learning the road. */
+    requiresStars: challenge.kind === 'endless' ? ENDLESS_STARS : 0,
     difficulty: DEFAULT_MODE_ID,
     challengeId: challenge.id,
   };
@@ -79,6 +97,7 @@ export function modesFor(stageId: string): PlayMode[] {
       nameKey: `difficulty.${id}.name`,
       descriptionKey: `difficulty.${id}.desc`,
       maxStars: (row.awardsStars ? 3 : 0) as 0 | 3,
+      requiresStars: 0,
       difficulty: id,
     }));
 
@@ -106,6 +125,25 @@ export function modeById(stageId: string, id: string): PlayMode | undefined {
 export function defaultMode(stageId: string): PlayMode | undefined {
   const modes = modesFor(stageId);
   return modes.find((mode) => mode.id === DEFAULT_MODE_ID) ?? modes[0];
+}
+
+/**
+ * Whether a mode is still closed to this player.
+ *
+ * Asked by the screen rather than folded into the ruleset, and that is the
+ * difference from a tower unlock: a locked tower changes the board the
+ * *simulation* resolves, so `placeTower` refuses one and the balance simulator
+ * sees the same roster a player would. A locked mode changes nothing the
+ * simulation computes — it decides which button a person may press — and the
+ * simulator has every reason to run Endless on a stage nobody has starred.
+ */
+export function modeLocked(profile: Profile, stageId: string, mode: PlayMode): boolean {
+  return bestStarsOnAnyMode(profile, stageId) < mode.requiresStars;
+}
+
+/** Why a mode is closed, in words the picker can show. */
+export function lockReason(mode: PlayMode): string {
+  return `${mode.requiresStars}-star this stage to unlock`;
 }
 
 /** What one stage is worth, from what it actually offers. */

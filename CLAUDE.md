@@ -279,6 +279,14 @@ flat record onto Normal, the only mode it could have been earned on; the migrati
 hands on anything that is not a map of stages rather than repairing it, because the first draft
 turned `stages: 7` into an empty campaign. Region 1 is 110 stars, not 30.
 
+**Endless is the one mode gated, and the gate is in the UI rather than the ruleset.** §14.2 asks
+for three stars *on the stage*, which is a thing done on one mode and not a total summed across
+four — eleven stars scraped thinly is not mastery of the map. The check is `modeLocked` in
+`app/modes.ts`, deliberately not folded into `buildRuleset` the way a tower unlock is: a locked
+tower changes the board the *simulation* resolves, so `placeTower` refuses one and the balance
+simulator sees the roster a player would; a locked mode changes nothing the simulation computes,
+and the simulator has every reason to run Endless on a stage nobody has starred.
+
 **The picker is two taps, and that is the feature.** Choosing a stage opens its modes and starts
 nothing. Iron is one life and Impossible is a different game; a single tap that launched whichever
 mode happened to be remembered would drop a player into one with nothing on screen having said so.

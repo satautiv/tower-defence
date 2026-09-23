@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { loadContent } from '@content/load';
-import { DEFAULT_MODE_ID, defaultMode, maxStarsFor, modeById, modesFor } from '@app/modes';
-import { STARS_PER_STAGE } from '@app/profile';
+import {
+  DEFAULT_MODE_ID,
+  ENDLESS_STARS,
+  defaultMode,
+  lockReason,
+  maxStarsFor,
+  modeById,
+  modeLocked,
+  modesFor,
+} from '@app/modes';
+import { EMPTY_PROFILE, STARS_PER_STAGE, recordStageResult } from '@app/profile';
+import type { StageResult } from '@sim/index';
 import locale from '../../src/i18n/en.json';
 
 /**
@@ -120,5 +130,76 @@ describe('every mode says what it is', () => {
       expect(keys.has(mode.nameKey), `${mode.id}: ${mode.nameKey}`).toBe(true);
       expect(keys.has(mode.descriptionKey), `${mode.id}: ${mode.descriptionKey}`).toBe(true);
     }
+  });
+});
+
+/**
+ * §14.2 gates Endless and nothing else.
+ *
+ * "3-star the stage" is a thing done on one mode rather than a total summed
+ * across four — eleven stars spread thinly is not mastery of the map, which is
+ * what the gate is for.
+ */
+describe('what Endless costs to open', () => {
+  function won(over: Partial<StageResult> = {}): StageResult {
+    return {
+      won: true,
+      stars: 3,
+      livesRemaining: 20,
+      startingLives: 20,
+      durationSeconds: 300,
+      wavesCleared: 10,
+      totalWaves: 10,
+      enemiesKilled: 10,
+      enemiesLeaked: 0,
+      goldEarned: 100,
+      towersBuilt: 3,
+      reactionsTriggered: 1,
+      ...over,
+    };
+  }
+
+  const stageId = '1-1';
+  const endless = modeById(stageId, 'endless_1_1');
+  if (endless === undefined) throw new Error('no Endless challenge on 1-1');
+
+  it('is the only mode that is gated at all', () => {
+    for (const mode of modesFor(stageId)) {
+      expect(mode.requiresStars, mode.id).toBe(mode.kind === 'endless' ? ENDLESS_STARS : 0);
+      if (mode.kind !== 'endless') expect(modeLocked(EMPTY_PROFILE, stageId, mode)).toBe(false);
+    }
+  });
+
+  it('is closed before the stage has been mastered', () => {
+    expect(modeLocked(EMPTY_PROFILE, stageId, endless)).toBe(true);
+
+    const oneStar = recordStageResult(EMPTY_PROFILE, stageId, 'normal', won({ stars: 1 }));
+    expect(modeLocked(oneStar, stageId, endless)).toBe(true);
+  });
+
+  it('opens on three stars on any one mode', () => {
+    const onNormal = recordStageResult(EMPTY_PROFILE, stageId, 'normal', won());
+    expect(modeLocked(onNormal, stageId, endless)).toBe(false);
+
+    const onVeteran = recordStageResult(EMPTY_PROFILE, stageId, 'veteran', won());
+    expect(modeLocked(onVeteran, stageId, endless)).toBe(false);
+  });
+
+  /* Three stars scraped across three modes is not mastery of the map. */
+  it('does not open on three stars added up across modes', () => {
+    let profile = recordStageResult(EMPTY_PROFILE, stageId, 'normal', won({ stars: 1 }));
+    profile = recordStageResult(profile, stageId, 'veteran', won({ stars: 1 }));
+    profile = recordStageResult(profile, stageId, 'impossible', won({ stars: 1 }));
+    expect(modeLocked(profile, stageId, endless)).toBe(true);
+  });
+
+  /* And it is this stage's stars, not the campaign's. */
+  it('is per stage', () => {
+    const elsewhere = recordStageResult(EMPTY_PROFILE, '1-2', 'normal', won());
+    expect(modeLocked(elsewhere, stageId, endless)).toBe(true);
+  });
+
+  it('says what opens it', () => {
+    expect(lockReason(endless)).toContain('3-star');
   });
 });
