@@ -137,7 +137,7 @@ describe('search', () => {
 
 describe('the screen from the menu', () => {
   it('is the same view, with a way back', () => {
-    useUiStore.setState({ screen: 'codex', previousScreen: 'menu' });
+    useUiStore.setState({ screen: 'codex' });
     render(<CodexScreen />);
 
     expect(screen.getByTestId('codex')).toBeInTheDocument();
