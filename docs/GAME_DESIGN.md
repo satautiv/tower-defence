@@ -697,7 +697,7 @@ The mechanics above are the skeleton. This section is the difference between a c
 
 ### 16.1 Visual
 
-- **2D, hand-painted-feel sprites**, orthographic top-down at a slight 3/4 tilt (~25°) — enough to give towers presence without demanding true isometric assets.
+- **2D flat, geometric sprites, generated from source in the repo** (see [ADR-0005](adr/0005-generated-art-direction.md)), orthographic top-down at a slight 3/4 tilt (~25°) — enough to give towers presence without demanding true isometric assets. Every readability rule below is unchanged by that choice; a painted set remains a later file drop through the same atlas build.
 - **Logical resolution 1920×1080**, scaled to fit; assets authored at 2× for high-DPI.
 - **Palette discipline:** environments are desaturated and low-contrast; **only gameplay-relevant elements are saturated.** Enemies, projectiles, statuses and reactions own the bright colours. This is the single most important readability rule, and it's what lets a busy late-game screen stay legible.
 - Damage-type colours (§4.2) are **reserved** — no environment art may use them at high saturation.
