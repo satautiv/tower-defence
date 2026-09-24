@@ -228,11 +228,37 @@ free to pick any such order. It sorts by depth now. And the authored description
 total at full rank while the screen offered the next rank, so a node read "returns 0.5 Aether"
 directly above "Next rank: 0.25 more". Descriptions are per-rank now.
 
-**Stages are not gated on stars, deliberately.** #37's unlock chain is about towers, heroes,
-powers and specialisations; nothing in the design gates stage *access*, and locking the region to
-its first stage would take the remaining playtests (#19, #36) away from the people who still have
-to run them. The region map shows what has been earned — stars, clears, best times — and opens
-everything.
+**Stages gate sequentially (#81), and the rule is `cleared`, not `starred`.** A stage opens when
+the one before it in its region has been cleared on *any* mode — `stageLocked` in
+`src/app/modes.ts`, beside `modeLocked` and for the same reason. The distinction from a tower
+unlock is load-bearing: a locked tower changes the board the *simulation* resolves, so it lives in
+`buildRuleset` and `placeTower` refuses one; a locked stage decides which button a person may
+press. **Folding it into the ruleset would break the balance gate outright**, which runs one job
+per stage against a profile that has cleared nothing — every stage from 1-2 on would become
+unrunnable.
+
+Gating on stars rather than clears was rejected: Relaxed awards none, so a star gate would never
+open on it, and gating progress on mastery punishes exactly the player the talent tree exists to
+help. Stars gate *modes* (Endless) and fund the tree. **A run in progress can never be stranded**
+— to have started stage N the player must have cleared N-1, and a clear is never taken away, so a
+snapshot always resumes into a stage that is still open with nothing needing to know a snapshot
+exists.
+
+**The hatch is `?unlock=all`, in `src/ui/devFlags.ts`, dev-only.** A parameter rather than a button
+because `docs/PLAYTEST-REGION1.md` forbids opening the dev overlay in front of a tester, so an
+unlock reachable only through `~` is no hatch. It is **session-only and never written to the
+profile**: a synthetic clear would corrupt the data a playtest is collecting and outlive the
+parameter. `import.meta.env.DEV` is its first statement, so the body is dead code in production and
+`vi.stubEnv('DEV', false)` proves the flag does nothing there.
+
+**One trap worth keeping, and only `dist/` could see it: a default argument is evaluated before
+the guard.** `unlockAllStages(search = currentSearch())` read `window.location.search` at every
+call site *before* the `import.meta.env.DEV` check could return — so a production bundle that
+could only ever answer `false` still shipped the location read. The parameter is optional and
+resolved after the guard now, and all four fingerprints (`unlock=all`, `URLSearchParams`,
+`location.search`, `currentSearch`) grep to zero in `dist/`. This is the same rule the dev overlay
+already follows — *the guard is the first statement* — with the discovery that a default
+parameter sits in front of the first statement.
 
 **Modes (#40) are live, and a map is now played seven ways.** Four difficulties in
 `tuning.json`, a Heroic and an Iron challenge per map, and an Endless run per map — thirty

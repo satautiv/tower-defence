@@ -6,6 +6,7 @@ import { compareStageIds } from '@content/stages';
 import { Button, Panel } from '../components/index.js';
 import { text } from '../text.js';
 import { useUiStore } from '../store.js';
+import { unlockAllStages } from '../devFlags.js';
 import {
   SCORING_MODE_IDS,
   bestTimeFor,
@@ -16,7 +17,14 @@ import {
   totalStars,
   useProfile,
 } from '@app/profile';
-import { lockReason, maxStarsFor, modeLocked, modesFor } from '@app/modes';
+import {
+  lockReason,
+  maxStarsFor,
+  modeLocked,
+  modesFor,
+  stageLockReason,
+  stageLocked,
+} from '@app/modes';
 import type { PlayMode } from '@app/modes';
 import { clearAllSaveData, exportFileName, exportSaveData, importSaveData } from '@app/saveData';
 
@@ -163,9 +171,16 @@ export function StageSelectScreen(): ReactElement {
      and every region after — appear by existing. Sorted by `compareStageIds`
      because string order puts 1-10 before 1-5, which is exactly the bug a
      campaign list must not have.
-     Every stage stays playable. #39 records what has been earned and this
-     shows it, but *gating* the campaign on it belongs with the region map
-     (#37), which is where a locked stage has somewhere to say why. */
+     The campaign gates sequentially (#81): a stage opens when the one before
+     it has been cleared on any mode. Every stage is still *listed*, because a
+     locked row that says what opens it is a signpost, while a hidden one is a
+     region that appears to end early. */
+  /* `?unlock=all` in a dev build only, for testing a late stage without
+     clearing nine first. Applied here rather than inside `stageLocked` so the
+     app layer stays free of the DOM and the gate itself stays a pure function
+     of the profile. */
+  const devUnlocked = unlockAllStages();
+
   const stages = [...loadContent().stages.values()]
     .filter((stage) => stage.region === 1)
     .sort((a, b) => compareStageIds(a.id, b.id));
@@ -188,7 +203,10 @@ export function StageSelectScreen(): ReactElement {
             const stars = stageStars(profile, stage.id);
             const most = maxStarsFor(stage.id);
             const best = bestTimeFor(profile, stage.id, SCORING_MODE_IDS);
-            const expanded = selectedStageId === stage.id;
+            const locked = !devUnlocked && stageLocked(profile, stage.id);
+            /* A locked stage can never be the open one, whatever a stale
+               selection says. */
+            const expanded = !locked && selectedStageId === stage.id;
 
             return (
               <div key={stage.id} className="ui-stage-row">
@@ -196,26 +214,39 @@ export function StageSelectScreen(): ReactElement {
                   variant="primary"
                   className="ui-stage"
                   onClick={() => open(stage.id)}
-                  aria-expanded={expanded}
+                  disabled={locked}
+                  aria-expanded={locked ? undefined : expanded}
                   data-testid={`stage-${stage.id}`}
                 >
                   <span className="ui-stage__name">
                     {stage.id} &middot; {text(stage.nameKey)}
                   </span>
-                  {/* The best clear, which §13 calls "no reward, pure pride" —
-                      so it sits beside the stars rather than above them. */}
-                  {best !== undefined && (
-                    <span className="ui-stage__time" data-testid={`best-${stage.id}`}>
-                      {formatClock(best)}
+                  {/* A locked stage says what opens it instead of what it has
+                      paid, because a score of zero is not something a player
+                      can act on and the requirement is. */}
+                  {locked ? (
+                    <span className="ui-stage__lock" data-testid={`lock-${stage.id}`}>
+                      {stageLockReason(stage.id)}
                     </span>
+                  ) : (
+                    <>
+                      {/* The best clear, which §13 calls "no reward, pure
+                          pride" — so it sits beside the stars rather than
+                          above them. */}
+                      {best !== undefined && (
+                        <span className="ui-stage__time" data-testid={`best-${stage.id}`}>
+                          {formatClock(best)}
+                        </span>
+                      )}
+                      <span
+                        className="ui-stage__stars"
+                        aria-label={`${stars} of ${most} stars`}
+                        data-testid={`stars-${stage.id}`}
+                      >
+                        {stars} / {most} &#9733;
+                      </span>
+                    </>
                   )}
-                  <span
-                    className="ui-stage__stars"
-                    aria-label={`${stars} of ${most} stars`}
-                    data-testid={`stars-${stage.id}`}
-                  >
-                    {stars} / {most} &#9733;
-                  </span>
                 </Button>
 
                 {expanded && (

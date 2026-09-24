@@ -9,6 +9,9 @@ import {
   modeById,
   modeLocked,
   modesFor,
+  previousStageId,
+  stageLockReason,
+  stageLocked,
 } from '@app/modes';
 import { EMPTY_PROFILE, STARS_PER_STAGE, recordStageResult } from '@app/profile';
 import type { StageResult } from '@sim/index';
@@ -201,5 +204,94 @@ describe('what Endless costs to open', () => {
 
   it('says what opens it', () => {
     expect(lockReason(endless)).toContain('3-star');
+  });
+});
+
+/**
+ * The campaign gate (#81).
+ *
+ * A stage opens when the one before it in its region has been cleared, on any
+ * mode or difficulty. Cleared rather than starred: someone who scraped a
+ * 1-star clear on Relaxed has finished the lesson and earned the next one, and
+ * gating on mastery would punish exactly the player the talent tree exists to
+ * help.
+ */
+describe('sequential stage unlocking', () => {
+  function won(over: Partial<StageResult> = {}): StageResult {
+    return {
+      won: true,
+      stars: 3,
+      livesRemaining: 20,
+      startingLives: 20,
+      durationSeconds: 300,
+      wavesCleared: 10,
+      totalWaves: 10,
+      enemiesKilled: 10,
+      enemiesLeaked: 0,
+      goldEarned: 100,
+      towersBuilt: 3,
+      reactionsTriggered: 1,
+      ...over,
+    };
+  }
+
+  it('opens the first stage of a region to a profile that has done nothing', () => {
+    expect(stageLocked(EMPTY_PROFILE, '1-1')).toBe(false);
+  });
+
+  it('closes every other stage until the one before it is cleared', () => {
+    expect(stageLocked(EMPTY_PROFILE, '1-2')).toBe(true);
+    expect(stageLocked(EMPTY_PROFILE, '1-10')).toBe(true);
+
+    const cleared = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', won());
+    expect(stageLocked(cleared, '1-2')).toBe(false);
+    expect(stageLocked(cleared, '1-3')).toBe(true);
+  });
+
+  /* Relaxed pays no stars, so a gate that read stars would never open on it. */
+  it('counts a clear on a mode that awards no stars', () => {
+    const relaxed = recordStageResult(EMPTY_PROFILE, '1-1', 'relaxed', won({ stars: 0 }), 0);
+    expect(stageLocked(relaxed, '1-2')).toBe(false);
+  });
+
+  it('does not count a loss', () => {
+    const lost = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', won({ won: false, stars: 0 }));
+    expect(stageLocked(lost, '1-2')).toBe(true);
+  });
+
+  /* Clearing 1-3 says nothing about 1-5, and must not open it. */
+  it('opens one stage at a time rather than everything below the high-water mark', () => {
+    const cleared = recordStageResult(EMPTY_PROFILE, '1-3', 'normal', won());
+    expect(stageLocked(cleared, '1-4')).toBe(false);
+    expect(stageLocked(cleared, '1-5')).toBe(true);
+  });
+
+  /**
+   * String order puts "1-10" directly after "1-1", which would make the boss
+   * stage the second thing a new player could open. `compareStageIds` exists
+   * for exactly this, and Endless already shipped the bug once by not using it.
+   */
+  it('orders stages numerically, so 1-10 follows 1-9', () => {
+    expect(previousStageId('1-10')).toBe('1-9');
+    expect(previousStageId('1-2')).toBe('1-1');
+    expect(previousStageId('1-1')).toBeUndefined();
+
+    const afterFirst = recordStageResult(EMPTY_PROFILE, '1-1', 'normal', won());
+    expect(stageLocked(afterFirst, '1-10')).toBe(true);
+  });
+
+  it('names the stage that opens it, in words a list can show', () => {
+    expect(stageLockReason('1-6')).toBe('Clear 1-5 to unlock');
+    expect(stageLockReason('1-1')).toBe('');
+  });
+
+  /* Every authored stage must be reachable by clearing the one before it, or
+     the campaign has a wall in it that no amount of play gets past. */
+  it('leaves no stage unreachable', () => {
+    let profile = EMPTY_PROFILE;
+    for (const id of ['1-1', '1-2', '1-3', '1-4', '1-5', '1-6', '1-7', '1-8', '1-9', '1-10']) {
+      expect(stageLocked(profile, id)).toBe(false);
+      profile = recordStageResult(profile, id, 'normal', won());
+    }
   });
 });

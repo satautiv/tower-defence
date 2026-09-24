@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { UI_STATE_KEYS, useUiStore } from '@ui/store';
+import { UI_STATE_KEYS, parentOf, useUiStore } from '@ui/store';
+import type { Screen } from '@ui/store';
 
 describe('the UI store holds UI state and nothing else', () => {
   beforeEach(() => useUiStore.getState().reset());
@@ -38,19 +39,82 @@ describe('navigation', () => {
     expect(useUiStore.getState().screen).toBe('splash');
   });
 
-  it('records where it came from and goes back', () => {
+  it('goes up one level', () => {
     const { navigate } = useUiStore.getState();
     navigate('menu');
     navigate('settings');
-    expect(useUiStore.getState().previousScreen).toBe('menu');
 
     useUiStore.getState().goBack();
     expect(useUiStore.getState().screen).toBe('menu');
   });
 
-  it('does nothing when there is nowhere to go back to', () => {
+  /**
+   * The bug #80 was filed for.
+   *
+   * Leaving a stage is an ordinary navigation, so a store that remembered where
+   * it came from pointed at `inStage` the moment a run ended — and Back on the
+   * stage list walked straight back into the stage just finished. Going *up*
+   * cannot do that, whatever route the player took to get here.
+   */
+  it('does not walk back into a stage that was just left', () => {
+    const { navigate } = useUiStore.getState();
+    navigate('menu');
+    navigate('regionMap');
+    navigate('stageSelect');
+    navigate('inStage');
+    navigate('stageSelect'); // clearing the stage, or quitting it
+
+    useUiStore.getState().goBack();
+    expect(useUiStore.getState().screen).toBe('regionMap');
+  });
+
+  /* The old `goBack` nulled its own pointer, so the second press was dead. */
+  it('is repeatable all the way to the root', () => {
+    const { navigate, goBack } = useUiStore.getState();
+    navigate('menu');
+    navigate('regionMap');
+    navigate('stageSelect');
+
+    goBack();
+    expect(useUiStore.getState().screen).toBe('regionMap');
+    goBack();
+    expect(useUiStore.getState().screen).toBe('menu');
+  });
+
+  it('does nothing at a root, rather than closing the game out from under a tap', () => {
     useUiStore.getState().goBack();
     expect(useUiStore.getState().screen).toBe('splash');
+
+    useUiStore.getState().navigate('menu');
+    useUiStore.getState().goBack();
+    expect(useUiStore.getState().screen).toBe('menu');
+  });
+
+  /* Every screen needs an answer, or Back is silently dead on the new one. */
+  it('declares a parent for every screen in the union', () => {
+    const screens: Screen[] = [
+      'splash',
+      'menu',
+      'regionMap',
+      'stageSelect',
+      'inStage',
+      'talents',
+      'codex',
+      'settings',
+      'editor',
+    ];
+    for (const screen of screens) {
+      expect(parentOf(screen)).not.toBeUndefined();
+    }
+  });
+
+  it('clears the selected tower on the way up, as navigating does', () => {
+    const { navigate, selectEntity, goBack } = useUiStore.getState();
+    navigate('menu');
+    navigate('regionMap');
+    selectEntity(7);
+    goBack();
+    expect(useUiStore.getState().selectedEntityId).toBeNull();
   });
 
   /* A panel surviving a navigation would reappear over an unrelated screen. */

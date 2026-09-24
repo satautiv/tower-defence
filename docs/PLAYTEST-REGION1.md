@@ -191,6 +191,13 @@ other's board.
 **Why 1-8:** it is the last stage that hands the player a new tower (the Mortar), so it is the
 first stage where the whole roster is in play and the map is not also teaching something.
 
+**Getting to 1-8.** The campaign gates sequentially (#81), so a fresh profile cannot open 1-8.
+Session A's furthest pair will usually already have it; if not, run the dev server with
+`?unlock=all` — `http://localhost:5173/?unlock=all` — which opens every stage for that session
+only and writes nothing to the profile. It works in a dev build and nowhere else. Prefer it to
+clearing seven stages as a warm-up, and note that the run itself is unaffected: the flag opens
+*access* and changes nothing the simulation computes.
+
 ## The criterion
 
 > **Two skilled players 3-star stage 1-8 with meaningfully different boards.**

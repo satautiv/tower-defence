@@ -59,10 +59,41 @@ export function isPaused(panel: PanelId | null): boolean {
   return panel !== null && PAUSING_PANELS.includes(panel);
 }
 
+/**
+ * Where Back goes from each screen. Declared, never remembered.
+ *
+ * The store used to keep a `previousScreen` — the last screen navigated away
+ * from — which answers *where was I* rather than *where is up*. Those two agree
+ * only while the player is moving down the tree, and leaving a stage is itself
+ * an ordinary navigation: after a run it pointed at `inStage`, so Back on the
+ * stage list walked straight back into the stage just finished (#80).
+ *
+ * A declared parent cannot be poisoned by how the player arrived, and it makes
+ * Back repeatable — the old `goBack` nulled its own pointer, so a second press
+ * did nothing at all.
+ *
+ * `splash` and `menu` are roots: Back from either is a no-op rather than an
+ * exit, because nothing in a game should close itself out from under a tap.
+ */
+const PARENT: Readonly<Record<Screen, Screen | null>> = {
+  splash: null,
+  menu: null,
+  regionMap: 'menu',
+  stageSelect: 'regionMap',
+  inStage: 'stageSelect',
+  talents: 'menu',
+  codex: 'menu',
+  settings: 'menu',
+  editor: 'menu',
+};
+
+/** Which screen sits above this one, or null at a root. */
+export function parentOf(screen: Screen): Screen | null {
+  return PARENT[screen];
+}
+
 export interface UiState {
   screen: Screen;
-  /** Where `goBack` returns to. One level; the router is a shallow tree. */
-  previousScreen: Screen | null;
   selectedStageId: string | null;
   /**
    * Which way the selected stage is being played (#48).
@@ -93,7 +124,6 @@ export interface UiState {
  */
 export const UI_STATE_KEYS = [
   'screen',
-  'previousScreen',
   'selectedStageId',
   'selectedModeId',
   'selectedEntityId',
@@ -110,7 +140,6 @@ export const UI_STATE_KEYS = [
 
 const INITIAL = {
   screen: 'splash' as Screen,
-  previousScreen: null,
   selectedStageId: null,
   selectedModeId: null,
   selectedEntityId: null,
@@ -126,7 +155,6 @@ export const useUiStore = create<UiState>((set) => ({
         ? state
         : {
             screen,
-            previousScreen: state.screen,
             /* Leaving a screen closes whatever it had open; a panel surviving a
                navigation would reappear over an unrelated screen. */
             openPanel: null,
@@ -134,12 +162,12 @@ export const useUiStore = create<UiState>((set) => ({
           },
     ),
 
+  /* Up one level, not back one step. `PARENT` says which, and why. */
   goBack: () =>
-    set((state) =>
-      state.previousScreen === null
-        ? state
-        : { screen: state.previousScreen, previousScreen: null, openPanel: null },
-    ),
+    set((state) => {
+      const up = PARENT[state.screen];
+      return up === null ? state : { screen: up, openPanel: null, selectedEntityId: null };
+    }),
 
   /* Choosing a stage forgets the last mode, so the picker opens on nothing
      chosen rather than on whatever the previous stage was played as. */
