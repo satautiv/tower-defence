@@ -582,6 +582,12 @@ Each region: **8 standard stages + 1 elite stage + 1 boss stage**.
 
 **Pacing rule:** every stage must introduce **exactly one new thing** — a new enemy, a new tower, a new terrain rule, or a new combination pressure. Never two. Never zero.
 
+**Unlock rule:** stages open **sequentially** — a stage becomes playable once the one before it in its region has been *cleared*, on any mode or difficulty. The first stage of a region is always open. This exists to protect the pacing rule above: the one-new-thing spine only teaches in order, and a player who opens 1-9 first meets the elites having never met Ward or armour, loses, and concludes the game is unfair — which is a pillar **P4** failure rather than a player failure.
+
+Cleared, **not starred**. A 1-star scrape on Relaxed has finished the lesson and earned the next one; gating progress on mastery would punish exactly the player the talent tree exists to help. Stars gate *modes* (§14.2's Endless) and fund the talent tree — never stage access.
+
+A locked stage is still **listed**, showing what opens it. A hidden one reads as a region that ends early.
+
 ### 12.3 Map authoring rules
 
 Each map is data (see technical plan) and must satisfy:

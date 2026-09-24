@@ -829,6 +829,16 @@ abbr.ui-wave__threat {
   color: var(--c-gold);
 }
 
+/* What opens a locked stage (#81). Muted rather than gold: it is a requirement
+   the player has not met, not a score they have earned, and colouring it like
+   stars would read as progress. */
+.ui-stage__lock {
+  flex: 0 0 auto;
+  margin-left: var(--s-2);
+  color: var(--c-text-muted);
+  font-size: var(--t-sm);
+}
+
 /* A stage and, when it is open, its modes (#48). The whole row spans the grid
    cell so the mode list sits under the stage it belongs to rather than beside
    an unrelated one. */

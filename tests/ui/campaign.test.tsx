@@ -11,10 +11,14 @@ import type { StageResult } from '@sim/index';
 /**
  * What the campaign says a player has done (#37, §14).
  *
- * Stages are deliberately not gated here. #37's unlock chain is about towers,
- * heroes, powers and specialisations; nothing in the design gates stage access,
- * and locking the region to its first stage would take the remaining playtests
- * (#19, #36) away from the people who still have to run them.
+ * The campaign gates sequentially (#81): a stage opens when the one before it
+ * in the region has been cleared, on any mode or difficulty. Cleared rather
+ * than starred — a 1-star scrape on Relaxed has finished the lesson and earned
+ * the next one, and gating on mastery would punish exactly the player the
+ * talent tree exists to help.
+ *
+ * Every stage is still listed. A locked row that says what opens it is a
+ * signpost; a hidden one is a region that appears to end early.
  */
 
 function won(over: Partial<StageResult> = {}): StageResult {
@@ -144,14 +148,95 @@ describe('the stage list', () => {
     expect(screen.getByTestId('region-total')).toHaveTextContent('2 of 110 stars');
   });
 
-  /* Deliberate, and stated so a later reader does not take it for an oversight. */
-  it('leaves every stage playable', () => {
+  /* Listed, not hidden: a locked row says what opens it. */
+  it('lists every stage in the region, open or not', () => {
     render(<StageSelectScreen />);
     for (const id of ['1-1', '1-5', '1-10']) {
-      expect(screen.getByTestId(`stars-${id}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`stage-${id}`)).toBeInTheDocument();
     }
-    const buttons = screen.getAllByRole('button', { name: /Emberfall|Watchfire|Rift Maw/ });
-    for (const button of buttons) expect(button).toBeEnabled();
+  });
+});
+
+/**
+ * The campaign gate (#81).
+ *
+ * The region's design is exactly one new thing per stage, and that spine only
+ * works in order: a player who opens 1-9 first meets the elites having never
+ * met Ward or armour, loses, and concludes the game is unfair — which is a
+ * pillar P4 failure rather than a player failure.
+ */
+describe('sequential unlocking', () => {
+  beforeEach(() => useUiStore.getState().reset());
+
+  it('opens the first stage of the region and nothing else', () => {
+    useProfile.setState({ profile: EMPTY_PROFILE, loaded: true });
+    render(<StageSelectScreen />);
+
+    expect(screen.getByTestId('stage-1-1')).toBeEnabled();
+    expect(screen.getByTestId('stage-1-2')).toBeDisabled();
+    expect(screen.getByTestId('stage-1-10')).toBeDisabled();
+  });
+
+  it('says what opens a locked stage rather than showing it no score', () => {
+    useProfile.setState({ profile: EMPTY_PROFILE, loaded: true });
+    render(<StageSelectScreen />);
+
+    expect(screen.getByTestId('lock-1-2')).toHaveTextContent('Clear 1-1 to unlock');
+    expect(screen.queryByTestId('stars-1-2')).not.toBeInTheDocument();
+    /* The open stage still shows what it has paid. */
+    expect(screen.getByTestId('stars-1-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('lock-1-1')).not.toBeInTheDocument();
+  });
+
+  it('opens the next stage when the one before it is cleared', () => {
+    useProfile.setState({
+      profile: recordStageResult(EMPTY_PROFILE, '1-1', 'normal', won()),
+      loaded: true,
+    });
+    render(<StageSelectScreen />);
+
+    expect(screen.getByTestId('stage-1-2')).toBeEnabled();
+    expect(screen.getByTestId('stage-1-3')).toBeDisabled();
+  });
+
+  /* Relaxed pays no stars at all, which is exactly why the gate reads clears. */
+  it('counts a clear on any mode, including one that pays no stars', () => {
+    useProfile.setState({
+      profile: recordStageResult(EMPTY_PROFILE, '1-1', 'relaxed', won({ stars: 0 }), 0),
+      loaded: true,
+    });
+    render(<StageSelectScreen />);
+
+    expect(screen.getByTestId('stage-1-2')).toBeEnabled();
+  });
+
+  it('does not open a stage on a loss', () => {
+    useProfile.setState({
+      profile: recordStageResult(EMPTY_PROFILE, '1-1', 'normal', won({ won: false, stars: 0 })),
+      loaded: true,
+    });
+    render(<StageSelectScreen />);
+
+    expect(screen.getByTestId('stage-1-2')).toBeDisabled();
+  });
+
+  it('cannot open the mode picker on a locked stage', () => {
+    useProfile.setState({ profile: EMPTY_PROFILE, loaded: true });
+    render(<StageSelectScreen />);
+
+    fireEvent.click(screen.getByTestId('stage-1-2'));
+
+    expect(screen.queryByTestId('modes-1-2')).not.toBeInTheDocument();
+    expect(useUiStore.getState().screen).not.toBe('inStage');
+  });
+
+  /* A stale selection must not leave a locked stage expanded. */
+  it('keeps a locked stage shut even when it is the selected one', () => {
+    useProfile.setState({ profile: EMPTY_PROFILE, loaded: true });
+    useUiStore.getState().selectStage('1-7');
+    render(<StageSelectScreen />);
+
+    expect(screen.queryByTestId('modes-1-7')).not.toBeInTheDocument();
   });
 });
 

@@ -1,6 +1,7 @@
 import { loadContent } from '@content/load';
+import { compareStageIds } from '@content/stages';
 import type { ChallengeDefinition } from '@content/schema/challenge';
-import { bestStarsOnAnyMode } from './profile.js';
+import { bestStarsOnAnyMode, stageCleared } from './profile.js';
 import type { Profile } from './profile.js';
 
 /**
@@ -42,10 +43,11 @@ export interface PlayMode {
   /**
    * Stars on one mode of this stage before it opens (§14.2).
    *
-   * Endless is the only thing gated: "3-star the stage" is what the unlock
+   * Endless is the only *mode* gated: "3-star the stage" is what the unlock
    * table asks, and it is a thing done on one mode rather than a total summed
-   * across four. Everything else is zero — §13 wants the variants reachable,
-   * and #37 already settled that stage *access* is never gated.
+   * across four. Every other mode is zero, because §13 wants the variants
+   * reachable on any stage the player has got to. Which stages those are is a
+   * separate question, answered by `stageLocked` (#81).
    */
   readonly requiresStars: number;
 }
@@ -144,6 +146,66 @@ export function modeLocked(profile: Profile, stageId: string, mode: PlayMode): b
 /** Why a mode is closed, in words the picker can show. */
 export function lockReason(mode: PlayMode): string {
   return `${mode.requiresStars}-star this stage to unlock`;
+}
+
+/**
+ * The stage before this one in its own region, or undefined for the first.
+ *
+ * Read from content and ordered by `compareStageIds`, never by string order,
+ * which puts 1-10 before 1-2 — the same trap Endless fell into when it
+ * gathered a region's stages to draw waves from.
+ */
+export function previousStageId(stageId: string): string | undefined {
+  const registry = loadContent();
+  const stage = registry.stages.get(stageId);
+  if (stage === undefined) return undefined;
+
+  const siblings = [...registry.stages.values()]
+    .filter((other) => other.region === stage.region)
+    .sort((a, b) => compareStageIds(a.id, b.id));
+
+  const index = siblings.findIndex((other) => other.id === stageId);
+  return index <= 0 ? undefined : siblings[index - 1]?.id;
+}
+
+/**
+ * Whether the campaign has reached this stage yet (#81).
+ *
+ * A stage opens when the one before it in its region has been **cleared**, on
+ * any mode or difficulty; the first stage of a region is always open.
+ *
+ * Cleared rather than starred, deliberately. Gating progress on mastery
+ * punishes exactly the player the talent tree exists to help: someone who
+ * scraped a 1-star clear on Relaxed has finished the lesson and earned the
+ * next one. Stars stay what they are — the currency, and the reason to return.
+ *
+ * Asked by the screen for the reason `modeLocked` is, and the distinction
+ * matters more here. A locked *tower* changes the board the simulation
+ * resolves, so it belongs in `buildRuleset` and `placeTower` refuses one. A
+ * locked *stage* decides which button a person may press and changes nothing
+ * the simulation computes — and folding it into the ruleset would break the
+ * balance gate outright, since that runs one job per stage against a profile
+ * that has cleared nothing. Every stage from 1-2 on would become unrunnable.
+ *
+ * A run in progress can never be stranded by this: to have started stage N the
+ * player must already have cleared N-1, and a clear is never taken away. So a
+ * snapshot always resumes into a stage that is still open, with nothing here
+ * needing to know a snapshot exists.
+ */
+export function stageLocked(profile: Profile, stageId: string): boolean {
+  const previous = previousStageId(stageId);
+  return previous !== undefined && !stageCleared(profile, previous);
+}
+
+/**
+ * Why a stage is closed, in words the list can show.
+ *
+ * Named by its id rather than its title because the list already prints the
+ * id, and "Clear 1-5 to unlock" points at a row the player can see.
+ */
+export function stageLockReason(stageId: string): string {
+  const previous = previousStageId(stageId);
+  return previous === undefined ? '' : `Clear ${previous} to unlock`;
 }
 
 /** What one stage is worth, from what it actually offers. */
