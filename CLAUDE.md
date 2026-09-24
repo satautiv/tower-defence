@@ -807,6 +807,7 @@ Planning artefacts:
 | `docs/adr/0004-reaction-readability.md` | What the first gate session found, and what was changed because of it |
 | `docs/TECH_DESIGN.md` | The technical spec — stack, architecture, per-system design, tooling, roadmap |
 | `tools/map-editor/README.md` | Why the editor is in `src/editor/` and not there |
+| `docs/adr/0005-generated-art-direction.md` | Why v1.0's art is generated and flat, and the one §16.1 clause that struck |
 
 The implementation roadmap lives entirely in **GitHub issues #3–#60** (`gh issue list`), grouped under milestones M0–M7. Issues #1 and #2 are the closed planning issues and hold the same content as the two docs.
 
